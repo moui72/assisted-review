@@ -1,21 +1,30 @@
 {
-  "name": "pr-review",
+  "name": "assisted-review",
   "version": "0.0.1",
   "description": "Standalone CLI: serve a browser UI to walk a GitHub PR hunk by hunk.",
   "packageManager": "pnpm@10.33.0",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/moui72/assisted-review.git"
+  },
   "engines": {
     "node": ">=20.18"
   },
   "bin": {
-    "pr-review": "build/cli.js"
+    "assisted-review": "build/cli.js"
   },
+  "files": [
+    "build",
+    "dist"
+  ],
   "scripts": {
     "cli": "ts-node src/cli.ts",
     "api": "ts-node src/cli.ts --api-only",
     "dev:web": "vite web",
     "dev": "concurrently -k -n api,web -c blue,magenta \"pnpm api\" \"pnpm dev:web\"",
-    "build": "tsc -p tsconfig.json && pnpm build:web",
+    "build": "tsc -p tsconfig.json && vite build web",
     "build:web": "vite build web",
+    "prepare": "tsc -p tsconfig.json && vite build web",
     "start": "node build/cli.js",
     "lint": "eslint .",
     "test": "jest",
@@ -29,18 +38,18 @@
     ]
   },
   "dependencies": {
+    "dotenv": "^17.4.2"
+  },
+  "devDependencies": {
     "@fontsource/ibm-plex-mono": "^5.2.7",
     "@fontsource/ibm-plex-sans": "^5.2.8",
     "@fontsource/ibm-plex-serif": "^5.2.7",
-    "dotenv": "^17.4.2",
     "highlight.js": "^11.11.1",
     "motion": "^12.40.0",
     "react": "^19",
     "react-dom": "^19",
     "react-markdown": "^10.1.0",
-    "remark-gfm": "^4.0.1"
-  },
-  "devDependencies": {
+    "remark-gfm": "^4.0.1",
     "@eslint/js": "^9",
     "@tailwindcss/vite": "^4",
     "@types/jest": "^29.5.14",

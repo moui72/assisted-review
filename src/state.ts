@@ -1,6 +1,6 @@
 // Persistent review state: load on start (resume), mutate via actions, save
-// after every mutation. One file per PR under ~/.pr-review (override with
-// PR_REVIEW_STATE_DIR). Single local user/process, so no locking needed.
+// after every mutation. One file per PR under ~/.assisted-review (override with
+// ASSISTED_REVIEW_STATE_DIR). Single local user/process, so no locking needed.
 
 import { homedir } from 'node:os';
 import { join } from 'node:path';
@@ -9,7 +9,7 @@ import { randomUUID } from 'node:crypto';
 import type { Action, DraftComment, PrRef, ReviewState, StoredNote } from './types';
 import { STATE_VERSION } from './types';
 
-const STATE_DIR = process.env.PR_REVIEW_STATE_DIR || join(homedir(), '.pr-review');
+const STATE_DIR = process.env.ASSISTED_REVIEW_STATE_DIR || join(homedir(), '.assisted-review');
 
 function statePath(pr: PrRef): string {
   return join(STATE_DIR, `${pr.owner}-${pr.repo}-${pr.number}.json`);

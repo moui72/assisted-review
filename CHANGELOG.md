@@ -10,11 +10,15 @@ See [ROADMAP.md](./ROADMAP.md) for what's planned next.
 
 ### Added
 
+- **Global install.** Packaged for `npm i -g github:moui72/assisted-review`: a
+  `prepare` hook builds the server + UI on install, `files` ships `build/` + `dist/`,
+  and the `build` script is package-manager-agnostic so the install doesn't require
+  pnpm. `npm pack --dry-run` confirms `.env` never enters the tarball.
 - **Core viewer.** Fetch a PR with `gh`, parse the diff into grouped hunks, and serve
   a focused, paginated localhost UI — one chunk per page (less scrolling), with
   syntax highlighting (highlight.js, including a custom Terraform/HCL grammar).
 - **Inline commenting + persisted state.** Click a line to anchor a draft comment;
-  flagged / viewed / comment state persists to `~/.pr-review/<owner>-<repo>-<n>.json`
+  flagged / viewed / comment state persists to `~/.assisted-review/<owner>-<repo>-<n>.json`
   via `POST /api/action` and resumes on restart. Whole-chunk comments are supported
   when no line is anchored.
 - **Claude bridge.** `GET /api/claude` (SSE) spawns headless
@@ -46,3 +50,10 @@ See [ROADMAP.md](./ROADMAP.md) for what's planned next.
 - **`.env` loading via dotenv.** Replaced a hand-rolled parser with `dotenv` so the
   `.env` file is honored whether the tool runs from source, a build, or an installed
   `bin`. Inline `FOO=bar` still wins; a missing `.env` is a no-op.
+- **Cwd-independent config discovery.** `.env` is now resolved from a precedence
+  chain (`$DOTENV_CONFIG_PATH` → `./.env` → `~/.assisted-review/.env`) instead of the
+  current directory only, so a global install finds credentials regardless of where
+  `assisted-review` is invoked.
+- **Dependency diet.** Only `dotenv` remains a runtime dependency; the web libraries
+  (react, motion, highlight.js, react-markdown, remark-gfm, @fontsource) moved to
+  `devDependencies` since vite bundles them into `dist/` at build time.

@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// pr-review <owner/repo#N | PR URL>
+// assisted-review <owner/repo#N | PR URL>
 //
 // Slice 1: fetch a PR, parse it into grouped hunks, serve a browser UI that
 // lets you navigate the chunks. No commenting/submit/Claude yet.
@@ -71,7 +71,7 @@ async function main(): Promise<void> {
     pr = parseRef(ref);
   } catch (err) {
     console.error(`error: ${(err as Error).message}`);
-    console.error('usage: pr-review <owner/repo#N | PR URL>');
+    console.error('usage: assisted-review <owner/repo#N | PR URL>');
     process.exit(2);
   }
 
@@ -118,10 +118,10 @@ async function main(): Promise<void> {
   const { url } = await startServer({ review, state }, { port, serveUi: !apiOnly });
 
   if (apiOnly) {
-    console.error(`\n  pr-review API serving at ${url}/api/review`);
+    console.error(`\n  assisted-review API serving at ${url}/api/review`);
     console.error(`  Start the UI with: pnpm dev:web  (proxies /api here)\n`);
   } else {
-    console.error(`\n  pr-review serving at ${url}`);
+    console.error(`\n  assisted-review serving at ${url}`);
     console.error(`  ${review.meta.title}`);
     console.error(`  Press Ctrl+C to stop.\n`);
     if (!noOpen) openBrowser(url);
