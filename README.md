@@ -37,7 +37,7 @@ pnpm cli https://github.com/owner/repo/pull/123
 
 ## Jira context (optional)
 
-The overview page pulls the referenced story + epic from the Jira REST API when these env vars are set; otherwise it shows a setup banner.
+The overview page pulls the referenced story + epic from the Jira REST API when these env vars are set; otherwise it shows a setup banner. Copy `.env.example` to `.env` (auto-loaded, gitignored) or pass them inline:
 
 ```bash
 JIRA_BASE_URL=https://your-org.atlassian.net \

@@ -10,6 +10,7 @@
 //   --mock-ai    attach placeholder (lorem) AI commentary to each chunk
 //   --port <n>   listen port (default 4319)
 
+import './env'; // load .env before any module reads process.env
 import { execFile } from 'node:child_process';
 import { parseRef } from './parse-ref';
 import { fetchDiff, fetchMeta, parseChunks } from './fetch';
