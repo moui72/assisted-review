@@ -1,4 +1,5 @@
 import type { Chunk, PrMeta, PrRef } from '../api.ts';
+import { Logo } from './Logo.tsx';
 
 function pad(n: number) {
   return String(n).padStart(2, '0');
@@ -34,13 +35,17 @@ export function TopNav({
   return (
     <header className="shrink-0 border-b border-edge bg-surface">
       <div className="shell flex items-center justify-between gap-6 pt-3">
-        <div className="min-w-0">
-          <div className="truncate text-[14px] font-medium text-fg">{meta.title}</div>
-          <div className="mt-0.5 font-mono text-[11px] text-faint">
-            {pr.owner}/{pr.repo}#{pr.number}
-            <span className="text-edge-strong"> · </span>
-            {meta.base_ref} ← {meta.head_ref}
-            {meta.is_draft && <span className="ml-2 text-accent">draft</span>}
+        <div className="flex min-w-0 items-center gap-3">
+          <Logo className="h-8 w-auto shrink-0 text-fg" />
+          <span className="h-8 w-px shrink-0 bg-edge" aria-hidden />
+          <div className="min-w-0">
+            <div className="truncate text-[14px] font-medium text-fg">{meta.title}</div>
+            <div className="mt-0.5 font-mono text-[11px] text-faint">
+              {pr.owner}/{pr.repo}#{pr.number}
+              <span className="text-edge-strong"> · </span>
+              {meta.base_ref} ← {meta.head_ref}
+              {meta.is_draft && <span className="ml-2 text-accent">draft</span>}
+            </div>
           </div>
         </div>
         <div className="flex shrink-0 items-center gap-3">

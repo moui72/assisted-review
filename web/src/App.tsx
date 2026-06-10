@@ -19,6 +19,7 @@ import { OverviewView } from './components/OverviewView.tsx';
 import { ResponseBar } from './components/ResponseBar.tsx';
 import { HelpOverlay } from './components/HelpOverlay.tsx';
 import { SubmitModal } from './components/SubmitModal.tsx';
+import { Logo } from './components/Logo.tsx';
 
 const SLIDE = {
   enter: (d: number) => ({ opacity: 0, x: d * 28 }),
@@ -228,8 +229,11 @@ export function App() {
   }
   if (!review || !state) {
     return (
-      <div className="flex h-full items-center justify-center bg-bg font-mono text-muted">
-        Loading…
+      <div className="flex h-full flex-col items-center justify-center gap-5 bg-bg">
+        <Logo className="h-20 w-auto text-fg/80" />
+        <span className="font-mono text-[12px] text-muted">
+          Loading<span className="animate-pulse">…</span>
+        </span>
       </div>
     );
   }
