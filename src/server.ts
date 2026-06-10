@@ -6,6 +6,7 @@ import { readFile } from 'node:fs/promises';
 import { join, normalize, extname } from 'node:path';
 import { applyAction, saveState } from './state';
 import { buildOverviewPrompt, buildPrompt, splitSuggestedAction, streamClaude } from './claude';
+import { buildReviewPayload, submitReview, VERDICTS, type Verdict } from './submit';
 import { OVERVIEW_ID, type Action, type AiNoteKind, type Review, type ReviewState } from './types';
 
 // dist/ is a sibling of this file's dir (src/ under ts-node, build/ after tsc).
@@ -97,6 +98,37 @@ export function startServer(
       ctx.state = applyAction(ctx.state, action);
       await saveState(ctx.state);
       return sendJson(res, 200, ctx.state);
+    }
+
+    // Publish drafted comments as a real GitHub PR review.
+    if (url.pathname === '/api/submit' && req.method === 'POST') {
+      const { verdict, body } = JSON.parse(await readBody(req)) as {
+        verdict?: string;
+        body?: string;
+      };
+      if (!verdict || !VERDICTS.includes(verdict as Verdict)) {
+        return sendJson(res, 400, { ok: false, error: `verdict must be one of ${VERDICTS.join(', ')}` });
+      }
+      if (ctx.state.submitted) {
+        return sendJson(res, 409, { ok: false, error: 'this review was already submitted' });
+      }
+      const payload = buildReviewPayload(
+        ctx.review.chunks,
+        ctx.state.comments,
+        verdict as Verdict,
+        body ?? '',
+        ctx.state.head_sha,
+      );
+      const result = await submitReview(ctx.review.pr, payload);
+      if (result.ok) {
+        ctx.state = {
+          ...ctx.state,
+          submitted: { at: new Date().toISOString(), verdict, url: result.html_url },
+        };
+        await saveState(ctx.state);
+      }
+      const status = result.ok ? 200 : result.stale ? 409 : 502;
+      return sendJson(res, status, { ...result, state: ctx.state });
     }
 
     // Server-Sent Events: stream a Claude note for a chunk (or the overview).

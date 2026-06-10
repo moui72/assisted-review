@@ -12,8 +12,11 @@ export function TopNav({
   viewed,
   flagged,
   commented,
+  commentCount,
+  submitted,
   onJump,
   onOpenHelp,
+  onSubmit,
 }: {
   pr: PrRef;
   meta: PrMeta;
@@ -22,8 +25,11 @@ export function TopNav({
   viewed: string[];
   flagged: string[];
   commented: string[];
+  commentCount: number;
+  submitted: boolean;
   onJump: (i: number) => void;
   onOpenHelp: () => void;
+  onSubmit: () => void;
 }) {
   return (
     <header className="shrink-0 border-b border-edge bg-surface">
@@ -48,6 +54,27 @@ export function TopNav({
               </>
             )}
           </div>
+          {submitted ? (
+            <span
+              title="Review submitted to GitHub"
+              className="rounded-md border border-emerald-400/40 bg-emerald-400/[0.08] px-2.5 py-1 font-sans text-[11.5px] font-semibold text-emerald-300"
+            >
+              ✓ Submitted
+            </span>
+          ) : (
+            <button
+              onClick={onSubmit}
+              title="Submit review to GitHub"
+              className="flex items-center gap-1.5 rounded-md bg-accent px-3 py-1 text-[12px] font-semibold text-bg transition hover:brightness-110"
+            >
+              Submit
+              {commentCount > 0 && (
+                <span className="rounded-full bg-bg/25 px-1.5 font-mono text-[11px] tabular-nums">
+                  {commentCount}
+                </span>
+              )}
+            </button>
+          )}
           <button
             onClick={onOpenHelp}
             aria-label="Keyboard shortcuts"

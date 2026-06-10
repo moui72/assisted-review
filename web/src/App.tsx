@@ -18,6 +18,7 @@ import { ChunkView } from './components/ChunkView.tsx';
 import { OverviewView } from './components/OverviewView.tsx';
 import { ResponseBar } from './components/ResponseBar.tsx';
 import { HelpOverlay } from './components/HelpOverlay.tsx';
+import { SubmitModal } from './components/SubmitModal.tsx';
 
 const SLIDE = {
   enter: (d: number) => ({ opacity: 0, x: d * 28 }),
@@ -37,6 +38,7 @@ export function App() {
   const [drafts, setDrafts] = useState<Record<string, string>>({});
   const [anchor, setAnchor] = useState<Anchor | null>(null);
   const [helpOpen, setHelpOpen] = useState(false);
+  const [submitOpen, setSubmitOpen] = useState(false);
   const [streaming, setStreaming] = useState<{
     chunkId: string;
     kind: AiNoteKind;
@@ -169,6 +171,10 @@ export function App() {
       if (tag === 'TEXTAREA' || tag === 'INPUT') return;
       const mod = IS_MAC ? e.metaKey : e.ctrlKey;
 
+      if (submitOpen) {
+        if (e.key === 'Escape') setSubmitOpen(false);
+        return;
+      }
       if (e.key === '?') {
         e.preventDefault();
         setHelpOpen((o) => !o);
@@ -206,7 +212,7 @@ export function App() {
     }
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [go, gotoUnviewed, toggleFlag, markViewedNext, markUnread, helpOpen, index]);
+  }, [go, gotoUnviewed, toggleFlag, markViewedNext, markUnread, helpOpen, submitOpen, index]);
 
   const commentedIds = useMemo(
     () => [...new Set((state?.comments ?? []).map((c) => c.chunk_id))],
@@ -275,8 +281,11 @@ export function App() {
         viewed={state.viewed}
         flagged={state.flagged}
         commented={commentedIds}
+        commentCount={state.comments.length}
+        submitted={!!state.submitted}
         onJump={jump}
         onOpenHelp={() => setHelpOpen(true)}
+        onSubmit={() => setSubmitOpen(true)}
       />
 
       <main className="relative min-h-0 flex-1 overflow-hidden">
@@ -337,6 +346,13 @@ export function App() {
       )}
 
       <HelpOverlay open={helpOpen} onClose={() => setHelpOpen(false)} isMac={IS_MAC} />
+      <SubmitModal
+        open={submitOpen}
+        onClose={() => setSubmitOpen(false)}
+        chunks={review.chunks}
+        state={state}
+        onSubmitted={setState}
+      />
     </div>
   );
 }

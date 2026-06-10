@@ -93,6 +93,10 @@ export const OVERVIEW_ID = '__overview__';
 
 export type Side = 'RIGHT' | 'LEFT';
 
+/** GitHub PR review events. */
+export type Verdict = 'APPROVE' | 'COMMENT' | 'REQUEST_CHANGES';
+export const VERDICTS: readonly Verdict[] = ['APPROVE', 'COMMENT', 'REQUEST_CHANGES'];
+
 /** A reviewer's drafted comment. A null anchor = comment on the whole chunk. */
 export interface DraftComment {
   id: string;
@@ -124,6 +128,8 @@ export interface ReviewState {
   flagged: string[]; // chunk ids
   viewed: string[]; // chunk ids
   notes: StoredNote[];
+  /** Set once the review has been published to GitHub. */
+  submitted?: { at: string; verdict: string; url?: string };
 }
 
 /** Mutations the UI POSTs to /api/action (and that the Claude route applies). */

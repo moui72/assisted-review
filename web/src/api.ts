@@ -1,4 +1,4 @@
-import type { Action, Review, ReviewState } from '../../src/types.ts';
+import type { Action, Review, ReviewState, Verdict } from '../../src/types.ts';
 
 export async function fetchReview(): Promise<Review> {
   const res = await fetch('/api/review');
@@ -20,6 +20,24 @@ export async function postAction(action: Action): Promise<ReviewState> {
   });
   if (!res.ok) throw new Error(`/api/action returned ${res.status}`);
   return (await res.json()) as ReviewState;
+}
+
+export interface SubmitResponse {
+  ok: boolean;
+  html_url?: string;
+  stale?: { old: string; new_head: string; inline_count: number };
+  error?: string;
+  state: ReviewState;
+}
+
+/** Publish the drafted comments as a real GitHub PR review. */
+export async function submitReview(verdict: Verdict, body: string): Promise<SubmitResponse> {
+  const res = await fetch('/api/submit', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ verdict, body }),
+  });
+  return (await res.json()) as SubmitResponse;
 }
 
 export interface ClaudeStreamHandlers {
@@ -71,7 +89,8 @@ export function streamClaude(
   return close;
 }
 
-export { OVERVIEW_ID } from '../../src/types.ts';
+export { OVERVIEW_ID, VERDICTS } from '../../src/types.ts';
+export type { Verdict } from '../../src/types.ts';
 export type { Review };
 export type {
   Chunk,
