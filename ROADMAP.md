@@ -56,4 +56,7 @@ A scratch list of future dev ideas. Throw anything here — no commitment implie
 
 ## Ideas / backlog
 
-_(add freely)_
+- Smart chunk clustering -- bring related code from across different files together into one chunk view (needs AI to decide how to group things)
+- Preload ai commentary -- summary on initial startup, chunks 1 or 2 ahead (and when focused if jumped to)
+- Make preload configurable -- N chunks ahead, or always on-demand (N=0). Separately, whether to preload summary or not
+
