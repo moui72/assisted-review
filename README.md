@@ -4,7 +4,7 @@ A local, browser-based tool for working through a GitHub pull request **one hunk
 
 It's a standalone CLI: it fetches a PR with `gh`, parses the diff into chunks, and serves a focused, paginated React UI from a localhost-only server. AI commentary streams from headless **Claude Code**; review state persists to disk so you can resume.
 
-> Status: early/in-progress. See [ROADMAP.md](./ROADMAP.md).
+> Status: early / in-progress — see the [changelog](./CHANGELOG.md) for what's shipped and the [roadmap](./ROADMAP.md) for what's planned.
 
 ## Requirements
 
