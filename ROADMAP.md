@@ -63,7 +63,5 @@ Each item is a one-line summary followed by detail. Roughly grouped by area.
 
 ## Backlog / ideas
 
-- Smart chunk clustering -- bring related code from across different files together into one chunk view (needs AI to decide how to group things)
-- Preload ai commentary -- summary on initial startup, chunks 1 or 2 ahead (and when focused if jumped to)
-- Make preload configurable -- N chunks ahead, or always on-demand (N=0). Separately, whether to preload summary or not
+_(add freely)_
 
