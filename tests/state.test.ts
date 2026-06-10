@@ -1,14 +1,17 @@
 import { rm } from 'node:fs/promises';
-import { applyAction, loadState, saveState, statePath } from '../src/state';
+import { applyAction, loadState, migrate, saveState, statePath } from '../src/state';
 import type { Action, PrRef, ReviewState } from '../src/types';
+import { STATE_VERSION } from '../src/types';
 
 const baseState = (pr: PrRef): ReviewState => ({
+  version: STATE_VERSION,
   pr,
   head_sha: 'sha0',
   started_at: '2020-01-01T00:00:00.000Z',
   comments: [],
   flagged: [],
   viewed: [],
+  notes: [],
 });
 
 describe('applyAction', () => {
@@ -145,6 +148,39 @@ describe('applyAction', () => {
   });
 });
 
+describe('migrate', () => {
+  const pr: PrRef = { owner: 'o', repo: 'r', number: 1 };
+
+  it('v0 with no notes field gets notes: [] and version stamped', () => {
+    const raw = { pr, head_sha: 'sha', started_at: '2020-01-01T00:00:00.000Z', comments: [], flagged: [], viewed: [] };
+    const result = migrate(raw);
+    expect(result.version).toBe(STATE_VERSION);
+    expect(result.notes).toEqual([]);
+  });
+
+  it('v0 with existing notes array preserves notes', () => {
+    const note = { id: 'n1', chunk_id: 'c1', kind: 'initial' as const, body: 'hi', created_at: '2020-01-01T00:00:00.000Z' };
+    const raw = { pr, head_sha: 'sha', started_at: '2020-01-01T00:00:00.000Z', comments: [], flagged: [], viewed: [], notes: [note] };
+    const result = migrate(raw);
+    expect(result.version).toBe(STATE_VERSION);
+    expect(result.notes).toHaveLength(1);
+    expect(result.notes[0].id).toBe('n1');
+  });
+
+  it('already-versioned state passes through unchanged', () => {
+    const state = baseState(pr);
+    const result = migrate(state);
+    expect(result).toEqual(state);
+  });
+
+  it('does not mutate the input object', () => {
+    const raw: Record<string, unknown> = { pr, head_sha: 'sha', started_at: '2020-01-01T00:00:00.000Z', comments: [], flagged: [], viewed: [] };
+    migrate(raw);
+    expect('version' in raw).toBe(false);
+    expect('notes' in raw).toBe(false);
+  });
+});
+
 describe('loadState / saveState persistence', () => {
   // Distinct PR numbers per test to avoid file collisions.
   const cleanup = async (pr: PrRef) => {
@@ -190,6 +226,17 @@ describe('loadState / saveState persistence', () => {
     expect(loaded.comments[0].chunk_id).toBe('c1');
     expect(loaded.flagged).toEqual(['c2']);
     expect(loaded.viewed).toEqual(['c3']);
+    await cleanup(pr);
+  });
+
+  it('saved state includes version and round-trips it', async () => {
+    const pr: PrRef = { owner: 'o', repo: 'r', number: 1004 };
+    await cleanup(pr);
+    const state = await loadState(pr, 'sha1');
+    expect(state.version).toBe(STATE_VERSION);
+    await saveState(state);
+    const loaded = await loadState(pr, 'sha1');
+    expect(loaded.version).toBe(STATE_VERSION);
     await cleanup(pr);
   });
 
