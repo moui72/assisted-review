@@ -1,20 +1,9 @@
-// Loads a .env file (KEY=VALUE lines) into process.env before any other module
-// reads it. Import this FIRST in the CLI entrypoint. Variables already present
-// in the environment take precedence, so explicit `FOO=bar pnpm cli …` wins.
+// Load a .env file into process.env before any other module reads it. Import
+// this FIRST in the CLI entrypoint. dotenv does not override variables already
+// present in the environment, so explicit `FOO=bar pnpm cli …` still wins, and
+// a missing .env is a no-op (not an error). Override the path with
+// DOTENV_CONFIG_PATH. `quiet` suppresses dotenv's startup tip.
 
-import { existsSync, readFileSync } from 'node:fs';
+import { config } from 'dotenv';
 
-const path = process.env.DOTENV_CONFIG_PATH || '.env';
-if (existsSync(path)) {
-  for (const raw of readFileSync(path, 'utf8').split('\n')) {
-    const line = raw.trim();
-    if (!line || line.startsWith('#') || !line.includes('=')) continue;
-    const eq = line.indexOf('=');
-    const key = line.slice(0, eq).trim();
-    if (!key || key in process.env) continue;
-    process.env[key] = line
-      .slice(eq + 1)
-      .trim()
-      .replace(/^['"]|['"]$/g, '');
-  }
-}
+config({ path: process.env.DOTENV_CONFIG_PATH || '.env', quiet: true });
