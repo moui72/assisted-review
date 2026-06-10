@@ -119,8 +119,11 @@ export interface StoredNote {
   created_at: string;
 }
 
+export const STATE_VERSION = 1;
+
 /** Persisted review state (drafts, flags, viewed, AI notes). Resumed on restart. */
 export interface ReviewState {
+  version: number;
   pr: PrRef;
   head_sha: string;
   started_at: string;

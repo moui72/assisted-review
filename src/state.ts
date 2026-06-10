@@ -7,6 +7,7 @@ import { join } from 'node:path';
 import { mkdir, readFile, writeFile, rename } from 'node:fs/promises';
 import { randomUUID } from 'node:crypto';
 import type { Action, DraftComment, PrRef, ReviewState, StoredNote } from './types';
+import { STATE_VERSION } from './types';
 
 const STATE_DIR = process.env.PR_REVIEW_STATE_DIR || join(homedir(), '.pr-review');
 
@@ -16,6 +17,7 @@ function statePath(pr: PrRef): string {
 
 function emptyState(pr: PrRef, headSha: string): ReviewState {
   return {
+    version: STATE_VERSION,
     pr,
     head_sha: headSha,
     started_at: new Date().toISOString(),
@@ -26,14 +28,25 @@ function emptyState(pr: PrRef, headSha: string): ReviewState {
   };
 }
 
+// Migrate raw parsed JSON from any prior version to the current ReviewState shape.
+// v0 (no version field): original format, notes array may be absent
+// v1: added version + guaranteed notes array
+export function migrate(raw: unknown): ReviewState {
+  const s = { ...(raw as Record<string, unknown>) };
+  if (typeof s.version !== 'number') {
+    if (!Array.isArray(s.notes)) s.notes = [];
+    s.version = STATE_VERSION;
+  }
+  return s as unknown as ReviewState;
+}
+
 export async function loadState(pr: PrRef, headSha: string): Promise<ReviewState> {
   try {
     const raw = await readFile(statePath(pr), 'utf8');
-    const state = JSON.parse(raw) as ReviewState;
+    const state = migrate(JSON.parse(raw));
     // Keep the persisted state; just refresh head_sha (staleness handling is a
     // later slice — for now we surface the latest sha we fetched).
     state.head_sha = headSha;
-    if (!Array.isArray(state.notes)) state.notes = []; // backfill older files
     return state;
   } catch {
     return emptyState(pr, headSha);
