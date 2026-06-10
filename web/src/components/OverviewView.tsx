@@ -20,11 +20,6 @@ function JiraCard({ issue, epic }: { issue: JiraIssue; epic?: boolean }) {
         </span>
       </div>
       <div className="font-sans text-[14px] font-medium text-fg">{issue.summary}</div>
-      {issue.description && (
-        <p className="mt-1.5 line-clamp-6 font-sans text-[13px] leading-relaxed whitespace-pre-wrap text-fg/70">
-          {issue.description}
-        </p>
-      )}
     </div>
   );
 }
@@ -59,14 +54,6 @@ function JiraSection({ jira }: { jira: JiraContext }) {
         <JiraCard key={i.key} issue={i} />
       ))}
       {jira.epic && <JiraCard issue={jira.epic} epic />}
-    </div>
-  );
-}
-
-function SectionLabel({ children }: { children: React.ReactNode }) {
-  return (
-    <div className="mb-2 font-sans text-[10px] font-semibold tracking-[0.2em] text-faint uppercase">
-      {children}
     </div>
   );
 }
@@ -159,25 +146,39 @@ function Summary({ ai }: { ai: AiPanelProps }) {
   );
 }
 
-function Description({ body }: { body: string }) {
-  const [open, setOpen] = useState(false);
-  const has = body.trim().length > 0;
+function Collapsible({
+  label,
+  enabled = true,
+  emptyHint,
+  defaultOpen = false,
+  children,
+}: {
+  label: string;
+  enabled?: boolean;
+  emptyHint?: string;
+  defaultOpen?: boolean;
+  children: React.ReactNode;
+}) {
+  const [open, setOpen] = useState(defaultOpen);
   return (
     <section>
       <button
         onClick={() => setOpen((o) => !o)}
-        disabled={!has}
-        className="flex items-center gap-1.5 font-sans text-[10px] font-semibold tracking-[0.2em] text-faint uppercase transition hover:text-muted disabled:opacity-60"
+        disabled={!enabled}
+        className="flex items-center gap-2 font-sans text-[10px] font-semibold tracking-[0.2em] text-faint uppercase transition hover:text-muted disabled:opacity-60"
       >
-        <span className={`inline-block transition-transform ${open ? 'rotate-90' : ''}`}>▸</span>
-        Description
-        {!has && <span className="ml-1 normal-case tracking-normal italic">— none</span>}
+        <span
+          aria-hidden
+          className={`inline-block text-[14px] leading-none transition-transform ${open ? 'rotate-90' : ''}`}
+        >
+          ▸
+        </span>
+        {label}
+        {!enabled && emptyHint && (
+          <span className="ml-1 normal-case tracking-normal italic">— {emptyHint}</span>
+        )}
       </button>
-      {open && has && (
-        <div className="mt-2 rounded-lg border border-edge bg-surface/40 p-4 text-fg/85">
-          <Markdown>{body}</Markdown>
-        </div>
-      )}
+      {open && enabled && <div className="mt-2">{children}</div>}
     </section>
   );
 }
@@ -216,12 +217,20 @@ export function OverviewView({
           </header>
 
           <Summary ai={ai} />
-          <Description body={meta.body} />
 
-          <section>
-            <SectionLabel>Jira</SectionLabel>
+          <Collapsible
+            label="GH PR description"
+            enabled={meta.body.trim().length > 0}
+            emptyHint="none"
+          >
+            <div className="rounded-lg border border-edge bg-surface/40 p-4 text-fg/85">
+              <Markdown>{meta.body}</Markdown>
+            </div>
+          </Collapsible>
+
+          <Collapsible label="Jira" defaultOpen>
             <JiraSection jira={jira} />
-          </section>
+          </Collapsible>
         </div>
       </div>
 
