@@ -30,6 +30,10 @@ Each item is a one-line summary followed by detail. Roughly grouped by area.
   cluttering the focused view.
 - **Side-by-side diff view.** An alternative to the current unified view.
 - **Collapse / expand by file.**
+- **View/resume/navigate ongoing reviews.** A menu to see what reviews you have started
+  and navigate between them. Also implies the need to dismiss/delete reviews when you no
+  longer want to see them in the menu.
+- **Ability to launch new reviews from UI.**
 
 ## Review workflow
 
@@ -64,4 +68,3 @@ Each item is a one-line summary followed by detail. Roughly grouped by area.
 ## Backlog / ideas
 
 _(add freely)_
-
