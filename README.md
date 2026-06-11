@@ -1,7 +1,7 @@
 <p align="center">
   <picture>
     <source media="(prefers-color-scheme: dark)" srcset="web/public/logo-dark.svg" />
-    <img alt="assisted-review" src="web/public/logo.svg" width="380" />
+    <img alt="assisted-review" src="web/public/logo.svg" width="440" />
   </picture>
 </p>
 
