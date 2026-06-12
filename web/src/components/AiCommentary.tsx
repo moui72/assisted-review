@@ -1,5 +1,6 @@
 import { useState, type RefObject } from 'react';
 import type { AiNoteKind } from '../api.ts';
+import { ErrorBanner } from './ErrorBanner.tsx';
 
 /** A note to display — `id` present means it's persisted (and deletable). */
 export interface DisplayNote {
@@ -124,9 +125,7 @@ export function AiCommentary({
         </div>
 
         {error && (
-          <div className="mb-2 rounded-md border border-[var(--del-fg)]/30 bg-[var(--del-bg)] px-3 py-1.5 font-sans text-[12px] text-[var(--del-fg)]">
-            {error}
-          </div>
+          <ErrorBanner className="mb-2">{error}</ErrorBanner>
         )}
 
         <div className="space-y-2 border-l border-accent/35 pl-4">

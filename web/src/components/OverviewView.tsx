@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import type { JiraContext, JiraIssue, PrMeta, PrRef } from '../api.ts';
 import type { AiPanelProps } from './ChunkView.tsx';
+import { ErrorBanner } from './ErrorBanner.tsx';
 import { Markdown } from './Markdown.tsx';
 
 function JiraCard({ issue, epic }: { issue: JiraIssue; epic?: boolean }) {
@@ -107,9 +108,7 @@ function Summary({ ai }: { ai: AiPanelProps }) {
       )}
 
       {ai.error && (
-        <div className="mt-2 rounded-md border border-[var(--del-fg)]/30 bg-[var(--del-bg)] px-3 py-1.5 font-sans text-[12px] text-[var(--del-fg)]">
-          {ai.error}
-        </div>
+        <ErrorBanner className="mt-2">{ai.error}</ErrorBanner>
       )}
 
       {qa.length > 0 && (

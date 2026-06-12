@@ -7,6 +7,7 @@ import {
   type ReviewState,
   type Verdict,
 } from '../api.ts';
+import { ErrorBanner } from './ErrorBanner.tsx';
 
 const VERDICT_META: Record<Verdict, { label: string; hint: string; tone: string }> = {
   COMMENT: { label: 'Comment', hint: 'Leave feedback without an explicit verdict', tone: 'text-fg' },
@@ -209,9 +210,7 @@ export function SubmitModal({
             )}
 
             {error && (
-              <div className="mt-4 rounded-md border border-[var(--del-fg)]/30 bg-[var(--del-bg)] px-3 py-2 font-sans text-[12.5px] text-[var(--del-fg)]">
-                {error}
-              </div>
+              <ErrorBanner className="mt-4 text-[12.5px] py-2">{error}</ErrorBanner>
             )}
           </div>
         )}
