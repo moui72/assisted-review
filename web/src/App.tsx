@@ -143,7 +143,7 @@ export function App() {
       const kind: AiNoteKind = question.trim() ? 'investigation' : 'initial';
       setStreaming({ chunkId: activeId, kind, text: '' });
       streamClaude(
-        { chunkId: activeId, kind, question },
+        { chunkId: activeId, question },
         {
           onDelta: (t) => setStreaming((s) => (s ? { ...s, text: s.text + t } : s)),
           onDone: (next) => {

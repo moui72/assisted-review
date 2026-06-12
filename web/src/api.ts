@@ -48,12 +48,11 @@ export interface ClaudeStreamHandlers {
 
 /** Stream a Claude note over SSE. Returns a cancel function. */
 export function streamClaude(
-  params: { chunkId: string; kind: 'initial' | 'investigation'; question: string },
+  params: { chunkId: string; question: string },
   handlers: ClaudeStreamHandlers,
 ): () => void {
   const u = new URL('/api/claude', location.origin);
   u.searchParams.set('chunk_id', params.chunkId);
-  u.searchParams.set('kind', params.kind);
   if (params.question.trim()) u.searchParams.set('q', params.question.trim());
 
   const es = new EventSource(u.toString());
