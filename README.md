@@ -5,43 +5,49 @@
   </picture>
 </p>
 
-A local, browser-based tool for working through a GitHub pull request **one hunk at a time** — with Claude commentary, line-anchored draft comments, and Jira context. You are the reviewer; Claude assists.
+## What is assisted-review?
 
-It's a standalone CLI: it fetches a PR with `gh`, parses the diff into chunks, and serves a focused, paginated React UI from a localhost-only server. AI commentary streams from headless **Claude Code**; review state persists to disk so you can resume.
+PR review fatigue is real. Large diffs overwhelm reviewers — context gets lost, subtle bugs slip through, and reviewers rush to finish. Standard GitHub review shows everything at once with no focus and no dedicated workspace.
+
+assisted-review fetches a PR and presents it one hunk at a time in a focused browser UI. Each chunk gets its own page. Claude analyzes each chunk upfront and answers follow-up questions in a sidebar. Jira context (story + epic) appears on the overview page when configured. State persists to disk so you can resume a review across sessions.
+
+You stay in control. Claude assists.
+
+It is a standalone CLI: it fetches the PR with `gh`, parses the diff into chunks, and serves a paginated React UI from a localhost-only server. AI commentary streams from headless Claude Code. No data leaves your machine except the comments you choose to post.
 
 > Status: early / in-progress — see the [changelog](./CHANGELOG.md) for what's shipped and the [roadmap](./ROADMAP.md) for what's planned.
 
 ## Requirements
 
-- Node ≥ 20.18
+- Node >= 20.18
 - [`gh`](https://cli.github.com/) authenticated (`gh auth status`)
 - [`claude`](https://claude.com/claude-code) CLI on `PATH` (for AI commentary)
 - [pnpm](https://pnpm.io) — only for working on the project (not for the global install)
 
 ## Install
 
-Install it globally straight from GitHub (builds on install — no clone, no pnpm needed):
+### Global install
+
+Install directly from GitHub. No clone or pnpm required. Builds on install.
 
 ```bash
 npm i -g github:moui72/assisted-review
-assisted-review <owner/repo#N | PR URL>     # fetch, serve, open the browser
+assisted-review <owner/repo#N | PR URL>
 ```
 
-Drop your Jira credentials once in `~/.assisted-review/.env` (see [Jira context](#jira-context-optional))
-and they're picked up no matter which directory you run `assisted-review` from. To update later,
-re-run the same `npm i -g …`; to remove, `npm uninstall -g assisted-review`.
+To update, re-run the same `npm i -g …` command. To remove, `npm uninstall -g assisted-review`.
 
-> The install builds itself from source, which needs the dev toolchain (`vite`, `tsc`)
-> — npm installs those automatically for the build and prunes them afterward. If you've
+> The install builds itself from source, which needs the dev toolchain (`vite`, `tsc`).
+> npm installs those automatically for the build and prunes them afterward. If you've
 > globally set `npm config set omit=dev`, that build step can't fetch them and the
-> install fails with e.g. `vite: not found`; install with `npm i -g --include=dev github:…`
-> in that case.
+> install fails with e.g. `vite: not found`. In that case, install with:
+> `npm i -g --include=dev github:moui72/assisted-review`
 
-## Quick start (from a checkout)
+### From a checkout
 
 ```bash
 pnpm install
-pnpm build:web                       # build the UI once (or use `pnpm dev` for HMR)
+pnpm build:web                        # build the UI once
 pnpm cli <owner/repo#N | PR URL>      # fetch, serve, open the browser
 ```
 
@@ -51,62 +57,87 @@ Example:
 pnpm cli https://github.com/owner/repo/pull/123
 ```
 
+## Configuration
+
+### Jira (optional)
+
+When Jira credentials are configured, the overview page pulls the referenced story and epic from the Jira REST API. Without credentials, it shows a setup banner instead.
+
+| Variable | Required | Description |
+|---|---|---|
+| `JIRA_BASE_URL` | Yes | Base URL of your Jira instance, e.g. `https://your-org.atlassian.net` |
+| `JIRA_USER` | Yes | Your Jira account email |
+| `JIRA_TOKEN` | Yes | Jira API token |
+| `JIRA_EPIC_FIELD` | No | Epic-Link custom field ID (default: `customfield_10008`) |
+
+Variables are read from the environment with the first match winning:
+
+1. Real environment variables (always win)
+2. `$DOTENV_CONFIG_PATH`, if set
+3. `./.env` in the current directory (useful in a checkout — copy `.env.example`)
+4. `~/.assisted-review/.env` (user-global; use this for a global install)
+
+All `.env` files are gitignored.
+
+**Example `~/.assisted-review/.env`:**
+
+```ini
+JIRA_BASE_URL=https://your-org.atlassian.net
+JIRA_USER=you@example.com
+JIRA_TOKEN=your-jira-api-token
+# JIRA_EPIC_FIELD=customfield_10008
+```
+
+### State directory
+
+Review state is stored in `~/.assisted-review/` by default. Override with:
+
+```bash
+ASSISTED_REVIEW_STATE_DIR=/path/to/state
+```
+
+### Inline env vars
+
+You can pass configuration inline for a one-off run:
+
+```bash
+JIRA_BASE_URL=https://your-org.atlassian.net JIRA_USER=you@example.com JIRA_TOKEN=<token> assisted-review owner/repo#123
+```
+
+## Usage
+
+```bash
+assisted-review <owner/repo#N | PR URL>
+```
+
 ### Flags
 
 | Flag | Effect |
 |---|---|
-| `--no-open` | Don't open the browser |
+| `--no-open` | Don't open the browser automatically |
 | `--api-only` | Serve only the API (pair with `pnpm dev:web`) |
-| `--mock-ai` | Fill chunks with placeholder commentary (offline) |
 | `--port <n>` | Listen port (default 4319) |
+| `--mock-ai` | Fill chunks with placeholder commentary (offline use) |
 
-## Jira context (optional)
+### Keyboard shortcuts
 
-The overview page pulls the referenced story + epic from the Jira REST API when these env vars are set; otherwise it shows a setup banner.
-
-These three keys are read from the environment, with the first match winning:
-
-1. real environment variables (always win)
-2. `$DOTENV_CONFIG_PATH`, if set
-3. `./.env` in the current directory (handy in a checkout — copy `.env.example`)
-4. `~/.assisted-review/.env` (user-global; **use this for a global install**)
-
-```ini
-# ~/.assisted-review/.env  (or ./.env in a checkout)
-JIRA_BASE_URL=https://your-org.atlassian.net
-JIRA_USER=you@example.com
-JIRA_TOKEN=<api-token>
-```
-
-…or pass them inline: `JIRA_BASE_URL=… JIRA_USER=… JIRA_TOKEN=… assisted-review <PR>`.
-
-Optional: `JIRA_EPIC_FIELD` (Epic-Link custom field; default `customfield_10008`). All
-`.env` files are gitignored.
+| Key | Action |
+|---|---|
+| `→` / `j` | Next chunk |
+| `←` / `k` | Previous chunk |
+| `⌘→` / `⌘←` (Ctrl on Win/Linux) | Next / previous unread chunk |
+| `↵` | Mark viewed and advance |
+| `esc` | Mark unread |
+| `f` | Flag chunk |
+| `c` | Comment |
+| `a` | Ask Claude |
+| `?` | Show help |
 
 ## Submitting
 
-When you're done, hit **Submit** in the top bar to publish to GitHub: pick a verdict
-(Approve / Comment / Request changes), add an optional summary, and the drafted line
-comments are posted as a single PR review via `gh api`. Whole-chunk comments anchor to
-the chunk's last changed line. If the PR was force-pushed since you started (the head SHA
-the comments were drafted against is gone), submission is blocked with a stale-SHA warning
-rather than posting mis-anchored comments — re-fetch the PR to re-anchor.
+When you're done reviewing, hit **Submit** in the top bar to publish to GitHub. Choose a verdict (Approve / Comment / Request changes), add an optional summary, and the drafted line comments are posted as a single PR review via `gh api`. Whole-chunk comments anchor to the chunk's last changed line.
 
-## Keyboard shortcuts
-
-`→`/`j` next · `←`/`k` prev · `⌘→`/`⌘←` (Ctrl on Win/Linux) next/prev **unread** · `↵` mark viewed + advance · `esc` mark unread · `f` flag · `c` comment · `a` ask Claude · `?` help
-
-## Development
-
-> **For live UI work, run `pnpm dev` and open the Vite server at `http://localhost:5173`** — it has hot-reload and proxies `/api` to the backend. `pnpm cli`/`pnpm start` serve the prebuilt `dist/` on `:4319` instead (no HMR; run `pnpm build:web` to pick up changes).
-
-```bash
-pnpm dev          # API server (:4319) + Vite HMR (:5173) — view :5173; set PR via PR_REF=owner/repo#N
-pnpm test         # Jest unit tests
-pnpm lint         # ESLint
-pnpm format       # Prettier
-pnpm build        # tsc (server → build/) + vite (UI → dist/)
-```
+If the PR was force-pushed since you started, the head SHA the comments were drafted against is no longer valid. In that case, submission is blocked with a stale-SHA warning rather than posting mis-anchored comments. Re-fetch the PR to re-anchor your comments to the new SHA.
 
 ## Architecture
 
@@ -122,4 +153,43 @@ src/         TypeScript backend (CommonJS, ts-node)
 web/         Vite + React + Tailwind UI → builds into dist/, served by the server
 ```
 
+- **`cli.ts`** — entry point; parses the PR ref, fetches the diff and metadata, extracts Jira keys, and hands off to the server.
+- **`fetch.ts` / `parse-ref.ts` / `parse-diff.ts`** — fetch the raw diff and PR metadata via `gh`, parse the ref format, and slice the unified diff into reviewable chunks.
+- **`server.ts`** — Express server providing the REST and SSE API. Serves the pre-built React UI from `dist/` unless `--api-only` is set.
+- **`state.ts`** — loads and persists review state (viewed, flagged, comments, AI notes) as JSON in `~/.assisted-review/`.
+- **`claude.ts`** — spawns headless `claude` as a subprocess and streams JSON-formatted commentary back to the server.
+- **`submit.ts`** — assembles drafted comments into a single PR review payload and posts it via `gh api`.
+- **`jira.ts`** — fetches issue and epic data from the Jira REST API using env-configured credentials.
+
 State lives in `~/.assisted-review/` (override with `ASSISTED_REVIEW_STATE_DIR`).
+
+## Contributing
+
+### Dev setup
+
+```bash
+pnpm install
+pnpm dev        # API server on :4319 + Vite HMR on :5173
+```
+
+Open `http://localhost:5173` for the live-reloading UI. Set a default PR with `PR_REF=owner/repo#N` in `.env` (copy `.env.example`).
+
+### Scripts
+
+| Script | What it does |
+|---|---|
+| `dev` | Starts the API server and Vite HMR server concurrently |
+| `build` | Compiles TypeScript (server → `build/`) and bundles the UI (→ `dist/`) |
+| `build:web` | Builds only the React UI with Vite |
+| `test` | Runs Jest unit tests |
+| `test:watch` | Runs Jest in watch mode |
+| `lint` | Runs ESLint |
+| `format` | Runs Prettier |
+
+### Adding a language
+
+Syntax highlighting is registered in `web/src/highlight.ts`. Import the language grammar from `highlight.js` there and add it to the `hljs.registerLanguage` calls.
+
+### PRs welcome
+
+Open a PR against `main`. CI runs lint and tests on every push. Please keep commits focused and include tests for new behavior where applicable.
