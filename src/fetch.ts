@@ -3,8 +3,7 @@
 
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
-import { chunksFromDiff } from './parse-diff';
-import type { Chunk, PrMeta, PrRef } from './types';
+import type { PrMeta, PrRef } from './types';
 
 const execFileAsync = promisify(execFile);
 
@@ -61,6 +60,3 @@ export async function fetchMeta(ref: PrRef): Promise<PrMeta> {
   };
 }
 
-export function parseChunks(diffText: string): Chunk[] {
-  return chunksFromDiff(diffText);
-}
