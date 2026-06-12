@@ -13,7 +13,8 @@
 import './env'; // load .env before any module reads process.env
 import { execFile } from 'node:child_process';
 import { parseRef } from './parse-ref';
-import { fetchDiff, fetchMeta, parseChunks } from './fetch';
+import { fetchDiff, fetchMeta } from './fetch';
+import { chunksFromDiff } from './parse-diff';
 import { attachMockNotes } from './mock-ai';
 import { startServer } from './server';
 import { loadState } from './state';
@@ -31,13 +32,11 @@ async function jiraWithTimeout(keys: string[], ms = 12000): Promise<JiraContext>
 }
 
 function openBrowser(url: string): void {
-  const cmd =
-    process.platform === 'darwin'
-      ? 'open'
-      : process.platform === 'win32'
-        ? 'start'
-        : 'xdg-open';
-  execFile(cmd, [url], () => {}); // best-effort; ignore failure
+  const [cmd, args]: [string, string[]] =
+    process.platform === 'darwin' ? ['open', [url]] :
+    process.platform === 'win32'  ? ['cmd', ['/c', 'start', '', url]] :
+                                    ['xdg-open', [url]];
+  execFile(cmd, args, () => {});
 }
 
 function parseArgs(argv: string[]): {
@@ -79,7 +78,7 @@ async function main(): Promise<void> {
   let review: Review;
   try {
     const [diffText, meta] = await Promise.all([fetchDiff(pr), fetchMeta(pr)]);
-    let chunks = parseChunks(diffText);
+    let chunks = chunksFromDiff(diffText);
     if (mockAi) chunks = attachMockNotes(chunks);
 
     const keys = extractIssueKeys(meta.title, meta.head_ref, meta.body);
@@ -104,7 +103,6 @@ async function main(): Promise<void> {
     console.error(`error: failed to fetch/parse PR: ${(err as Error).message}`);
     console.error('hint: is `gh` installed and authenticated? try `gh auth status`.');
     process.exit(1);
-    return;
   }
 
   const state = await loadState(review.pr, review.meta.head_sha);
