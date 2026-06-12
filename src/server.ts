@@ -110,7 +110,7 @@ export function startServer(
         return sendJson(res, 400, { ok: false, error: `verdict must be one of ${VERDICTS.join(', ')}` });
       }
       if (ctx.state.submitted) {
-        return sendJson(res, 409, { ok: false, error: 'this review was already submitted' });
+        return sendJson(res, 410, { ok: false, error: 'this review was already submitted' });
       }
       const payload = buildReviewPayload(
         ctx.review.chunks,
