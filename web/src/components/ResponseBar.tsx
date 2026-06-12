@@ -26,6 +26,7 @@ export function ResponseBar({
   onMarkUnread,
   onNext,
   onPrev,
+  isMac,
 }: {
   draft: string;
   onDraft: (text: string) => void;
@@ -43,7 +44,9 @@ export function ResponseBar({
   onMarkUnread: () => void;
   onNext: () => void;
   onPrev: () => void;
+  isMac: boolean;
 }) {
+  const mod = isMac ? '⌘' : 'Ctrl+';
   const hasDraft = draft.trim().length > 0;
   return (
     <footer className="shrink-0 border-t border-edge bg-surface">
@@ -73,7 +76,7 @@ export function ResponseBar({
             if ((e.metaKey || e.ctrlKey) && e.key === 'Enter' && hasDraft) onComment();
           }}
           placeholder={
-            anchor ? `Comment on line ${anchor.line}…  (⌘↵)` : 'Comment on this chunk…  (⌘↵)'
+            anchor ? `Comment on line ${anchor.line}…  (${mod}↵)` : `Comment on this chunk…  (${mod}↵)`
           }
           rows={2}
           className="thin-scroll w-full resize-none rounded-md border border-edge bg-bg px-3 py-2 font-sans text-[13.5px] text-fg placeholder:text-faint focus:border-accent/60 focus:outline-none"
@@ -86,7 +89,7 @@ export function ResponseBar({
               className="rounded-md bg-accent px-3.5 py-1.5 text-[12.5px] font-semibold text-bg transition enabled:hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-35"
             >
               Comment
-              <Kbd>⌘↵</Kbd>
+              <Kbd>{mod}↵</Kbd>
             </button>
             <button
               onClick={onFlag}

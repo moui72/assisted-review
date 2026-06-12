@@ -27,8 +27,7 @@ const SLIDE = {
   exit: (d: number) => ({ opacity: 0, x: d * -28 }),
 };
 
-const IS_MAC =
-  typeof navigator !== 'undefined' && /mac|iphone|ipad/i.test(navigator.platform || navigator.userAgent);
+const IS_MAC = /mac|iphone|ipad/i.test(navigator.userAgent);
 
 export function App() {
   const [review, setReview] = useState<Review | null>(null);
@@ -346,6 +345,7 @@ export function App() {
           onMarkUnread={markUnread}
           onNext={() => go(1)}
           onPrev={() => go(-1)}
+          isMac={IS_MAC}
         />
       )}
 
