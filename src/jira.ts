@@ -17,7 +17,7 @@ const USER = process.env.JIRA_USER ?? '';
 const TOKEN = process.env.JIRA_TOKEN ?? '';
 const EPIC_FIELD = process.env.JIRA_EPIC_FIELD || 'customfield_10008';
 const SETUP_HINT =
-  "Claude can't reach Jira. Set JIRA_BASE_URL, JIRA_USER, and JIRA_TOKEN " +
+  "assisted-review can't reach Jira. Set JIRA_BASE_URL, JIRA_USER, and JIRA_TOKEN " +
   '(an API token) in the environment to pull in ticket and epic context.';
 
 /** Extract Jira issue keys (e.g. FEN-2622) from any number of text sources. */
