@@ -12,4 +12,6 @@ module.exports = {
   transform: {
     '^.+\\.tsx?$': ['ts-jest', { tsconfig: 'tsconfig.jest.json' }],
   },
+  coverageReporters: ['text', 'json-summary', 'json'],
+  coverageDirectory: 'coverage',
 };
