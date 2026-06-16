@@ -1,4 +1,4 @@
-import type { PrRef } from './types';
+import type { PrRef } from './types.js';
 
 // Parse a PR reference into {owner, repo, number}.
 // Accepts: "owner/repo#123" or a github.com PR URL.

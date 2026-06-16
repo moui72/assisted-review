@@ -20,8 +20,8 @@ import type {
   PrRef,
   ReviewState,
   StoredNote,
-} from './types';
-import { STATE_VERSION } from './types';
+} from './types.js';
+import { STATE_VERSION } from './types.js';
 
 const STATE_DIR =
   process.env.ASSISTED_REVIEW_STATE_DIR || join(homedir(), '.assisted-review');

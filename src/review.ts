@@ -1,12 +1,12 @@
 // Shared PR-loading logic used by both cli.ts (startup) and server.ts (open endpoint).
 // Keeps cli.ts from being imported by the server (it self-executes via void main()).
 
-import { fetchDiff, fetchMeta } from './fetch';
-import { chunksFromDiff } from './parse-diff';
-import { attachMockNotes } from './mock-ai';
-import { loadState } from './state';
-import { buildJiraContext, extractIssueKeys } from './jira';
-import type { JiraContext, PrRef, Review, ReviewState } from './types';
+import { fetchDiff, fetchMeta } from './fetch.js';
+import { chunksFromDiff } from './parse-diff.js';
+import { attachMockNotes } from './mock-ai.js';
+import { loadState } from './state.js';
+import { buildJiraContext, extractIssueKeys } from './jira.js';
+import type { JiraContext, PrRef, Review, ReviewState } from './types.js';
 
 async function jiraWithTimeout(
   keys: string[],

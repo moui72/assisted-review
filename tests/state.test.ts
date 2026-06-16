@@ -83,7 +83,7 @@ describe('applyAction', () => {
     // Pin the clock forward so the refreshed updated_at is observably distinct
     // from the created_at set on the same millisecond above.
     const later = '2099-01-01T00:00:00.000Z';
-    const spy = jest
+    const spy = vi
       .spyOn(Date.prototype, 'toISOString')
       .mockReturnValue(later);
     const next = applyAction(state, {

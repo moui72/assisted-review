@@ -10,7 +10,7 @@
 // If any are missing, returns { available: false } with a setup hint so the UI
 // can show a banner instead of failing.
 
-import type { JiraContext, JiraIssue } from './types';
+import type { JiraContext, JiraIssue } from './types.js';
 
 const BASE_URL = (process.env.JIRA_BASE_URL ?? '').replace(/\/$/, '');
 const USER = process.env.JIRA_USER ?? '';
