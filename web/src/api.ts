@@ -7,16 +7,23 @@ import type {
   Verdict,
 } from '../../src/types.ts';
 
-export async function fetchReview(): Promise<Review> {
+export async function fetchReview(): Promise<Review | null> {
   const res = await fetch('/api/review');
+  if (res.status === 204) return null;
   if (!res.ok) throw new Error(`/api/review returned ${res.status}`);
   return (await res.json()) as Review;
 }
 
-export async function fetchState(): Promise<ReviewState> {
+export async function fetchState(): Promise<ReviewState | null> {
   const res = await fetch('/api/state');
+  if (res.status === 204) return null;
   if (!res.ok) throw new Error(`/api/state returned ${res.status}`);
   return (await res.json()) as ReviewState;
+}
+
+export async function clearActiveReview(): Promise<void> {
+  const res = await fetch('/api/review', { method: 'DELETE' });
+  if (!res.ok) throw new Error(`DELETE /api/review returned ${res.status}`);
 }
 
 export async function postAction(action: Action): Promise<ReviewState> {
