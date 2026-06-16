@@ -13,11 +13,11 @@
 // start/end ranges, so the reply pass and multi-line shaping are dropped.
 
 import { spawn } from 'node:child_process';
-import type { Chunk, DraftComment, PrRef, Side } from './types';
+import type { Chunk, DraftComment, PrRef, Side } from './types.js';
 
-export { VERDICTS } from './types';
-export type { Verdict } from './types';
-import type { Verdict } from './types';
+export { VERDICTS } from './types.js';
+export type { Verdict } from './types.js';
+import type { Verdict } from './types.js';
 
 export interface ReviewComment {
   path: string;

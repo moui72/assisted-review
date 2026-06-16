@@ -2,10 +2,10 @@ import { parseDiff, groupChunks, chunksFromDiff } from '../src/parse-diff';
 
 // Silence the parse-diff warnings (console.error) during tests.
 beforeAll(() => {
-  jest.spyOn(console, 'error').mockImplementation(() => {});
+  vi.spyOn(console, 'error').mockImplementation(() => {});
 });
 afterAll(() => {
-  jest.restoreAllMocks();
+  vi.restoreAllMocks();
 });
 
 describe('parseDiff', () => {

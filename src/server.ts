@@ -8,21 +8,21 @@ import {
 } from 'node:http';
 import { readFile } from 'node:fs/promises';
 import { join, normalize, extname } from 'node:path';
-import { applyAction, deleteReview, listReviews, saveState } from './state';
+import { applyAction, deleteReview, listReviews, saveState } from './state.js';
 import {
   buildOverviewPrompt,
   buildPrompt,
   splitSuggestedAction,
   streamClaude,
-} from './claude';
+} from './claude.js';
 import {
   buildReviewPayload,
   submitReview,
   VERDICTS,
   type Verdict,
-} from './submit';
-import { parseRef } from './parse-ref';
-import { loadReview } from './review';
+} from './submit.js';
+import { parseRef } from './parse-ref.js';
+import { loadReview } from './review.js';
 import {
   OVERVIEW_ID,
   type Action,
@@ -30,10 +30,10 @@ import {
   type PrRef,
   type Review,
   type ReviewState,
-} from './types';
+} from './types.js';
 
-// dist/ is a sibling of this file's dir (src/ under ts-node, build/ after tsc).
-const DIST_DIR = join(__dirname, '..', 'dist');
+// dist/ is a sibling of this file's dir (src/ under tsx, build/ after tsc).
+const DIST_DIR = join(import.meta.dirname, '..', 'dist');
 
 const MIME: Record<string, string> = {
   '.html': 'text/html; charset=utf-8',

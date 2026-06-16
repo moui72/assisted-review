@@ -10,13 +10,13 @@
 //   --mock-ai    attach placeholder (lorem) AI commentary to each chunk
 //   --port <n>   listen port (default 4319)
 
-import './env'; // load .env before any module reads process.env
+import './env.js'; // load .env before any module reads process.env
 import { execFile } from 'node:child_process';
-import { parseRef } from './parse-ref';
-import { startServer } from './server';
-import { saveState } from './state';
-import { loadReview } from './review';
-import type { Review, ReviewState } from './types';
+import { parseRef } from './parse-ref.js';
+import { startServer } from './server.js';
+import { saveState } from './state.js';
+import { loadReview } from './review.js';
+import type { Review, ReviewState } from './types.js';
 
 function openBrowser(url: string): void {
   const [cmd, args]: [string, string[]] =

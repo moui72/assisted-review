@@ -2,7 +2,7 @@
 // layout is stable across reloads. Swap this for the headless-Claude bridge
 // (slice 3) without touching the UI — it reads `chunk.ai_notes` either way.
 
-import type { AiNote, Chunk } from './types';
+import type { AiNote, Chunk } from './types.js';
 
 const LOREM = [
   'Lorem ipsum dolor sit amet, consectetur adipiscing elit.',

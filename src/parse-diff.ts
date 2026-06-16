@@ -2,7 +2,7 @@
 // original parse-diff.py: an array of groups, each with
 // { id, file, hunk_header, old_range, new_range, context, diff, members }.
 
-import type { Chunk, HunkMember, LineRange, RawHunk } from './types';
+import type { Chunk, HunkMember, LineRange, RawHunk } from './types.js';
 
 const HUNK_HEADER_RE = /^@@ -(\d+)(?:,(\d+))? \+(\d+)(?:,(\d+))? @@(.*)$/;
 

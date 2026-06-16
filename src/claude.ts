@@ -5,7 +5,7 @@
 
 import { spawn } from 'node:child_process';
 import { tmpdir } from 'node:os';
-import type { AiNoteKind, Chunk, JiraContext, PrMeta } from './types';
+import type { AiNoteKind, Chunk, JiraContext, PrMeta } from './types.js';
 
 const MAX_DIFF_CHARS = 12000;
 const MAX_JIRA_DESC = 1200;
