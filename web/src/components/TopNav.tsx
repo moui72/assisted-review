@@ -17,6 +17,7 @@ export function TopNav({
   submitted,
   onJump,
   onOpenHelp,
+  onOpenReviews,
   onSubmit,
 }: {
   pr: PrRef;
@@ -30,6 +31,7 @@ export function TopNav({
   submitted: boolean;
   onJump: (i: number) => void;
   onOpenHelp: () => void;
+  onOpenReviews: () => void;
   onSubmit: () => void;
 }) {
   return (
@@ -39,7 +41,9 @@ export function TopNav({
           <Logo className="h-8 w-auto shrink-0 text-fg" />
           <span className="h-8 w-px shrink-0 bg-edge" aria-hidden />
           <div className="min-w-0">
-            <div className="truncate text-[14px] font-medium text-fg">{meta.title}</div>
+            <div className="truncate text-[14px] font-medium text-fg">
+              {meta.title}
+            </div>
             <div className="mt-0.5 font-mono text-[11px] text-faint">
               {pr.owner}/{pr.repo}#{pr.number}
               <span className="text-edge-strong"> · </span>
@@ -80,6 +84,14 @@ export function TopNav({
               )}
             </button>
           )}
+          <button
+            onClick={onOpenReviews}
+            aria-label="Reviews"
+            title="View / switch reviews"
+            className="rounded border border-edge-strong px-2 py-0.5 font-sans text-[11.5px] text-muted transition hover:border-fg/40 hover:text-fg"
+          >
+            Reviews
+          </button>
           <button
             onClick={onOpenHelp}
             aria-label="Keyboard shortcuts"

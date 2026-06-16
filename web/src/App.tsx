@@ -11,6 +11,7 @@ import {
   type Review,
   type ReviewState,
 } from './api.ts';
+import { ReviewsMenu } from './components/ReviewsMenu.tsx';
 import type { Anchor } from './diff.ts';
 import type { DisplayNote } from './components/AiCommentary.tsx';
 import { TopNav } from './components/TopNav.tsx';
@@ -39,6 +40,7 @@ export function App() {
   const [anchor, setAnchor] = useState<Anchor | null>(null);
   const [helpOpen, setHelpOpen] = useState(false);
   const [submitOpen, setSubmitOpen] = useState(false);
+  const [reviewsOpen, setReviewsOpen] = useState(false);
   const [streaming, setStreaming] = useState<{
     chunkId: string;
     kind: AiNoteKind;
@@ -47,6 +49,7 @@ export function App() {
   const [claudeError, setClaudeError] = useState<string | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const askRef = useRef<HTMLInputElement>(null);
+  const claudeCloseRef = useRef<(() => void) | null>(null);
 
   useEffect(() => {
     Promise.all([fetchReview(), fetchState()])
@@ -54,9 +57,12 @@ export function App() {
         setReview(r);
         setState(s);
         const i = Number(new URLSearchParams(window.location.search).get('i'));
-        if (Number.isInteger(i) && i >= 1 && i <= r.chunks.length) setIndex(i - 1);
+        if (Number.isInteger(i) && i >= 1 && i <= r.chunks.length)
+          setIndex(i - 1);
       })
-      .catch((e: unknown) => setError(e instanceof Error ? e.message : String(e)));
+      .catch((e: unknown) =>
+        setError(e instanceof Error ? e.message : String(e)),
+      );
   }, []);
 
   const total = review?.chunks.length ?? 0;
@@ -129,7 +135,9 @@ export function App() {
   }, [anchor, chunk, dispatch, drafts]);
 
   const selectLine = useCallback((a: Anchor) => {
-    setAnchor((cur) => (cur?.side === a.side && cur?.line === a.line ? null : a));
+    setAnchor((cur) =>
+      cur?.side === a.side && cur?.line === a.line ? null : a,
+    );
     textareaRef.current?.focus();
   }, []);
 
@@ -141,15 +149,18 @@ export function App() {
       setClaudeError(null);
       const kind: AiNoteKind = question.trim() ? 'investigation' : 'initial';
       setStreaming({ chunkId: activeId, kind, text: '' });
-      streamClaude(
+      claudeCloseRef.current = streamClaude(
         { chunkId: activeId, question },
         {
-          onDelta: (t) => setStreaming((s) => (s ? { ...s, text: s.text + t } : s)),
+          onDelta: (t) =>
+            setStreaming((s) => (s ? { ...s, text: s.text + t } : s)),
           onDone: (next) => {
+            claudeCloseRef.current = null;
             setState(next);
             setStreaming(null);
           },
           onError: (msg) => {
+            claudeCloseRef.current = null;
             setClaudeError(msg);
             setStreaming(null);
           },
@@ -175,6 +186,10 @@ export function App() {
         if (e.key === 'Escape') setSubmitOpen(false);
         return;
       }
+      if (reviewsOpen) {
+        if (e.key === 'Escape') setReviewsOpen(false);
+        return;
+      }
       if (e.key === '?') {
         e.preventDefault();
         setHelpOpen((o) => !o);
@@ -196,7 +211,8 @@ export function App() {
       } else if (e.key === 'Enter') {
         if (tag === 'BUTTON') return; // let a focused button handle its own click
         e.preventDefault();
-        if (index < 0) go(1); // overview → begin review
+        if (index < 0)
+          go(1); // overview → begin review
         else markViewedNext();
       } else if (e.key === 'Escape') markUnread();
       else if (e.key === 'n' || e.key === 'j') go(1);
@@ -212,7 +228,17 @@ export function App() {
     }
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [go, gotoUnviewed, toggleFlag, markViewedNext, markUnread, helpOpen, submitOpen, index]);
+  }, [
+    go,
+    gotoUnviewed,
+    toggleFlag,
+    markViewedNext,
+    markUnread,
+    helpOpen,
+    submitOpen,
+    reviewsOpen,
+    index,
+  ]);
 
   const commentedIds = useMemo(
     () => [...new Set((state?.comments ?? []).map((c) => c.chunk_id))],
@@ -237,7 +263,9 @@ export function App() {
     );
   }
 
-  const chunkComments = chunk ? state.comments.filter((c) => c.chunk_id === chunk.id) : [];
+  const chunkComments = chunk
+    ? state.comments.filter((c) => c.chunk_id === chunk.id)
+    : [];
   const isFlagged = chunk ? state.flagged.includes(chunk.id) : false;
   const isViewed = chunk ? state.viewed.includes(chunk.id) : false;
 
@@ -288,6 +316,7 @@ export function App() {
         submitted={!!state.submitted}
         onJump={jump}
         onOpenHelp={() => setHelpOpen(true)}
+        onOpenReviews={() => setReviewsOpen(true)}
         onSubmit={() => setSubmitOpen(true)}
       />
 
@@ -310,7 +339,9 @@ export function App() {
                 comments={chunkComments}
                 anchor={anchor}
                 onSelectLine={selectLine}
-                onDeleteComment={(id) => void dispatch({ type: 'delete_comment', id })}
+                onDeleteComment={(id) =>
+                  void dispatch({ type: 'delete_comment', id })
+                }
                 ai={aiPanel}
               />
             ) : (
@@ -349,7 +380,28 @@ export function App() {
         />
       )}
 
-      <HelpOverlay open={helpOpen} onClose={() => setHelpOpen(false)} isMac={IS_MAC} />
+      <HelpOverlay
+        open={helpOpen}
+        onClose={() => setHelpOpen(false)}
+        isMac={IS_MAC}
+      />
+      <ReviewsMenu
+        open={reviewsOpen}
+        currentPr={review.pr}
+        onClose={() => setReviewsOpen(false)}
+        onSwitched={(nextReview, nextState) => {
+          claudeCloseRef.current?.();
+          claudeCloseRef.current = null;
+          setReview(nextReview);
+          setState(nextState);
+          setIndex(-1);
+          setDir(1);
+          setDrafts({});
+          setAnchor(null);
+          setStreaming(null);
+          setClaudeError(null);
+        }}
+      />
       <SubmitModal
         open={submitOpen}
         onClose={() => setSubmitOpen(false)}
