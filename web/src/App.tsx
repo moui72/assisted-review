@@ -12,6 +12,7 @@ import {
   type ReviewState,
 } from './api.ts';
 import { ReviewsMenu } from './components/ReviewsMenu.tsx';
+import { Splash } from './components/Splash.tsx';
 import type { Anchor } from './diff.ts';
 import type { DisplayNote } from './components/AiCommentary.tsx';
 import { TopNav } from './components/TopNav.tsx';
@@ -33,6 +34,7 @@ const IS_MAC = /mac|iphone|ipad/i.test(navigator.userAgent);
 export function App() {
   const [review, setReview] = useState<Review | null>(null);
   const [state, setState] = useState<ReviewState | null>(null);
+  const [loaded, setLoaded] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [index, setIndex] = useState(-1); // -1 = overview page; 0..N-1 = chunks
   const [dir, setDir] = useState(1);
@@ -56,9 +58,12 @@ export function App() {
       .then(([r, s]) => {
         setReview(r);
         setState(s);
-        const i = Number(new URLSearchParams(window.location.search).get('i'));
-        if (Number.isInteger(i) && i >= 1 && i <= r.chunks.length)
-          setIndex(i - 1);
+        setLoaded(true);
+        if (r) {
+          const i = Number(new URLSearchParams(window.location.search).get('i'));
+          if (Number.isInteger(i) && i >= 1 && i <= r.chunks.length)
+            setIndex(i - 1);
+        }
       })
       .catch((e: unknown) =>
         setError(e instanceof Error ? e.message : String(e)),
@@ -253,6 +258,16 @@ export function App() {
     );
   }
   if (!review || !state) {
+    if (loaded) {
+      return (
+        <Splash
+          onOpened={(r, s) => {
+            setReview(r);
+            setState(s);
+          }}
+        />
+      );
+    }
     return (
       <div className="flex h-full flex-col items-center justify-center gap-5 bg-bg">
         <Logo className="h-20 w-auto text-fg/80" />
@@ -398,6 +413,15 @@ export function App() {
           setDir(1);
           setDrafts({});
           setAnchor(null);
+          setStreaming(null);
+          setClaudeError(null);
+        }}
+        onCleared={() => {
+          claudeCloseRef.current?.();
+          claudeCloseRef.current = null;
+          setReview(null);
+          setState(null);
+          setReviewsOpen(false);
           setStreaming(null);
           setClaudeError(null);
         }}

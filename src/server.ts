@@ -93,8 +93,8 @@ async function serveStatic(
 }
 
 export interface AppContext {
-  review: Review;
-  state: ReviewState;
+  review: Review | null;
+  state: ReviewState | null;
 }
 
 export interface StartOptions {
@@ -131,18 +131,39 @@ export function startServer(
   ): Promise<void> {
     const url = new URL(req.url ?? '/', `http://${host}`);
 
-    if (url.pathname === '/api/review') return sendJson(res, 200, ctx.review);
-    if (url.pathname === '/api/state') return sendJson(res, 200, ctx.state);
+    if (url.pathname === '/api/review') {
+      if (req.method === 'GET') {
+        if (!ctx.review) { res.writeHead(204); res.end(); return; }
+        return sendJson(res, 200, ctx.review);
+      }
+      if (req.method === 'DELETE') {
+        currentCancel?.();
+        currentCancel = null;
+        if (ctx.review) await deleteReview(ctx.review.pr).catch(() => {});
+        ctx.review = null;
+        ctx.state = null;
+        return sendJson(res, 200, { ok: true });
+      }
+    }
+    if (url.pathname === '/api/state') {
+      if (!ctx.state) { res.writeHead(204); res.end(); return; }
+      return sendJson(res, 200, ctx.state);
+    }
 
     if (url.pathname === '/api/action' && req.method === 'POST') {
+      const { review, state } = ctx;
+      if (!review || !state) return sendJson(res, 503, { error: 'no active review' });
       const action = JSON.parse(await readBody(req)) as Action;
-      ctx.state = applyAction(ctx.state, action);
-      await saveState(ctx.state);
-      return sendJson(res, 200, ctx.state);
+      const nextState = applyAction(state, action);
+      ctx.state = nextState;
+      await saveState(nextState);
+      return sendJson(res, 200, nextState);
     }
 
     // Publish drafted comments as a real GitHub PR review.
     if (url.pathname === '/api/submit' && req.method === 'POST') {
+      const { review, state } = ctx;
+      if (!review || !state) return sendJson(res, 503, { error: 'no active review' });
       const { verdict, body } = JSON.parse(await readBody(req)) as {
         verdict?: string;
         body?: string;
@@ -153,33 +174,29 @@ export function startServer(
           error: `verdict must be one of ${VERDICTS.join(', ')}`,
         });
       }
-      if (ctx.state.submitted) {
+      if (state.submitted) {
         return sendJson(res, 410, {
           ok: false,
           error: 'this review was already submitted',
         });
       }
       const payload = buildReviewPayload(
-        ctx.review.chunks,
-        ctx.state.comments,
+        review.chunks,
+        state.comments,
         verdict as Verdict,
         body ?? '',
-        ctx.state.head_sha,
+        state.head_sha,
       );
-      const result = await submitReview(ctx.review.pr, payload);
+      const result = await submitReview(review.pr, payload);
+      const nextState = result.ok
+        ? { ...state, submitted: { at: new Date().toISOString(), verdict, url: result.html_url } }
+        : state;
       if (result.ok) {
-        ctx.state = {
-          ...ctx.state,
-          submitted: {
-            at: new Date().toISOString(),
-            verdict,
-            url: result.html_url,
-          },
-        };
-        await saveState(ctx.state);
+        ctx.state = nextState;
+        await saveState(nextState);
       }
       const status = result.ok ? 200 : result.stale ? 409 : 502;
-      return sendJson(res, status, { ...result, state: ctx.state });
+      return sendJson(res, status, { ...result, state: nextState });
     }
 
     // List all persisted reviews (for the review picker menu).
@@ -204,7 +221,12 @@ export function startServer(
 
     // Open (fetch + load) a review and make it the active one.
     if (url.pathname === '/api/reviews/open' && req.method === 'POST') {
-      const { ref } = JSON.parse(await readBody(req)) as { ref?: string };
+      let ref: string | undefined;
+      try {
+        ({ ref } = JSON.parse(await readBody(req)) as { ref?: string });
+      } catch {
+        return sendJson(res, 400, { error: 'request body must be valid JSON' });
+      }
       if (!ref) return sendJson(res, 400, { error: 'ref is required' });
       let pr: PrRef;
       try {
@@ -228,13 +250,16 @@ export function startServer(
 
     // Server-Sent Events: stream a Claude note for a chunk (or the overview).
     if (url.pathname === '/api/claude') {
+      const { review, state: initialState } = ctx;
+      if (!review || !initialState) return sendJson(res, 503, { error: 'no active review' });
+
       const chunkId = url.searchParams.get('chunk_id') ?? '';
       const question = url.searchParams.get('q') ?? '';
       const isOverview = chunkId === OVERVIEW_ID;
 
       const chunk = isOverview
         ? null
-        : ctx.review.chunks.find((c) => c.id === chunkId);
+        : review.chunks.find((c) => c.id === chunkId);
       if (!isOverview && !chunk)
         return sendJson(res, 404, { error: 'unknown chunk' });
 
@@ -242,9 +267,9 @@ export function startServer(
       const kind: AiNoteKind = question.trim() ? 'investigation' : 'initial';
       const prompt = isOverview
         ? buildOverviewPrompt(
-            ctx.review.meta,
-            ctx.review.chunks,
-            ctx.review.overview.jira,
+            review.meta,
+            review.chunks,
+            review.overview.jira,
             question,
           )
         : buildPrompt(chunk!, kind, question);
@@ -262,16 +287,18 @@ export function startServer(
       const cancel = streamClaude(prompt, {
         onDelta: (text) => sse('delta', { text }),
         onError: (message) => {
-          currentCancel = null;
+          if (currentCancel === cancel) currentCancel = null;
           sse('error', { message });
           res.end();
         },
         onDone: (full) => {
-          currentCancel = null;
+          if (currentCancel === cancel) currentCancel = null;
+          // Guard: the review may have been cleared while the stream was in flight.
+          if (!ctx.state) { res.end(); return; }
           const { body, suggestedAction } = wantsAction
             ? splitSuggestedAction(full)
             : { body: full.trim(), suggestedAction: undefined };
-          ctx.state = applyAction(ctx.state, {
+          const nextState = applyAction(ctx.state, {
             type: 'add_note',
             chunk_id: isOverview ? OVERVIEW_ID : chunk!.id,
             kind,
@@ -279,15 +306,16 @@ export function startServer(
             body,
             suggested_action: suggestedAction,
           });
-          void saveState(ctx.state).then(() => {
-            sse('done', { state: ctx.state });
+          ctx.state = nextState;
+          void saveState(nextState).then(() => {
+            sse('done', { state: nextState });
             res.end();
           });
         },
       });
       currentCancel = cancel;
       req.on('close', () => {
-        currentCancel = null;
+        if (currentCancel === cancel) currentCancel = null;
         cancel();
       });
       return;

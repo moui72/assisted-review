@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import {
+  clearActiveReview,
   deleteReview,
   fetchReviews,
   openReview,
@@ -37,17 +38,20 @@ export function ReviewsMenu({
   currentPr,
   onClose,
   onSwitched,
+  onCleared,
 }: {
   open: boolean;
   currentPr: PrRef;
   onClose: () => void;
   onSwitched: (review: Review, state: ReviewState) => void;
+  onCleared: () => void;
 }) {
   const [reviews, setReviews] = useState<ReviewSummary[] | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [opening, setOpening] = useState(false);
   const [openError, setOpenError] = useState<string | null>(null);
   const [ref, setRef] = useState('');
+  const [confirming, setConfirming] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -64,6 +68,9 @@ export function ReviewsMenu({
   if (!open) return null;
 
   const currentKey = prKey(currentPr);
+  const currentSummary = reviews?.find((r) => prKey(r.pr) === currentKey) ?? null;
+  const confirmLabel = currentSummary ? prLabel(currentSummary) : currentKey;
+  const switchTarget = reviews?.find((r) => prKey(r.pr) !== currentKey) ?? null;
 
   const handleOpen = async (refToOpen: string) => {
     if (!refToOpen.trim() || opening) return;
@@ -91,7 +98,34 @@ export function ReviewsMenu({
         (prev) => prev?.filter((r) => prKey(r.pr) !== prKey(pr)) ?? null,
       );
     } catch {
-      // Best-effort; if it's the current PR the file may not exist yet
+      // Best-effort: delete failures are non-fatal, list is already updated optimistically
+    }
+  };
+
+  const handleConfirmDismiss = async () => {
+    setConfirming(false);
+    if (switchTarget) {
+      // Switch to next review, then delete the current one.
+      setOpening(true);
+      setOpenError(null);
+      try {
+        const result = await openReview(prKey(switchTarget.pr));
+        if (result.review && result.state) {
+          await deleteReview(currentPr).catch(() => {});
+          onSwitched(result.review, result.state);
+          onClose();
+        } else {
+          setOpenError('Failed to switch reviews');
+        }
+      } catch (e) {
+        setOpenError(e instanceof Error ? e.message : String(e));
+      } finally {
+        setOpening(false);
+      }
+    } else {
+      // No other reviews — clear the session entirely.
+      await clearActiveReview().catch(() => {});
+      onCleared();
     }
   };
 
@@ -210,8 +244,12 @@ export function ReviewsMenu({
                           </button>
                         )}
                         <button
-                          onClick={() => void handleDismiss(r.pr)}
-                          disabled={opening}
+                          onClick={() =>
+                            isCurrent
+                              ? setConfirming(true)
+                              : void handleDismiss(r.pr)
+                          }
+                          disabled={opening || (isCurrent && confirming)}
                           title="Remove from list"
                           className="rounded border border-edge-strong px-2 py-0.5 text-[11.5px] text-muted transition hover:border-red-400/40 hover:text-red-300 disabled:opacity-40"
                         >
@@ -225,6 +263,46 @@ export function ReviewsMenu({
             )}
           </div>
         </div>
+
+        {/* Confirmation footer for deleting the current review */}
+        {confirming && (
+          <div className="border-t border-edge px-5 py-4">
+            <p className="text-[13px] font-medium text-fg">
+              Delete{' '}
+              <span className="text-red-300">"{confirmLabel}"</span>?
+            </p>
+            <p className="mt-0.5 text-[12px] text-muted">
+              {switchTarget
+                ? `You'll be switched to "${prLabel(switchTarget)}".`
+                : 'No other reviews. Your current session will end.'}
+            </p>
+            {openError && (
+              <ErrorBanner className="mt-2 py-1.5 text-[12px]">
+                {openError}
+              </ErrorBanner>
+            )}
+            <div className="mt-3 flex justify-end gap-2">
+              <button
+                onClick={() => setConfirming(false)}
+                disabled={opening}
+                className="rounded border border-edge-strong px-3 py-1 text-[12px] text-muted transition hover:text-fg disabled:opacity-40"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => void handleConfirmDismiss()}
+                disabled={opening}
+                className="rounded border border-red-400/40 bg-red-400/10 px-3 py-1 text-[12px] text-red-300 transition hover:bg-red-400/20 disabled:opacity-40"
+              >
+                {opening
+                  ? switchTarget
+                    ? 'Switching…'
+                    : 'Deleting…'
+                  : 'Delete'}
+              </button>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

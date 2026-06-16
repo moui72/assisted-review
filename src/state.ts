@@ -16,9 +16,9 @@ import { randomUUID } from 'node:crypto';
 import type {
   Action,
   DraftComment,
-  PrMeta,
   PrRef,
   ReviewState,
+  ReviewSummary,
   StoredNote,
 } from './types.js';
 import { STATE_VERSION } from './types.js';
@@ -137,17 +137,6 @@ export function applyAction(state: ReviewState, action: Action): ReviewState {
     default:
       return state;
   }
-}
-
-export interface ReviewSummary {
-  pr: PrRef;
-  meta?: PrMeta;
-  head_sha: string;
-  started_at: string;
-  comment_count: number;
-  flagged_count: number;
-  viewed_count: number;
-  submitted?: { at: string; verdict: string; url?: string };
 }
 
 export async function listReviews(): Promise<ReviewSummary[]> {

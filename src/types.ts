@@ -141,6 +141,17 @@ export interface ReviewState {
   submitted?: { at: string; verdict: string; url?: string };
 }
 
+export interface ReviewSummary {
+  pr: PrRef;
+  meta?: PrMeta;
+  head_sha: string;
+  started_at: string;
+  comment_count: number;
+  flagged_count: number;
+  viewed_count: number;
+  submitted?: { at: string; verdict: string; url?: string };
+}
+
 /** Mutations the UI POSTs to /api/action (and that the Claude route applies). */
 export type Action =
   | {
