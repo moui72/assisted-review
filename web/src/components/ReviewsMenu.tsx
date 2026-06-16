@@ -95,6 +95,30 @@ export function ReviewsMenu({
     }
   };
 
+  // Dismissing the active review requires switching first so the server has a
+  // valid active context; then the old state file is safe to delete.
+  const handleDismissCurrent = async () => {
+    if (!reviews) return;
+    const next = reviews.find((r) => prKey(r.pr) !== currentKey);
+    if (!next) return; // only review — button is hidden, but guard anyway
+    setOpening(true);
+    setOpenError(null);
+    try {
+      const result = await openReview(prKey(next.pr));
+      if (result.review && result.state) {
+        await deleteReview(currentPr).catch(() => {});
+        onSwitched(result.review, result.state);
+        onClose();
+      } else {
+        setOpenError('Failed to switch reviews');
+      }
+    } catch (e) {
+      setOpenError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setOpening(false);
+    }
+  };
+
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-[1px]"
@@ -209,14 +233,20 @@ export function ReviewsMenu({
                             Switch
                           </button>
                         )}
-                        <button
-                          onClick={() => void handleDismiss(r.pr)}
-                          disabled={opening}
-                          title="Remove from list"
-                          className="rounded border border-edge-strong px-2 py-0.5 text-[11.5px] text-muted transition hover:border-red-400/40 hover:text-red-300 disabled:opacity-40"
-                        >
-                          ✕
-                        </button>
+                        {(!isCurrent || reviews.length > 1) && (
+                          <button
+                            onClick={() =>
+                              isCurrent
+                                ? void handleDismissCurrent()
+                                : void handleDismiss(r.pr)
+                            }
+                            disabled={opening}
+                            title="Remove from list"
+                            className="rounded border border-edge-strong px-2 py-0.5 text-[11.5px] text-muted transition hover:border-red-400/40 hover:text-red-300 disabled:opacity-40"
+                          >
+                            ✕
+                          </button>
+                        )}
                       </div>
                     </li>
                   );
