@@ -1,5 +1,13 @@
 import { rm } from 'node:fs/promises';
-import { applyAction, loadState, migrate, saveState, statePath } from '../src/state';
+import {
+  applyAction,
+  deleteReview,
+  listReviews,
+  loadState,
+  migrate,
+  saveState,
+  statePath,
+} from '../src/state';
 import type { Action, PrRef, ReviewState } from '../src/types';
 import { STATE_VERSION } from '../src/types';
 
@@ -152,15 +160,36 @@ describe('migrate', () => {
   const pr: PrRef = { owner: 'o', repo: 'r', number: 1 };
 
   it('v0 with no notes field gets notes: [] and version stamped', () => {
-    const raw = { pr, head_sha: 'sha', started_at: '2020-01-01T00:00:00.000Z', comments: [], flagged: [], viewed: [] };
+    const raw = {
+      pr,
+      head_sha: 'sha',
+      started_at: '2020-01-01T00:00:00.000Z',
+      comments: [],
+      flagged: [],
+      viewed: [],
+    };
     const result = migrate(raw);
     expect(result.version).toBe(STATE_VERSION);
     expect(result.notes).toEqual([]);
   });
 
   it('v0 with existing notes array preserves notes', () => {
-    const note = { id: 'n1', chunk_id: 'c1', kind: 'initial' as const, body: 'hi', created_at: '2020-01-01T00:00:00.000Z' };
-    const raw = { pr, head_sha: 'sha', started_at: '2020-01-01T00:00:00.000Z', comments: [], flagged: [], viewed: [], notes: [note] };
+    const note = {
+      id: 'n1',
+      chunk_id: 'c1',
+      kind: 'initial' as const,
+      body: 'hi',
+      created_at: '2020-01-01T00:00:00.000Z',
+    };
+    const raw = {
+      pr,
+      head_sha: 'sha',
+      started_at: '2020-01-01T00:00:00.000Z',
+      comments: [],
+      flagged: [],
+      viewed: [],
+      notes: [note],
+    };
     const result = migrate(raw);
     expect(result.version).toBe(STATE_VERSION);
     expect(result.notes).toHaveLength(1);
@@ -174,7 +203,14 @@ describe('migrate', () => {
   });
 
   it('does not mutate the input object', () => {
-    const raw: Record<string, unknown> = { pr, head_sha: 'sha', started_at: '2020-01-01T00:00:00.000Z', comments: [], flagged: [], viewed: [] };
+    const raw: Record<string, unknown> = {
+      pr,
+      head_sha: 'sha',
+      started_at: '2020-01-01T00:00:00.000Z',
+      comments: [],
+      flagged: [],
+      viewed: [],
+    };
     migrate(raw);
     expect('version' in raw).toBe(false);
     expect('notes' in raw).toBe(false);
@@ -248,5 +284,113 @@ describe('loadState / saveState persistence', () => {
     const reloaded = await loadState(pr, 'new-sha');
     expect(reloaded.head_sha).toBe('new-sha');
     await cleanup(pr);
+  });
+});
+
+describe('listReviews', () => {
+  const cleanup = async (pr: PrRef) => {
+    await rm(statePath(pr), { force: true });
+  };
+
+  it('returns an empty array when no state files exist', async () => {
+    const result = await listReviews();
+    expect(Array.isArray(result)).toBe(true);
+  });
+
+  it('lists a saved review with correct summary fields', async () => {
+    const pr: PrRef = { owner: 'list-test', repo: 'repo', number: 5001 };
+    await cleanup(pr);
+    let state = await loadState(pr, 'sha-list');
+    state = applyAction(state, {
+      type: 'add_comment',
+      chunk_id: 'c1',
+      side: 'RIGHT',
+      line: 1,
+      body: 'hi',
+    });
+    state = applyAction(state, { type: 'toggle_flag', chunk_id: 'c2' });
+    state = applyAction(state, {
+      type: 'set_viewed',
+      chunk_id: 'c3',
+      viewed: true,
+    });
+    await saveState(state);
+
+    const reviews = await listReviews();
+    const found = reviews.find(
+      (r) => r.pr.owner === 'list-test' && r.pr.number === 5001,
+    );
+    expect(found).toBeDefined();
+    expect(found!.comment_count).toBe(1);
+    expect(found!.flagged_count).toBe(1);
+    expect(found!.viewed_count).toBe(1);
+    expect(found!.head_sha).toBe('sha-list');
+    await cleanup(pr);
+  });
+
+  it('includes meta when saved in state', async () => {
+    const pr: PrRef = { owner: 'list-test', repo: 'repo', number: 5002 };
+    await cleanup(pr);
+    let state = await loadState(pr, 'sha-meta');
+    state = {
+      ...state,
+      meta: {
+        title: 'My PR',
+        author: 'dev',
+        base_ref: 'main',
+        head_ref: 'feat',
+        is_draft: false,
+        url: 'http://x',
+        head_sha: 'sha-meta',
+        body: '',
+      },
+    };
+    await saveState(state);
+
+    const reviews = await listReviews();
+    const found = reviews.find((r) => r.pr.number === 5002);
+    expect(found?.meta?.title).toBe('My PR');
+    await cleanup(pr);
+  });
+
+  it('sorts reviews newest first by started_at', async () => {
+    const pr1: PrRef = { owner: 'sort-test', repo: 'r', number: 5003 };
+    const pr2: PrRef = { owner: 'sort-test', repo: 'r', number: 5004 };
+    await cleanup(pr1);
+    await cleanup(pr2);
+
+    const s1 = await loadState(pr1, 'sha1');
+    const s2 = await loadState(pr2, 'sha2');
+    // Force distinct started_at
+    await saveState({ ...s1, started_at: '2020-01-01T00:00:00.000Z' });
+    await saveState({ ...s2, started_at: '2025-01-01T00:00:00.000Z' });
+
+    const reviews = await listReviews();
+    const idx1 = reviews.findIndex((r) => r.pr.number === 5003);
+    const idx2 = reviews.findIndex((r) => r.pr.number === 5004);
+    expect(idx2).toBeLessThan(idx1); // newer (5004) comes first
+    await cleanup(pr1);
+    await cleanup(pr2);
+  });
+});
+
+describe('deleteReview', () => {
+  it('removes the state file so listReviews no longer returns it', async () => {
+    const pr: PrRef = { owner: 'del-test', repo: 'repo', number: 6001 };
+    await rm(statePath(pr), { force: true });
+    await saveState(await loadState(pr, 'sha-del'));
+
+    let found = (await listReviews()).find((r) => r.pr.number === 6001);
+    expect(found).toBeDefined();
+
+    await deleteReview(pr);
+    found = (await listReviews()).find((r) => r.pr.number === 6001);
+    expect(found).toBeUndefined();
+  });
+
+  it('throws when the file does not exist', async () => {
+    const pr: PrRef = { owner: 'del-test', repo: 'repo', number: 6002 };
+    await rm(statePath(pr), { force: true });
+    await expect(deleteReview(pr)).rejects.toThrow();
   });
 });

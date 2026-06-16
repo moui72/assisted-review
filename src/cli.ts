@@ -13,29 +13,18 @@
 import './env'; // load .env before any module reads process.env
 import { execFile } from 'node:child_process';
 import { parseRef } from './parse-ref';
-import { fetchDiff, fetchMeta } from './fetch';
-import { chunksFromDiff } from './parse-diff';
-import { attachMockNotes } from './mock-ai';
 import { startServer } from './server';
-import { loadState } from './state';
-import { buildJiraContext, extractIssueKeys } from './jira';
-import type { JiraContext, Review } from './types';
-
-// Don't let a slow/unreachable Jira hold up startup.
-async function jiraWithTimeout(keys: string[], ms = 12000): Promise<JiraContext> {
-  return Promise.race([
-    buildJiraContext(keys),
-    new Promise<JiraContext>((resolve) =>
-      setTimeout(() => resolve({ available: false, reason: 'Jira request timed out', keys, issues: [] }), ms),
-    ),
-  ]);
-}
+import { saveState } from './state';
+import { loadReview } from './review';
+import type { Review, ReviewState } from './types';
 
 function openBrowser(url: string): void {
   const [cmd, args]: [string, string[]] =
-    process.platform === 'darwin' ? ['open', [url]] :
-    process.platform === 'win32'  ? ['cmd', ['/c', 'start', '', url]] :
-                                    ['xdg-open', [url]];
+    process.platform === 'darwin'
+      ? ['open', [url]]
+      : process.platform === 'win32'
+        ? ['cmd', ['/c', 'start', '', url]]
+        : ['xdg-open', [url]];
   execFile(cmd, args, () => {});
 }
 
@@ -63,7 +52,9 @@ function parseArgs(argv: string[]): {
 }
 
 async function main(): Promise<void> {
-  const { ref, noOpen, apiOnly, mockAi, port } = parseArgs(process.argv.slice(2));
+  const { ref, noOpen, apiOnly, mockAi, port } = parseArgs(
+    process.argv.slice(2),
+  );
 
   let pr;
   try {
@@ -75,14 +66,12 @@ async function main(): Promise<void> {
   }
 
   console.error(`Fetching ${pr.owner}/${pr.repo}#${pr.number} ...`);
-  let review: Review;
+  let review: Review, state: ReviewState;
   try {
-    const [diffText, meta] = await Promise.all([fetchDiff(pr), fetchMeta(pr)]);
-    let chunks = chunksFromDiff(diffText);
-    if (mockAi) chunks = attachMockNotes(chunks);
-
-    const keys = extractIssueKeys(meta.title, meta.head_ref, meta.body);
-    const jira = await jiraWithTimeout(keys);
+    ({ review, state } = await loadReview(pr, { mockAi }));
+    console.error(`Parsed ${review.chunks.length} chunk(s) across the diff.`);
+    const jira = review.overview.jira;
+    const keys = jira.keys;
     if (keys.length) {
       console.error(
         jira.available
@@ -90,30 +79,27 @@ async function main(): Promise<void> {
           : `Jira: unavailable (${jira.reason}). Overview will show a setup banner.`,
       );
     }
-
-    review = {
-      pr,
-      meta,
-      chunks,
-      overview: { jira },
-      generated_at: new Date().toISOString(),
-    };
-    console.error(`Parsed ${chunks.length} chunk(s) across the diff.`);
   } catch (err) {
     console.error(`error: failed to fetch/parse PR: ${(err as Error).message}`);
-    console.error('hint: is `gh` installed and authenticated? try `gh auth status`.');
+    console.error(
+      'hint: is `gh` installed and authenticated? try `gh auth status`.',
+    );
     process.exit(1);
   }
 
-  const state = await loadState(review.pr, review.meta.head_sha);
-  const priorCount = state.comments.length + state.flagged.length + state.viewed.length;
+  const priorCount =
+    state.comments.length + state.flagged.length + state.viewed.length;
   if (priorCount > 0) {
     console.error(
       `Resumed state: ${state.comments.length} comment(s), ${state.flagged.length} flagged, ${state.viewed.length} viewed.`,
     );
   }
+  await saveState(state);
 
-  const { url } = await startServer({ review, state }, { port, serveUi: !apiOnly });
+  const { url } = await startServer(
+    { review, state },
+    { port, serveUi: !apiOnly, mockAi },
+  );
 
   if (apiOnly) {
     console.error(`\n  assisted-review API serving at ${url}/api/review`);

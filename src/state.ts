@@ -4,12 +4,27 @@
 
 import { homedir } from 'node:os';
 import { join } from 'node:path';
-import { mkdir, readFile, writeFile, rename } from 'node:fs/promises';
+import {
+  mkdir,
+  readFile,
+  writeFile,
+  rename,
+  unlink,
+  readdir,
+} from 'node:fs/promises';
 import { randomUUID } from 'node:crypto';
-import type { Action, DraftComment, PrRef, ReviewState, StoredNote } from './types';
+import type {
+  Action,
+  DraftComment,
+  PrMeta,
+  PrRef,
+  ReviewState,
+  StoredNote,
+} from './types';
 import { STATE_VERSION } from './types';
 
-const STATE_DIR = process.env.ASSISTED_REVIEW_STATE_DIR || join(homedir(), '.assisted-review');
+const STATE_DIR =
+  process.env.ASSISTED_REVIEW_STATE_DIR || join(homedir(), '.assisted-review');
 
 function statePath(pr: PrRef): string {
   return join(STATE_DIR, `${pr.owner}-${pr.repo}-${pr.number}.json`);
@@ -40,7 +55,10 @@ export function migrate(raw: unknown): ReviewState {
   return s as unknown as ReviewState;
 }
 
-export async function loadState(pr: PrRef, headSha: string): Promise<ReviewState> {
+export async function loadState(
+  pr: PrRef,
+  headSha: string,
+): Promise<ReviewState> {
   try {
     const raw = await readFile(statePath(pr), 'utf8');
     const state = migrate(JSON.parse(raw));
@@ -84,7 +102,10 @@ export function applyAction(state: ReviewState, action: Action): ReviewState {
         ),
       };
     case 'delete_comment':
-      return { ...state, comments: state.comments.filter((c) => c.id !== action.id) };
+      return {
+        ...state,
+        comments: state.comments.filter((c) => c.id !== action.id),
+      };
     case 'toggle_flag':
       return {
         ...state,
@@ -116,6 +137,51 @@ export function applyAction(state: ReviewState, action: Action): ReviewState {
     default:
       return state;
   }
+}
+
+export interface ReviewSummary {
+  pr: PrRef;
+  meta?: PrMeta;
+  head_sha: string;
+  started_at: string;
+  comment_count: number;
+  flagged_count: number;
+  viewed_count: number;
+  submitted?: { at: string; verdict: string; url?: string };
+}
+
+export async function listReviews(): Promise<ReviewSummary[]> {
+  try {
+    const files = await readdir(STATE_DIR);
+    const summaries: ReviewSummary[] = [];
+    for (const f of files) {
+      if (!f.endsWith('.json') || f.endsWith('.tmp.json')) continue;
+      try {
+        const raw = await readFile(join(STATE_DIR, f), 'utf8');
+        const state = migrate(JSON.parse(raw) as unknown) as ReviewState;
+        if (!state.pr) continue;
+        summaries.push({
+          pr: state.pr,
+          meta: state.meta,
+          head_sha: state.head_sha,
+          started_at: state.started_at,
+          comment_count: state.comments.length,
+          flagged_count: state.flagged.length,
+          viewed_count: state.viewed.length,
+          submitted: state.submitted,
+        });
+      } catch {
+        // Skip unparseable or malformed files
+      }
+    }
+    return summaries.sort((a, b) => b.started_at.localeCompare(a.started_at));
+  } catch {
+    return [];
+  }
+}
+
+export async function deleteReview(pr: PrRef): Promise<void> {
+  await unlink(statePath(pr));
 }
 
 export { statePath };

@@ -1,4 +1,11 @@
-import type { Action, Review, ReviewState, Verdict } from '../../src/types.ts';
+import type {
+  Action,
+  PrMeta,
+  PrRef,
+  Review,
+  ReviewState,
+  Verdict,
+} from '../../src/types.ts';
 
 export async function fetchReview(): Promise<Review> {
   const res = await fetch('/api/review');
@@ -31,7 +38,10 @@ export interface SubmitResponse {
 }
 
 /** Publish the drafted comments as a real GitHub PR review. */
-export async function submitReview(verdict: Verdict, body: string): Promise<SubmitResponse> {
+export async function submitReview(
+  verdict: Verdict,
+  body: string,
+): Promise<SubmitResponse> {
   const res = await fetch('/api/submit', {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
@@ -86,6 +96,45 @@ export function streamClaude(
   });
 
   return close;
+}
+
+export interface ReviewSummary {
+  pr: PrRef;
+  meta?: PrMeta;
+  head_sha: string;
+  started_at: string;
+  comment_count: number;
+  flagged_count: number;
+  viewed_count: number;
+  submitted?: { at: string; verdict: string; url?: string };
+}
+
+export async function fetchReviews(): Promise<ReviewSummary[]> {
+  const res = await fetch('/api/reviews');
+  if (!res.ok) throw new Error(`/api/reviews returned ${res.status}`);
+  return (await res.json()) as ReviewSummary[];
+}
+
+export async function deleteReview(pr: PrRef): Promise<void> {
+  const res = await fetch(`/api/reviews/${pr.owner}/${pr.repo}/${pr.number}`, {
+    method: 'DELETE',
+  });
+  if (!res.ok) throw new Error(`DELETE /api/reviews returned ${res.status}`);
+}
+
+export interface OpenReviewResponse {
+  review?: Review;
+  state?: ReviewState;
+  error?: string;
+}
+
+export async function openReview(ref: string): Promise<OpenReviewResponse> {
+  const res = await fetch('/api/reviews/open', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ ref }),
+  });
+  return (await res.json()) as OpenReviewResponse;
 }
 
 export { OVERVIEW_ID, VERDICTS } from '../../src/types.ts';

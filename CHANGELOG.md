@@ -10,6 +10,13 @@ See [ROADMAP.md](./ROADMAP.md) for what's planned next.
 
 ### Added
 
+- **Review picker & launch from UI.** A "Reviews" button in the top-nav opens a
+  modal that lists all saved reviews (showing PR title, ref, and progress at a
+  glance), lets you switch to any of them without restarting the server, dismiss
+  (delete) ones you no longer want, and open a brand-new review by pasting an
+  `owner/repo#N` ref or PR URL. PR metadata is now cached in the state file so
+  titles are available without re-fetching. Switching cancels any in-flight Claude
+  stream to prevent stale notes from landing in the wrong review's state.
 - **Global install.** Packaged for `npm i -g github:moui72/assisted-review`: a
   `prepare` hook builds the server + UI on install, `files` ships `build/` + `dist/`,
   and the `build` script is package-manager-agnostic so the install doesn't require

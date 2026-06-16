@@ -95,7 +95,11 @@ export type Side = 'RIGHT' | 'LEFT';
 
 /** GitHub PR review events. */
 export type Verdict = 'APPROVE' | 'COMMENT' | 'REQUEST_CHANGES';
-export const VERDICTS: readonly Verdict[] = ['APPROVE', 'COMMENT', 'REQUEST_CHANGES'];
+export const VERDICTS: readonly Verdict[] = [
+  'APPROVE',
+  'COMMENT',
+  'REQUEST_CHANGES',
+];
 
 /** A reviewer's drafted comment. A null anchor = comment on the whole chunk. */
 export interface DraftComment {
@@ -125,6 +129,8 @@ export const STATE_VERSION = 1;
 export interface ReviewState {
   version: number;
   pr: PrRef;
+  /** Cached PR metadata so the reviews listing can show titles without re-fetching. */
+  meta?: PrMeta;
   head_sha: string;
   started_at: string;
   comments: DraftComment[];
@@ -137,7 +143,13 @@ export interface ReviewState {
 
 /** Mutations the UI POSTs to /api/action (and that the Claude route applies). */
 export type Action =
-  | { type: 'add_comment'; chunk_id: string; side: Side | null; line: number | null; body: string }
+  | {
+      type: 'add_comment';
+      chunk_id: string;
+      side: Side | null;
+      line: number | null;
+      body: string;
+    }
   | { type: 'update_comment'; id: string; body: string }
   | { type: 'delete_comment'; id: string }
   | { type: 'toggle_flag'; chunk_id: string }
