@@ -204,7 +204,12 @@ export function startServer(
 
     // Open (fetch + load) a review and make it the active one.
     if (url.pathname === '/api/reviews/open' && req.method === 'POST') {
-      const { ref } = JSON.parse(await readBody(req)) as { ref?: string };
+      let ref: string | undefined;
+      try {
+        ({ ref } = JSON.parse(await readBody(req)) as { ref?: string });
+      } catch {
+        return sendJson(res, 400, { error: 'request body must be valid JSON' });
+      }
       if (!ref) return sendJson(res, 400, { error: 'ref is required' });
       let pr: PrRef;
       try {
@@ -262,12 +267,12 @@ export function startServer(
       const cancel = streamClaude(prompt, {
         onDelta: (text) => sse('delta', { text }),
         onError: (message) => {
-          currentCancel = null;
+          if (currentCancel === cancel) currentCancel = null;
           sse('error', { message });
           res.end();
         },
         onDone: (full) => {
-          currentCancel = null;
+          if (currentCancel === cancel) currentCancel = null;
           const { body, suggestedAction } = wantsAction
             ? splitSuggestedAction(full)
             : { body: full.trim(), suggestedAction: undefined };
@@ -287,7 +292,7 @@ export function startServer(
       });
       currentCancel = cancel;
       req.on('close', () => {
-        currentCancel = null;
+        if (currentCancel === cancel) currentCancel = null;
         cancel();
       });
       return;

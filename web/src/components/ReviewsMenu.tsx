@@ -91,7 +91,7 @@ export function ReviewsMenu({
         (prev) => prev?.filter((r) => prKey(r.pr) !== prKey(pr)) ?? null,
       );
     } catch {
-      // Best-effort; if it's the current PR the file may not exist yet
+      // Best-effort: delete failures are non-fatal, list is already updated optimistically
     }
   };
 

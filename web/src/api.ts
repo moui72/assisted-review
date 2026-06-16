@@ -1,9 +1,9 @@
 import type {
   Action,
-  PrMeta,
   PrRef,
   Review,
   ReviewState,
+  ReviewSummary,
   Verdict,
 } from '../../src/types.ts';
 
@@ -98,17 +98,6 @@ export function streamClaude(
   return close;
 }
 
-export interface ReviewSummary {
-  pr: PrRef;
-  meta?: PrMeta;
-  head_sha: string;
-  started_at: string;
-  comment_count: number;
-  flagged_count: number;
-  viewed_count: number;
-  submitted?: { at: string; verdict: string; url?: string };
-}
-
 export async function fetchReviews(): Promise<ReviewSummary[]> {
   const res = await fetch('/api/reviews');
   if (!res.ok) throw new Error(`/api/reviews returned ${res.status}`);
@@ -134,11 +123,13 @@ export async function openReview(ref: string): Promise<OpenReviewResponse> {
     headers: { 'content-type': 'application/json' },
     body: JSON.stringify({ ref }),
   });
-  return (await res.json()) as OpenReviewResponse;
+  const data = (await res.json()) as OpenReviewResponse;
+  if (!res.ok) throw new Error(data.error ?? `/api/reviews/open returned ${res.status}`);
+  return data;
 }
 
 export { OVERVIEW_ID, VERDICTS } from '../../src/types.ts';
-export type { Verdict } from '../../src/types.ts';
+export type { Verdict, ReviewSummary } from '../../src/types.ts';
 export type { Review };
 export type {
   Chunk,
