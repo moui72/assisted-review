@@ -53,4 +53,10 @@ describe('highlightLine', () => {
   it('does not throw on input that does not fully parse', () => {
     expect(() => highlightLine('const ( ] unterminated', 'typescript')).not.toThrow();
   });
+
+  it('falls back to HTML-escaped output when hljs throws (unknown language)', () => {
+    // hljs throws for unknown language names; the catch block returns escaped plain text.
+    const result = highlightLine('a < b', '__not_a_real_language__');
+    expect(result).toBe('a &lt; b');
+  });
 });

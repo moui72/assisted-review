@@ -186,6 +186,127 @@ describe('parseDiff', () => {
     expect(hunks.every((h) => h.file === 'f.ts')).toBe(true);
   });
 
+  it('binary file with extra lines after the marker skips them', () => {
+    const diff = [
+      'diff --git a/img.png b/img.png',
+      'Binary files a/img.png and b/img.png differ',
+      'some trailing metadata line',
+    ].join('\n');
+    const hunks = parseDiff(diff);
+    expect(hunks).toHaveLength(0);
+  });
+
+  it('unexpected line inside a hunk ends the hunk and continues', () => {
+    const diff = [
+      'diff --git a/f.ts b/f.ts',
+      '--- a/f.ts',
+      '+++ b/f.ts',
+      '@@ -1,2 +1,2 @@',
+      '-old',
+      'UNEXPECTED',
+      '+new',
+    ].join('\n');
+    // The hunk is finalized before UNEXPECTED, so c1 has only the -old line;
+    // UNEXPECTED and +new are then outside any hunk and skipped/warned.
+    const hunks = parseDiff(diff);
+    expect(hunks).toHaveLength(1);
+    expect(hunks[0].diff).toContain('-old');
+    expect(hunks[0].diff).not.toContain('UNEXPECTED');
+  });
+
+  it('blank line between sections outside a hunk is silently skipped', () => {
+    const diff = [
+      'diff --git a/f.ts b/f.ts',
+      '',
+      '--- a/f.ts',
+      '+++ b/f.ts',
+      '@@ -1,1 +1,1 @@',
+      '-a',
+      '+b',
+    ].join('\n');
+    const hunks = parseDiff(diff);
+    expect(hunks).toHaveLength(1);
+  });
+
+  it('unrecognized line outside a hunk emits a warning and is skipped', () => {
+    const warnSpy = vi.spyOn(console, 'error');
+    const diff = [
+      'diff --git a/f.ts b/f.ts',
+      'totally unknown metadata',
+      '--- a/f.ts',
+      '+++ b/f.ts',
+      '@@ -1,1 +1,1 @@',
+      '-a',
+      '+b',
+    ].join('\n');
+    const hunks = parseDiff(diff);
+    expect(hunks).toHaveLength(1);
+    expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('skipping unrecognized line'));
+  });
+
+  it('hunk with no preceding path emits a warning and produces no chunk', () => {
+    const warnSpy = vi.spyOn(console, 'error');
+    const diff = ['@@ -1,1 +1,1 @@', '-a', '+b'].join('\n');
+    const hunks = parseDiff(diff);
+    expect(hunks).toHaveLength(0);
+    expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('no known file path'));
+  });
+
+  it('diff --git header without a/ prefix falls back to --- / +++ for path', () => {
+    const diff = [
+      'diff --git old.ts new.ts',
+      '--- a/actual.ts',
+      '+++ b/actual.ts',
+      '@@ -1,1 +1,1 @@',
+      '-a',
+      '+b',
+    ].join('\n');
+    const hunks = parseDiff(diff);
+    expect(hunks).toHaveLength(1);
+    expect(hunks[0].file).toBe('actual.ts');
+  });
+
+  it('--- marker without a/ prefix uses the raw path', () => {
+    // Old-style unified diffs sometimes omit the a/b/ prefix.
+    const diff = [
+      '--- path/to/file.ts',
+      '+++ path/to/file.ts',
+      '@@ -1,1 +1,1 @@',
+      '-a',
+      '+b',
+    ].join('\n');
+    const hunks = parseDiff(diff);
+    expect(hunks).toHaveLength(1);
+    expect(hunks[0].file).toBe('path/to/file.ts');
+  });
+
+  it('hunk after only a --- marker (no +++) uses the old path', () => {
+    // curNewPath stays null; finalizeHunk falls back to curOldPath.
+    const diff = [
+      '--- a/legacy.ts',
+      '@@ -1,1 +1,1 @@',
+      '-old',
+      '+new',
+    ].join('\n');
+    const hunks = parseDiff(diff);
+    expect(hunks).toHaveLength(1);
+    expect(hunks[0].file).toBe('legacy.ts');
+  });
+
+  it('--- marker with a tab-delimited timestamp strips the timestamp', () => {
+    const diff = [
+      'diff --git a/f.ts b/f.ts',
+      '--- a/f.ts\t2020-01-01 00:00:00.000000000 +0000',
+      '+++ b/f.ts',
+      '@@ -1,1 +1,1 @@',
+      '-a',
+      '+b',
+    ].join('\n');
+    const hunks = parseDiff(diff);
+    expect(hunks).toHaveLength(1);
+    expect(hunks[0].file).toBe('f.ts');
+  });
+
   it('does not leave \\r in the stored diff/body for CRLF input', () => {
     const diff = [
       'diff --git a/f.ts b/f.ts',

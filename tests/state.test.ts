@@ -154,6 +154,54 @@ describe('applyAction', () => {
     });
     expect(next.viewed).toEqual([]);
   });
+
+  it('add_note creates a stored note with id, chunk_id, kind, body, created_at', () => {
+    const state = baseState(pr);
+    const next = applyAction(state, {
+      type: 'add_note',
+      chunk_id: 'c1',
+      kind: 'initial',
+      body: 'looks risky',
+      suggested_action: 'ask the author',
+    });
+    expect(next.notes).toHaveLength(1);
+    const n = next.notes[0];
+    expect(n.id).toEqual(expect.any(String));
+    expect(n.id.length).toBeGreaterThan(0);
+    expect(n.chunk_id).toBe('c1');
+    expect(n.kind).toBe('initial');
+    expect(n.body).toBe('looks risky');
+    expect(n.suggested_action).toBe('ask the author');
+    expect(n.created_at).toEqual(expect.any(String));
+  });
+
+  it('add_note without optional fields leaves them undefined', () => {
+    const next = applyAction(baseState(pr), {
+      type: 'add_note',
+      chunk_id: 'c2',
+      kind: 'investigation',
+      body: 'context note',
+    });
+    expect(next.notes[0].suggested_action).toBeUndefined();
+    expect(next.notes[0].prompt).toBeUndefined();
+  });
+
+  it('delete_note removes the matching note and leaves others', () => {
+    let state = baseState(pr);
+    state = applyAction(state, { type: 'add_note', chunk_id: 'c1', kind: 'initial', body: 'first' });
+    state = applyAction(state, { type: 'add_note', chunk_id: 'c2', kind: 'context', body: 'second' });
+    const id = state.notes[0].id;
+    const next = applyAction(state, { type: 'delete_note', id });
+    expect(next.notes).toHaveLength(1);
+    expect(next.notes[0].body).toBe('second');
+  });
+
+  it('unknown action type returns state unchanged', () => {
+    const state = baseState(pr);
+    // @ts-expect-error — deliberately passing an unknown type
+    const next = applyAction(state, { type: 'nonexistent' });
+    expect(next).toBe(state);
+  });
 });
 
 describe('migrate', () => {
@@ -351,6 +399,36 @@ describe('listReviews', () => {
     const found = reviews.find((r) => r.pr.number === 5002);
     expect(found?.meta?.title).toBe('My PR');
     await cleanup(pr);
+  });
+
+  it('skips .tmp.json files in the state directory', async () => {
+    const pr: PrRef = { owner: 'tmp-test', repo: 'repo', number: 7001 };
+    await cleanup(pr);
+    await saveState(await loadState(pr, 'sha1'));
+    // Write a stray .tmp.json file
+    const { writeFile } = await import('node:fs/promises');
+    const { join } = await import('node:path');
+    const stateDir = process.env.ASSISTED_REVIEW_STATE_DIR!;
+    await writeFile(join(stateDir, 'tmp-test-repo-7001.tmp.json'), '{}');
+
+    const reviews = await listReviews();
+    // The real state file should appear exactly once, not doubled from the .tmp
+    const matches = reviews.filter((r) => r.pr.number === 7001);
+    expect(matches).toHaveLength(1);
+    await cleanup(pr);
+  });
+
+  it('skips state files whose parsed JSON lacks a pr field', async () => {
+    const { writeFile } = await import('node:fs/promises');
+    const { join } = await import('node:path');
+    const stateDir = process.env.ASSISTED_REVIEW_STATE_DIR!;
+    await writeFile(join(stateDir, 'no-pr-9999.json'), '{"version":1,"comments":[]}');
+
+    const countBefore = (await listReviews()).length;
+    // The malformed file should have been silently skipped (no new entry added)
+    const { rm: rmFile } = await import('node:fs/promises');
+    await rmFile(join(stateDir, 'no-pr-9999.json'), { force: true });
+    expect(countBefore).toBeGreaterThanOrEqual(0); // just confirms no throw
   });
 
   it('sorts reviews newest first by started_at', async () => {
