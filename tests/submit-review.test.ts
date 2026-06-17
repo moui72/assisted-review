@@ -19,26 +19,30 @@ const payload = (comments: ReviewPayload['comments'] = []): ReviewPayload => ({
   comments,
 });
 
-type SpawnResponse = { stdout: string; stderr: string; code: number };
+type SpawnResponse = { stdout: string; stderr: string; code: number | null };
+
+function makeChild(r: SpawnResponse) {
+  const child = Object.assign(new EventEmitter(), {
+    stdout: new EventEmitter(),
+    stderr: new EventEmitter(),
+    stdin: { write: vi.fn(), end: vi.fn() },
+  });
+  process.nextTick(() => {
+    if (r.stdout) child.stdout.emit('data', Buffer.from(r.stdout));
+    if (r.stderr) child.stderr.emit('data', Buffer.from(r.stderr));
+    child.emit('close', r.code);
+  });
+  return child as unknown as ReturnType<typeof spawn>;
+}
 
 // Configure spawn mock so each call gets the next response. Events are
 // scheduled via process.nextTick INSIDE the factory (not at setup time)
 // so listeners are registered before events fire.
 function setupSpawnMock(...responses: SpawnResponse[]) {
   let callIndex = 0;
-  vi.mocked(spawn).mockImplementation(() => {
-    const r = responses[callIndex++] ?? { stdout: '', stderr: 'no more responses', code: 1 };
-    const child = new EventEmitter() as ReturnType<typeof spawn>;
-    (child as any).stdout = new EventEmitter();
-    (child as any).stderr = new EventEmitter();
-    (child as any).stdin = { write: vi.fn(), end: vi.fn() };
-    process.nextTick(() => {
-      if (r.stdout) (child as any).stdout.emit('data', Buffer.from(r.stdout));
-      if (r.stderr) (child as any).stderr.emit('data', Buffer.from(r.stderr));
-      child.emit('close', r.code);
-    });
-    return child;
-  });
+  vi.mocked(spawn).mockImplementation(() => makeChild(
+    responses[callIndex++] ?? { stdout: '', stderr: 'no more responses', code: 1 },
+  ));
 }
 
 describe('submitReview', () => {
@@ -150,23 +154,10 @@ describe('submitReview', () => {
   });
 
   it('close event with null exit code is treated as 0', async () => {
-    // Simulate a process whose close event passes null (e.g. killed by signal but
-    // we treat it as success for this path; the ?? 0 coalesces null to 0).
-    let callIndex = 0;
-    const responses = [
-      { stdout: '{"html_url":"https://github.com/review"}', stderr: '' as string, code: null as number | null },
-    ];
-    vi.mocked(spawn).mockImplementation(() => {
-      const r = responses[callIndex++];
-      const child = new EventEmitter() as ReturnType<typeof spawn>;
-      (child as any).stdout = new EventEmitter();
-      (child as any).stderr = new EventEmitter();
-      (child as any).stdin = { write: vi.fn(), end: vi.fn() };
-      process.nextTick(() => {
-        if (r.stdout) (child as any).stdout.emit('data', Buffer.from(r.stdout));
-        child.emit('close', r.code); // emits null
-      });
-      return child;
+    setupSpawnMock({
+      stdout: '{"html_url":"https://github.com/review"}',
+      stderr: '',
+      code: null,
     });
 
     const result = await submitReview(ref, payload());
