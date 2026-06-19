@@ -1,4 +1,5 @@
 import type { Chunk, PrMeta, PrRef } from '../api.ts';
+import { useTheme } from '../theme.tsx';
 import { Logo } from './Logo.tsx';
 
 function pad(n: number) {
@@ -34,6 +35,7 @@ export function TopNav({
   onOpenReviews: () => void;
   onSubmit: () => void;
 }) {
+  const { theme, toggle } = useTheme();
   return (
     <header className="shrink-0 border-b border-edge bg-surface">
       <div className="shell flex items-center justify-between gap-6 pt-3">
@@ -91,6 +93,30 @@ export function TopNav({
             className="rounded border border-edge-strong px-2 py-0.5 font-sans text-[11.5px] text-muted transition hover:border-fg/40 hover:text-fg"
           >
             Reviews
+          </button>
+          <button
+            onClick={toggle}
+            aria-label={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+            title={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+            className="rounded border border-edge-strong p-1 text-muted transition hover:border-fg/40 hover:text-fg"
+          >
+            {theme === 'dark' ? (
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden>
+                <circle cx="12" cy="12" r="4"/>
+                <line x1="12" y1="2" x2="12" y2="5"/>
+                <line x1="12" y1="19" x2="12" y2="22"/>
+                <line x1="2" y1="12" x2="5" y2="12"/>
+                <line x1="19" y1="12" x2="22" y2="12"/>
+                <line x1="4.93" y1="4.93" x2="7.07" y2="7.07"/>
+                <line x1="16.93" y1="16.93" x2="19.07" y2="19.07"/>
+                <line x1="4.93" y1="19.07" x2="7.07" y2="16.93"/>
+                <line x1="16.93" y1="7.07" x2="19.07" y2="4.93"/>
+              </svg>
+            ) : (
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden>
+                <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+              </svg>
+            )}
           </button>
           <button
             onClick={onOpenHelp}
