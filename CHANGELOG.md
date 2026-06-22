@@ -1,3 +1,10 @@
+# [1.1.0](https://github.com/moui72/assisted-review/compare/v1.0.1...v1.1.0) (2026-06-22)
+
+
+### Features
+
+* Jira configure wizard + preload config endpoint ([#41](https://github.com/moui72/assisted-review/issues/41)) ([87cfcdd](https://github.com/moui72/assisted-review/commit/87cfcdd84fa310febb3948b22caeee90493e7cfc))
+
 ## [1.0.1](https://github.com/moui72/assisted-review/compare/v1.0.0...v1.0.1) (2026-06-22)
 
 
