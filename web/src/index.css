@@ -34,6 +34,41 @@
   --tok-var: #d7c6e6;
 }
 
+/* ── Light mode palette. Overrides :root vars; no utility regeneration needed
+   because @theme inline resolves var() at runtime. ── */
+[data-theme='light'] {
+  --bg: #f5f1e6;
+  --surface: #fdfcf8;
+  --surface-2: #eeeade;
+  --edge: #d8d3c7;
+  --edge-strong: #bdb8ac;
+  --fg: #39454f;
+  --muted: #6a7078;
+  --faint: #9ca2aa;
+  --accent: #c69a33;
+
+  /* diff tokens */
+  --add-bg: #e6f4ec;
+  --add-fg: #116329;
+  --add-gutter: #ccebd6;
+  --del-bg: #fce8ea;
+  --del-fg: #82071e;
+  --del-gutter: #f5c6cb;
+  --hunk-bg: #eceade;
+
+  /* syntax-highlight tokens */
+  --tok-comment: #7c8490;
+  --tok-keyword: #c9353d;
+  --tok-string: #2d6a9f;
+  --tok-number: #be5a00;
+  --tok-title: #6741d9;
+  --tok-attr: #be5a00;
+  --tok-type: #0064c8;
+  --tok-meta: #7c8490;
+  --tok-tag: #c9353d;
+  --tok-var: #8050b0;
+}
+
 /* highlight.js token classes → CSS vars. Backgrounds stay transparent so the
    diff add/del row colors show through. */
 .hljs-comment,

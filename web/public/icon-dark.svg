@@ -1,0 +1,22 @@
+<svg viewBox="547 48 186 186" xmlns="http://www.w3.org/2000/svg" shape-rendering="crispEdges">
+  <style>
+    svg {
+      --ar-bg:#2C353D; --ar-ink:#F7F2E2;
+      --ar-accent:#C69A33; --ar-metal:#9B9FA0;
+    }
+  </style>
+  <rect x="628" y="58" width="24" height="18" fill="var(--ar-accent,#C69A33)"/>
+  <rect x="634" y="74" width="12" height="26" fill="var(--ar-ink,#F7F2E2)"/>
+  <rect x="575" y="98" width="130" height="26" fill="var(--ar-ink,#F7F2E2)"/>
+  <rect x="583" y="123" width="114" height="26" fill="var(--ar-ink,#F7F2E2)"/>
+  <rect x="591" y="148" width="98" height="26" fill="var(--ar-ink,#F7F2E2)"/>
+  <rect x="599" y="173" width="82" height="26" fill="var(--ar-ink,#F7F2E2)"/>
+  <rect x="607" y="198" width="66" height="26" fill="var(--ar-ink,#F7F2E2)"/>
+  <rect x="602" y="136" width="28" height="28" fill="var(--ar-accent,#C69A33)"/>
+  <rect x="650" y="136" width="28" height="28" fill="var(--ar-accent,#C69A33)"/>
+  <rect x="606" y="140" width="8" height="8" fill="var(--ar-bg,#2C353D)"/>
+  <rect x="654" y="140" width="8" height="8" fill="var(--ar-bg,#2C353D)"/>
+  <rect x="620" y="198" width="10" height="12" fill="var(--ar-metal,#9B9FA0)"/>
+  <rect x="634" y="198" width="10" height="12" fill="var(--ar-metal,#9B9FA0)"/>
+  <rect x="648" y="198" width="10" height="12" fill="var(--ar-metal,#9B9FA0)"/>
+</svg>
