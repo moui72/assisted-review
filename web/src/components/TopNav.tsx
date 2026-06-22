@@ -40,7 +40,7 @@ export function TopNav({
     <header className="shrink-0 border-b border-edge bg-surface">
       <div className="shell flex items-center justify-between gap-6 pt-3">
         <div className="flex min-w-0 items-center gap-3">
-          <Logo className="h-8 w-auto shrink-0 text-fg" />
+          <Logo className="h-8 w-auto shrink-0 text-fg" variant="icon" />
           <span className="h-8 w-px shrink-0 bg-edge" aria-hidden />
           <div className="min-w-0">
             <div className="truncate text-[14px] font-medium text-fg">
