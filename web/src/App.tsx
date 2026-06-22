@@ -3,11 +3,13 @@ import { AnimatePresence, motion } from 'motion/react';
 import {
   fetchReview,
   fetchState,
+  fetchConfig,
   postAction,
   streamClaude,
   OVERVIEW_ID,
   type Action,
   type AiNoteKind,
+  type PreloadConfig,
   type Review,
   type ReviewState,
 } from './api.ts';
@@ -31,6 +33,32 @@ const SLIDE = {
 
 const IS_MAC = /mac|iphone|ipad/i.test(navigator.userAgent);
 
+function findNextPreload(
+  review: Review,
+  state: ReviewState,
+  index: number,
+  config: PreloadConfig,
+  attempted: Set<string>,
+): string | null {
+  const hasNote = (id: string) => {
+    if (state.notes.some((n) => n.chunk_id === id)) return true;
+    if (id !== OVERVIEW_ID) {
+      const c = review.chunks.find((c) => c.id === id);
+      if (c?.ai_notes?.length) return true;
+    }
+    return false;
+  };
+
+  const candidates: string[] = [];
+  if (index < 0 && config.preload_overview) candidates.push(OVERVIEW_ID);
+  for (let i = 1; i <= config.preload_chunks; i++) {
+    const ni = index + i;
+    if (ni >= 0 && ni < review.chunks.length) candidates.push(review.chunks[ni].id);
+  }
+
+  return candidates.find((id) => !attempted.has(id) && !hasNote(id)) ?? null;
+}
+
 export function App() {
   const [review, setReview] = useState<Review | null>(null);
   const [state, setState] = useState<ReviewState | null>(null);
@@ -49,11 +77,16 @@ export function App() {
     text: string;
   } | null>(null);
   const [claudeError, setClaudeError] = useState<string | null>(null);
+  const [preloadConfig, setPreloadConfig] = useState<PreloadConfig | null>(null);
+  const [preloadTick, setPreloadTick] = useState(0);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const askRef = useRef<HTMLInputElement>(null);
   const claudeCloseRef = useRef<(() => void) | null>(null);
+  const preloadCancelRef = useRef<(() => void) | null>(null);
+  const preloadAttemptedRef = useRef<Set<string>>(new Set());
 
   useEffect(() => {
+    fetchConfig().then(setPreloadConfig).catch(() => {});
     Promise.all([fetchReview(), fetchState()])
       .then(([r, s]) => {
         setReview(r);
@@ -79,6 +112,36 @@ export function App() {
     setAnchor(null);
     setClaudeError(null);
   }, [activeId]);
+
+  // Background preloading: silently request Claude notes for upcoming chunks one at a time.
+  // Driven by navigation (index), state changes (completed preloads), and preloadTick (errors).
+  useEffect(() => {
+    if (!review || !state || !preloadConfig || streaming || preloadCancelRef.current) return;
+
+    const next = findNextPreload(review, state, index, preloadConfig, preloadAttemptedRef.current);
+    if (!next) return;
+
+    preloadAttemptedRef.current.add(next);
+    const cancel = streamClaude(
+      { chunkId: next, question: '' },
+      {
+        onDelta: () => {},
+        onDone: (nextState) => {
+          preloadCancelRef.current = null;
+          setState(nextState);
+        },
+        onError: () => {
+          preloadCancelRef.current = null;
+          setPreloadTick((t) => t + 1);
+        },
+      },
+    );
+    preloadCancelRef.current = cancel;
+    return () => {
+      cancel();
+      preloadCancelRef.current = null;
+    };
+  }, [review, state, index, preloadConfig, streaming, preloadTick]);
 
   const dispatch = useCallback(async (action: Action) => {
     const next = await postAction(action);
@@ -151,6 +214,8 @@ export function App() {
   const askClaude = useCallback(
     (question: string) => {
       if (!activeId || streaming) return;
+      preloadCancelRef.current?.();
+      preloadCancelRef.current = null;
       setClaudeError(null);
       const kind: AiNoteKind = question.trim() ? 'investigation' : 'initial';
       setStreaming({ chunkId: activeId, kind, text: '' });
@@ -407,6 +472,9 @@ export function App() {
         onSwitched={(nextReview, nextState) => {
           claudeCloseRef.current?.();
           claudeCloseRef.current = null;
+          preloadCancelRef.current?.();
+          preloadCancelRef.current = null;
+          preloadAttemptedRef.current = new Set();
           setReview(nextReview);
           setState(nextState);
           setIndex(-1);
@@ -419,6 +487,9 @@ export function App() {
         onCleared={() => {
           claudeCloseRef.current?.();
           claudeCloseRef.current = null;
+          preloadCancelRef.current?.();
+          preloadCancelRef.current = null;
+          preloadAttemptedRef.current = new Set();
           setReview(null);
           setState(null);
           setReviewsOpen(false);
