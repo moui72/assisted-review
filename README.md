@@ -28,20 +28,14 @@ It is a standalone CLI: it fetches the PR with `gh`, parses the diff into chunks
 
 ### Global install
 
-Install directly from GitHub. No clone or pnpm required. Builds on install.
+Install from npm. No clone or pnpm required.
 
 ```bash
-npm i -g github:moui72/assisted-review
+npm i -g assisted-review
 assisted-review <owner/repo#N | PR URL>
 ```
 
-To update, re-run the same `npm i -g …` command. To remove, `npm uninstall -g assisted-review`.
-
-> The install builds itself from source, which needs the dev toolchain (`vite`, `tsc`).
-> npm installs those automatically for the build and prunes them afterward. If you've
-> globally set `npm config set omit=dev`, that build step can't fetch them and the
-> install fails with e.g. `vite: not found`. In that case, install with:
-> `npm i -g --include=dev github:moui72/assisted-review`
+To update: `npm update -g assisted-review`. To remove: `npm uninstall -g assisted-review`.
 
 ### From a checkout
 
