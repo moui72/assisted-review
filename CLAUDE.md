@@ -3,7 +3,7 @@
 ```
 src/        Backend TypeScript (CommonJS, compiled to build/)
 web/        Frontend — Vite + React 19 + Tailwind v4
-tests/      Jest suite (covers src/ and web/src/)
+tests/      Vitest suite (covers src/ and web/src/)
 ```
 
 Dev: backend via ts-node; Vite dev server proxies `/api` to `http://127.0.0.1:4319`.
@@ -34,6 +34,10 @@ No `tailwind.config.js` — do not create one. Theming uses CSS custom propertie
 ## External Dependencies
 
 `gh` and `claude` CLIs are required at runtime as subprocesses (not importable packages). Surface clear errors if either is absent.
+
+## Testing
+
+Keep statement and line coverage above **90%** (enforced by `vitest.config.ts` thresholds). Run `npx vitest run --coverage` to check. Coverage is measured over `src/**/*.ts` and `web/src/diff.ts` + `web/src/highlight.ts`; `src/cli.ts`, `src/setup-jira.ts`, and `src/env.ts` are excluded (untestable entry points / interactive). Use module mocks for external CLIs (`gh`, `op`, `claude`) and `node:child_process`; use `vi.spyOn(globalThis, 'fetch')` for HTTP calls.
 
 ## Domain Concepts
 
