@@ -1,3 +1,10 @@
+## [1.0.1](https://github.com/moui72/assisted-review/compare/v1.0.0...v1.0.1) (2026-06-22)
+
+
+### Bug Fixes
+
+* use icon variant of logo in TopNav for legibility ([#40](https://github.com/moui72/assisted-review/issues/40)) ([e1e1524](https://github.com/moui72/assisted-review/commit/e1e15242f859fbad4cf8dde97600b036e9f5b80a))
+
 # 1.0.0 (2026-06-22)
 
 
