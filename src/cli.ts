@@ -16,6 +16,7 @@ import { parseRef } from './parse-ref.js';
 import { startServer } from './server.js';
 import { saveState } from './state.js';
 import { loadReview } from './review.js';
+import { setupJira } from './setup-jira.js';
 import type { Review, ReviewState } from './types.js';
 
 function openBrowser(url: string): void {
@@ -52,6 +53,11 @@ function parseArgs(argv: string[]): {
 }
 
 async function main(): Promise<void> {
+  if (process.argv[2] === 'configure') {
+    await setupJira();
+    return;
+  }
+
   const { ref, noOpen, apiOnly, mockAi, port } = parseArgs(
     process.argv.slice(2),
   );
@@ -62,6 +68,7 @@ async function main(): Promise<void> {
   } catch (err) {
     console.error(`error: ${(err as Error).message}`);
     console.error('usage: assisted-review <owner/repo#N | PR URL>');
+    console.error('       assisted-review configure    (Jira setup wizard)');
     process.exit(2);
   }
 
@@ -96,9 +103,12 @@ async function main(): Promise<void> {
   }
   await saveState(state);
 
+  const preloadChunks = Number(process.env.PRELOAD_CHUNKS ?? '1');
+  const preloadOverview = process.env.PRELOAD_OVERVIEW !== 'false';
+
   const { url } = await startServer(
     { review, state },
-    { port, serveUi: !apiOnly, mockAi },
+    { port, serveUi: !apiOnly, mockAi, preloadChunks, preloadOverview },
   );
 
   if (apiOnly) {
