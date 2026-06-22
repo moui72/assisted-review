@@ -102,6 +102,8 @@ export interface StartOptions {
   host?: string;
   serveUi?: boolean;
   mockAi?: boolean;
+  preloadChunks?: number;
+  preloadOverview?: boolean;
 }
 
 export function startServer(
@@ -111,6 +113,8 @@ export function startServer(
     host = '127.0.0.1',
     serveUi = true,
     mockAi = false,
+    preloadChunks = 1,
+    preloadOverview = true,
   }: StartOptions = {},
 ): Promise<{ url: string }> {
   // Track the active Claude SSE stream cancel fn — called before switching reviews
@@ -130,6 +134,13 @@ export function startServer(
     res: ServerResponse,
   ): Promise<void> {
     const url = new URL(req.url ?? '/', `http://${host}`);
+
+    if (url.pathname === '/api/config' && req.method === 'GET') {
+      return sendJson(res, 200, {
+        preload_chunks: preloadChunks,
+        preload_overview: preloadOverview,
+      });
+    }
 
     if (url.pathname === '/api/review') {
       if (req.method === 'GET') {
@@ -328,6 +339,10 @@ export function startServer(
 
   return new Promise((resolve, reject) => {
     server.on('error', reject);
-    server.listen(port, host, () => resolve({ url: `http://${host}:${port}` }));
+    server.listen(port, host, () => {
+      const addr = server.address();
+      const boundPort = typeof addr === 'object' && addr ? addr.port : port;
+      resolve({ url: `http://${host}:${boundPort}` });
+    });
   });
 }

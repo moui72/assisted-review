@@ -105,6 +105,17 @@ export function streamClaude(
   return close;
 }
 
+export interface PreloadConfig {
+  preload_chunks: number;
+  preload_overview: boolean;
+}
+
+export async function fetchConfig(): Promise<PreloadConfig> {
+  const res = await fetch('/api/config');
+  if (!res.ok) throw new Error(`/api/config returned ${res.status}`);
+  return (await res.json()) as PreloadConfig;
+}
+
 export async function fetchReviews(): Promise<ReviewSummary[]> {
   const res = await fetch('/api/reviews');
   if (!res.ok) throw new Error(`/api/reviews returned ${res.status}`);
