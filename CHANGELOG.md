@@ -1,3 +1,10 @@
+# [1.2.0](https://github.com/moui72/assisted-review/compare/v1.1.0...v1.2.0) (2026-06-23)
+
+
+### Features
+
+* TopNav logo fix, settings panel, Jira config, and test coverage ([#42](https://github.com/moui72/assisted-review/issues/42)) ([3104b4a](https://github.com/moui72/assisted-review/commit/3104b4a3609f05e17ff3fd79310f8add17e03101))
+
 # [1.1.0](https://github.com/moui72/assisted-review/compare/v1.0.1...v1.1.0) (2026-06-22)
 
 
