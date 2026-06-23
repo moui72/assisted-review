@@ -71,7 +71,7 @@ describe('findNextPreload', () => {
     it('skips OVERVIEW_ID if a stored note already exists for it', () => {
       const review = makeReview([makeChunk('c1')]);
       const state = makeState([{ chunk_id: OVERVIEW_ID }]);
-      expect(findNextPreload(review, makeState([{ chunk_id: OVERVIEW_ID }]), -1, ON, new Set())).toBe('c1');
+      expect(findNextPreload(review, state, -1, ON, new Set())).toBe('c1');
     });
 
     it('returns chunk[0] after OVERVIEW_ID is attempted, given preload_chunks=1', () => {
