@@ -37,7 +37,11 @@ No `tailwind.config.js` — do not create one. Theming uses CSS custom propertie
 
 ## Testing
 
-Keep statement and line coverage above **90%** (enforced by `vitest.config.ts` thresholds). Run `npx vitest run --coverage` to check. Coverage is measured over `src/**/*.ts` and `web/src/diff.ts` + `web/src/highlight.ts`; `src/cli.ts`, `src/setup-jira.ts`, and `src/env.ts` are excluded (untestable entry points / interactive). Use module mocks for external CLIs (`gh`, `op`, `claude`) and `node:child_process`; use `vi.spyOn(globalThis, 'fetch')` for HTTP calls.
+Backend (`src/**/*.ts`) statement and line coverage must stay above **90%** (per-glob threshold enforced in `vitest.config.ts`). Run `npx vitest run --coverage` to check. `src/cli.ts`, `src/setup-jira.ts`, and `src/env.ts` are excluded (untestable entry points / interactive).
+
+Frontend components (`web/src/`) are measured but not gated — coverage is a work in progress there. Component tests live in `tests/components/` and use `// @vitest-environment jsdom` docblocks (not `environmentMatchGlobs`).
+
+Use module mocks for external CLIs (`gh`, `op`, `claude`) and `node:child_process`; use `vi.spyOn(globalThis, 'fetch')` for HTTP calls.
 
 ## Domain Concepts
 

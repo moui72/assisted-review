@@ -34,7 +34,7 @@ function ChipGroup<T extends string | number>({
       {options.map((o) => (
         <button
           key={o}
-          onClick={() => onChange(o)}
+          onClick={() => { if (o !== value) onChange(o); }}
           className={`rounded border px-2 py-0.5 font-mono text-[11px] transition ${
             o === value
               ? 'border-accent bg-accent/10 text-accent'
