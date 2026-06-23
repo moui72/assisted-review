@@ -13,7 +13,9 @@ import {
   type Review,
   type ReviewState,
 } from './api.ts';
+import { findNextPreload } from './preload.ts';
 import { ReviewsMenu } from './components/ReviewsMenu.tsx';
+import { SettingsPanel } from './components/SettingsPanel.tsx';
 import { Splash } from './components/Splash.tsx';
 import type { Anchor } from './diff.ts';
 import type { DisplayNote } from './components/AiCommentary.tsx';
@@ -33,31 +35,6 @@ const SLIDE = {
 
 const IS_MAC = /mac|iphone|ipad/i.test(navigator.userAgent);
 
-function findNextPreload(
-  review: Review,
-  state: ReviewState,
-  index: number,
-  config: PreloadConfig,
-  attempted: Set<string>,
-): string | null {
-  const hasNote = (id: string) => {
-    if (state.notes.some((n) => n.chunk_id === id)) return true;
-    if (id !== OVERVIEW_ID) {
-      const c = review.chunks.find((c) => c.id === id);
-      if (c?.ai_notes?.length) return true;
-    }
-    return false;
-  };
-
-  const candidates: string[] = [];
-  if (index < 0 && config.preload_overview) candidates.push(OVERVIEW_ID);
-  for (let i = 1; i <= config.preload_chunks; i++) {
-    const ni = index + i;
-    if (ni >= 0 && ni < review.chunks.length) candidates.push(review.chunks[ni].id);
-  }
-
-  return candidates.find((id) => !attempted.has(id) && !hasNote(id)) ?? null;
-}
 
 export function App() {
   const [review, setReview] = useState<Review | null>(null);
@@ -71,6 +48,7 @@ export function App() {
   const [helpOpen, setHelpOpen] = useState(false);
   const [submitOpen, setSubmitOpen] = useState(false);
   const [reviewsOpen, setReviewsOpen] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
   const [streaming, setStreaming] = useState<{
     chunkId: string;
     kind: AiNoteKind;
@@ -86,7 +64,14 @@ export function App() {
   const preloadAttemptedRef = useRef<Set<string>>(new Set());
 
   useEffect(() => {
-    fetchConfig().then(setPreloadConfig).catch(() => {});
+    fetchConfig().then((serverCfg) => {
+      const storedChunks = localStorage.getItem('ar-preload-chunks');
+      const storedOverview = localStorage.getItem('ar-preload-overview');
+      setPreloadConfig({
+        preload_chunks: storedChunks !== null ? Number(storedChunks) : serverCfg.preload_chunks,
+        preload_overview: storedOverview !== null ? storedOverview !== 'false' : serverCfg.preload_overview,
+      });
+    }).catch(() => {});
     Promise.all([fetchReview(), fetchState()])
       .then(([r, s]) => {
         setReview(r);
@@ -142,6 +127,13 @@ export function App() {
       preloadCancelRef.current = null;
     };
   }, [review, state, index, preloadConfig, streaming, preloadTick]);
+
+  const handlePreloadChange = useCallback((cfg: PreloadConfig) => {
+    localStorage.setItem('ar-preload-chunks', String(cfg.preload_chunks));
+    localStorage.setItem('ar-preload-overview', String(cfg.preload_overview));
+    setPreloadConfig(cfg);
+    preloadAttemptedRef.current = new Set();
+  }, []);
 
   const dispatch = useCallback(async (action: Action) => {
     const next = await postAction(action);
@@ -260,6 +252,10 @@ export function App() {
         if (e.key === 'Escape') setReviewsOpen(false);
         return;
       }
+      if (settingsOpen) {
+        if (e.key === 'Escape') setSettingsOpen(false);
+        return;
+      }
       if (e.key === '?') {
         e.preventDefault();
         setHelpOpen((o) => !o);
@@ -307,6 +303,7 @@ export function App() {
     helpOpen,
     submitOpen,
     reviewsOpen,
+    settingsOpen,
     index,
   ]);
 
@@ -397,6 +394,7 @@ export function App() {
         onJump={jump}
         onOpenHelp={() => setHelpOpen(true)}
         onOpenReviews={() => setReviewsOpen(true)}
+        onOpenSettings={() => setSettingsOpen(true)}
         onSubmit={() => setSubmitOpen(true)}
       />
 
@@ -464,6 +462,12 @@ export function App() {
         open={helpOpen}
         onClose={() => setHelpOpen(false)}
         isMac={IS_MAC}
+      />
+      <SettingsPanel
+        open={settingsOpen}
+        onClose={() => setSettingsOpen(false)}
+        preloadConfig={preloadConfig}
+        onPreloadChange={handlePreloadChange}
       />
       <ReviewsMenu
         open={reviewsOpen}
