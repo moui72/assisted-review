@@ -31,6 +31,12 @@ jobs:
       - name: Test with coverage
         run: pnpm test --coverage
 
+      - name: Check coverage files exist
+        if: always()
+        run: |
+          test -f coverage/coverage-summary.json || { echo "::error::coverage/coverage-summary.json missing — did tests run?"; exit 1; }
+          test -f coverage/coverage-final.json    || { echo "::error::coverage/coverage-final.json missing — did tests run?"; exit 1; }
+
       - name: Report coverage
         uses: davelosert/vitest-coverage-report-action@v2
         if: always()
