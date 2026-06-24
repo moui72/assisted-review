@@ -1,3 +1,10 @@
+## [1.2.1](https://github.com/moui72/assisted-review/compare/v1.2.0...v1.2.1) (2026-06-24)
+
+
+### Bug Fixes
+
+* destructure onOpenSettings prop in TopNav ([#44](https://github.com/moui72/assisted-review/issues/44)) ([f375f10](https://github.com/moui72/assisted-review/commit/f375f10e13b65b4ea761df838fd4a4116e5d061a))
+
 # [1.2.0](https://github.com/moui72/assisted-review/compare/v1.1.0...v1.2.0) (2026-06-23)
 
 
