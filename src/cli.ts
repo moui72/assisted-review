@@ -62,46 +62,50 @@ async function main(): Promise<void> {
     process.argv.slice(2),
   );
 
-  let pr;
-  try {
-    pr = parseRef(ref);
-  } catch (err) {
-    console.error(`error: ${(err as Error).message}`);
-    console.error('usage: assisted-review <owner/repo#N | PR URL>');
-    console.error('       assisted-review configure    (Jira setup wizard)');
-    process.exit(2);
-  }
+  let review: Review | null = null;
+  let state: ReviewState | null = null;
 
-  console.error(`Fetching ${pr.owner}/${pr.repo}#${pr.number} ...`);
-  let review: Review, state: ReviewState;
-  try {
-    ({ review, state } = await loadReview(pr, { mockAi }));
-    console.error(`Parsed ${review.chunks.length} chunk(s) across the diff.`);
-    const jira = review.overview.jira;
-    const keys = jira.keys;
-    if (keys.length) {
+  if (ref !== undefined) {
+    let pr;
+    try {
+      pr = parseRef(ref);
+    } catch (err) {
+      console.error(`error: ${(err as Error).message}`);
+      console.error('usage: assisted-review <owner/repo#N | PR URL>');
+      console.error('       assisted-review configure    (Jira setup wizard)');
+      process.exit(2);
+    }
+
+    console.error(`Fetching ${pr.owner}/${pr.repo}#${pr.number} ...`);
+    try {
+      ({ review, state } = await loadReview(pr, { mockAi }));
+      console.error(`Parsed ${review.chunks.length} chunk(s) across the diff.`);
+      const jira = review.overview.jira;
+      const keys = jira.keys;
+      if (keys.length) {
+        console.error(
+          jira.available
+            ? `Jira: linked ${jira.issues.map((i) => i.key).join(', ') || '(none fetched)'}${jira.epic ? ` · epic ${jira.epic.key}` : ''}.`
+            : `Jira: unavailable (${jira.reason}). Overview will show a setup banner.`,
+        );
+      }
+    } catch (err) {
+      console.error(`error: failed to fetch/parse PR: ${(err as Error).message}`);
       console.error(
-        jira.available
-          ? `Jira: linked ${jira.issues.map((i) => i.key).join(', ') || '(none fetched)'}${jira.epic ? ` · epic ${jira.epic.key}` : ''}.`
-          : `Jira: unavailable (${jira.reason}). Overview will show a setup banner.`,
+        'hint: is `gh` installed and authenticated? try `gh auth status`.',
+      );
+      process.exit(1);
+    }
+
+    const priorCount =
+      state!.comments.length + state!.flagged.length + state!.viewed.length;
+    if (priorCount > 0) {
+      console.error(
+        `Resumed state: ${state!.comments.length} comment(s), ${state!.flagged.length} flagged, ${state!.viewed.length} viewed.`,
       );
     }
-  } catch (err) {
-    console.error(`error: failed to fetch/parse PR: ${(err as Error).message}`);
-    console.error(
-      'hint: is `gh` installed and authenticated? try `gh auth status`.',
-    );
-    process.exit(1);
+    await saveState(state!);
   }
-
-  const priorCount =
-    state.comments.length + state.flagged.length + state.viewed.length;
-  if (priorCount > 0) {
-    console.error(
-      `Resumed state: ${state.comments.length} comment(s), ${state.flagged.length} flagged, ${state.viewed.length} viewed.`,
-    );
-  }
-  await saveState(state);
 
   const preloadChunks = Number(process.env.PRELOAD_CHUNKS ?? '1');
   const preloadOverview = process.env.PRELOAD_OVERVIEW !== 'false';
@@ -116,7 +120,7 @@ async function main(): Promise<void> {
     console.error(`  Start the UI with: pnpm dev:web  (proxies /api here)\n`);
   } else {
     console.error(`\n  assisted-review serving at ${url}`);
-    console.error(`  ${review.meta.title}`);
+    if (review) console.error(`  ${review.meta.title}`);
     console.error(`  Press Ctrl+C to stop.\n`);
     if (!noOpen) openBrowser(url);
   }
