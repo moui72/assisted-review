@@ -18,6 +18,7 @@ export function TopNav({
   onJump,
   onOpenHelp,
   onOpenReviews,
+  onOpenSettings,
   onSubmit,
 }: {
   pr: PrRef;
