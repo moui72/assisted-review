@@ -25,8 +25,17 @@ jobs:
       - name: Lint
         run: pnpm lint
 
+      - name: Build
+        run: pnpm build
+
       - name: Test with coverage
         run: pnpm test --coverage
+
+      - name: Check coverage files exist
+        if: always()
+        run: |
+          test -f coverage/coverage-summary.json || { echo "::error::coverage/coverage-summary.json missing — did tests run?"; exit 1; }
+          test -f coverage/coverage-final.json    || { echo "::error::coverage/coverage-final.json missing — did tests run?"; exit 1; }
 
       - name: Report coverage
         uses: davelosert/vitest-coverage-report-action@v2
@@ -35,3 +44,29 @@ jobs:
           json-summary-path: coverage/coverage-summary.json
           json-final-path: coverage/coverage-final.json
           name: Test Coverage
+
+  e2e:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Install Playwright browser
+        run: npx playwright install --with-deps chromium
+
+      - name: Build
+        run: pnpm build
+
+      - name: E2E smoke test
+        run: pnpm test:e2e
