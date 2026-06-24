@@ -1,3 +1,10 @@
+# [1.3.0](https://github.com/moui72/assisted-review/compare/v1.2.1...v1.3.0) (2026-06-24)
+
+
+### Features
+
+* add Playwright e2e smoke test and build check to CI ([#45](https://github.com/moui72/assisted-review/issues/45)) ([a808730](https://github.com/moui72/assisted-review/commit/a808730c9dccac5c21b5f846c0c4d93d1879a338))
+
 ## [1.2.1](https://github.com/moui72/assisted-review/compare/v1.2.0...v1.2.1) (2026-06-24)
 
 

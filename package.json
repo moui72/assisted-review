@@ -1,6 +1,6 @@
 {
   "name": "assisted-review",
-  "version": "1.2.1",
+  "version": "1.3.0",
   "description": "Standalone CLI: serve a browser UI to walk a GitHub PR hunk by hunk.",
   "type": "module",
   "packageManager": "pnpm@10.33.0",
