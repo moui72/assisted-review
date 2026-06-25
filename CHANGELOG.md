@@ -1,3 +1,11 @@
+## [Unreleased]
+
+### Added
+
+- **GitLab MR support.** Pass `namespace/repo!123` or a `gitlab.com` MR URL to review a GitLab merge request. Fetches the diff and metadata via the `glab` CLI. Submitting posts each inline comment as a separate MR discussion and (optionally) calls the approve endpoint — mirroring GitHub's single-review model as closely as the GitLab API allows. Stale-SHA protection works the same way. State files for GitLab reviews are prefixed with `gitlab-` to avoid collisions with same-named GitHub repos.
+
+---
+
 # [1.2.0](https://github.com/moui72/assisted-review/compare/v1.1.0...v1.2.0) (2026-06-23)
 
 
@@ -41,69 +49,3 @@
 * publish to npm on merge to main ([af306b5](https://github.com/moui72/assisted-review/commit/af306b5e5047d8c60ca1f572f4a04d6527d9013e))
 * review picker + launch new reviews from UI ([c30b308](https://github.com/moui72/assisted-review/commit/c30b308e887f0b2354a4569d658705e8bc2291ee)), closes [owner/repo#N](https://github.com/owner/repo/issues/N)
 
-# Changelog
-
-All notable changes to this project are recorded here. The format loosely follows
-[Keep a Changelog](https://keepachangelog.com/). The project is pre-1.0 and has not
-been released, so everything currently lives under _Unreleased_.
-
-See [ROADMAP.md](./ROADMAP.md) for what's planned next.
-
-## [Unreleased]
-
-### Added
-
-- **Review picker & launch from UI.** A "Reviews" button in the top-nav opens a
-  modal that lists all saved reviews (showing PR title, ref, and progress at a
-  glance), lets you switch to any of them without restarting the server, dismiss
-  (delete) ones you no longer want, and open a brand-new review by pasting an
-  `owner/repo#N` ref or PR URL. PR metadata is now cached in the state file so
-  titles are available without re-fetching. Switching cancels any in-flight Claude
-  stream to prevent stale notes from landing in the wrong review's state.
-- **Global install.** Packaged for `npm i -g github:moui72/assisted-review`: a
-  `prepare` hook builds the server + UI on install, `files` ships `build/` + `dist/`,
-  and the `build` script is package-manager-agnostic so the install doesn't require
-  pnpm. `npm pack --dry-run` confirms `.env` never enters the tarball.
-- **Core viewer.** Fetch a PR with `gh`, parse the diff into grouped hunks, and serve
-  a focused, paginated localhost UI — one chunk per page (less scrolling), with
-  syntax highlighting (highlight.js, including a custom Terraform/HCL grammar).
-- **Inline commenting + persisted state.** Click a line to anchor a draft comment;
-  flagged / viewed / comment state persists to `~/.assisted-review/<owner>-<repo>-<n>.json`
-  via `POST /api/action` and resumes on restart. Whole-chunk comments are supported
-  when no line is anchored.
-- **Claude bridge.** `GET /api/claude` (SSE) spawns headless
-  `claude -p --output-format stream-json` and streams token deltas to the AI panel,
-  persisting the note to state on completion. Ask a free-text question (investigation)
-  or leave it empty to get an "explain this chunk" summary; each initial chunk note
-  also surfaces a **suggested action**. Diff-grounded with tools disabled.
-- **Overview page.** A first page before the chunks: a streamed whole-PR AI summary,
-  the GH PR description (collapsible, rendered as markdown), and Jira story + epic
-  context pulled straight from the REST API. Jira is configured purely via env vars
-  (`JIRA_BASE_URL` / `JIRA_USER` / `JIRA_TOKEN`); a setup-hint banner shows when it's
-  unconfigured.
-- **Submit to GitHub.** `POST /api/submit` assembles the drafted comments into a
-  single PR review and posts it via `gh api`. Includes verdict selection
-  (Approve / Comment / Request changes), an optional summary, a stale-SHA pre-flight
-  (blocks rather than mis-anchoring after a force-push), and a submit modal that
-  reports success / stale / error states.
-- **Keyboard-driven navigation.** Paginated next/prev, jump to next/prev _unread_
-  (skipping viewed), mark viewed-and-advance, mark unread, flag, focus comment, ask
-  Claude, and a help overlay (`?`). Top-strip ticks are colored by state
-  (unviewed / viewed / commented / flagged) and clickable.
-
-### Changed
-
-- **Overview layout polish.** Renamed the description section to "GH PR description",
-  enlarged the disclosure chevron, made the Jira section collapsible (open by
-  default), and dropped the ticket body from Jira story cards (key/type/status +
-  summary only).
-- **`.env` loading via dotenv.** Replaced a hand-rolled parser with `dotenv` so the
-  `.env` file is honored whether the tool runs from source, a build, or an installed
-  `bin`. Inline `FOO=bar` still wins; a missing `.env` is a no-op.
-- **Cwd-independent config discovery.** `.env` is now resolved from a precedence
-  chain (`$DOTENV_CONFIG_PATH` → `./.env` → `~/.assisted-review/.env`) instead of the
-  current directory only, so a global install finds credentials regardless of where
-  `assisted-review` is invoked.
-- **Dependency diet.** Only `dotenv` remains a runtime dependency; the web libraries
-  (react, motion, highlight.js, react-markdown, remark-gfm, @fontsource) moved to
-  `devDependencies` since vite bundles them into `dist/` at build time.
