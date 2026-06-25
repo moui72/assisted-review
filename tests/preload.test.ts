@@ -3,7 +3,7 @@ import { OVERVIEW_ID, STATE_VERSION } from '../src/types.ts';
 import type { Chunk, PrRef, Review, ReviewState, StoredNote } from '../src/types.ts';
 import type { PreloadConfig } from '../web/src/api.ts';
 
-const pr: PrRef = { owner: 'o', repo: 'r', number: 1 };
+const pr: PrRef = { owner: 'o', repo: 'r', number: 1, platform: 'github' };
 
 function makeChunk(id: string, hasAiNote = false): Chunk {
   return {

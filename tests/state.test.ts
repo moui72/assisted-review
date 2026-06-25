@@ -23,7 +23,7 @@ const baseState = (pr: PrRef): ReviewState => ({
 });
 
 describe('applyAction', () => {
-  const pr: PrRef = { owner: 'o', repo: 'r', number: 1 };
+  const pr: PrRef = { owner: 'o', repo: 'r', number: 1, platform: 'github' as const };
 
   it('add_comment creates a comment with id, timestamps and fields', () => {
     const state = baseState(pr);
@@ -205,7 +205,7 @@ describe('applyAction', () => {
 });
 
 describe('migrate', () => {
-  const pr: PrRef = { owner: 'o', repo: 'r', number: 1 };
+  const pr: PrRef = { owner: 'o', repo: 'r', number: 1, platform: 'github' as const };
 
   it('v0 with no notes field gets notes: [] and version stamped', () => {
     const raw = {
@@ -263,6 +263,44 @@ describe('migrate', () => {
     expect('version' in raw).toBe(false);
     expect('notes' in raw).toBe(false);
   });
+
+  it('backfills platform: github on pr field when missing', () => {
+    const raw = {
+      pr: { owner: 'o', repo: 'r', number: 1 }, // no platform field
+      head_sha: 'sha',
+      started_at: '2020-01-01T00:00:00.000Z',
+      comments: [],
+      flagged: [],
+      viewed: [],
+    };
+    const result = migrate(raw);
+    expect(result.pr.platform).toBe('github');
+  });
+
+  it('does not overwrite an existing platform field', () => {
+    const glPr: PrRef = { owner: 'group/repo', repo: 'proj', number: 1, platform: 'gitlab' };
+    const state = baseState(glPr);
+    const result = migrate(state);
+    expect(result.pr.platform).toBe('gitlab');
+  });
+});
+
+describe('statePath', () => {
+  it('GitHub: produces owner-repo-number.json', () => {
+    const p = statePath({ owner: 'alice', repo: 'proj', number: 42, platform: 'github' });
+    expect(p).toMatch(/alice-proj-42\.json$/);
+    expect(p).not.toContain('gitlab');
+  });
+
+  it('GitLab: prefixes with gitlab- and encodes slashes in owner', () => {
+    const p = statePath({ owner: 'group/subteam', repo: 'proj', number: 7, platform: 'gitlab' });
+    expect(p).toMatch(/gitlab-group%2Fsubteam-proj-7\.json$/);
+  });
+
+  it('GitLab simple namespace (no slash) still prefixes with gitlab-', () => {
+    const p = statePath({ owner: 'mygroup', repo: 'proj', number: 1, platform: 'gitlab' });
+    expect(p).toMatch(/gitlab-mygroup-proj-1\.json$/);
+  });
 });
 
 describe('loadState / saveState persistence', () => {
@@ -273,7 +311,7 @@ describe('loadState / saveState persistence', () => {
   };
 
   it('loadState on a non-existent file returns empty state with given head_sha and started_at', async () => {
-    const pr: PrRef = { owner: 'o', repo: 'r', number: 1001 };
+    const pr: PrRef = { owner: 'o', repo: 'r', number: 1001, platform: 'github' as const };
     await cleanup(pr);
     const state = await loadState(pr, 'sha-abc');
     expect(state.head_sha).toBe('sha-abc');
@@ -286,7 +324,7 @@ describe('loadState / saveState persistence', () => {
   });
 
   it('saveState then loadState round-trips comments/flags/viewed', async () => {
-    const pr: PrRef = { owner: 'o', repo: 'r', number: 1002 };
+    const pr: PrRef = { owner: 'o', repo: 'r', number: 1002, platform: 'github' as const };
     await cleanup(pr);
     let state = await loadState(pr, 'sha1');
     state = applyAction(state, {
@@ -314,7 +352,7 @@ describe('loadState / saveState persistence', () => {
   });
 
   it('saved state includes version and round-trips it', async () => {
-    const pr: PrRef = { owner: 'o', repo: 'r', number: 1004 };
+    const pr: PrRef = { owner: 'o', repo: 'r', number: 1004, platform: 'github' as const };
     await cleanup(pr);
     const state = await loadState(pr, 'sha1');
     expect(state.version).toBe(STATE_VERSION);
@@ -325,7 +363,7 @@ describe('loadState / saveState persistence', () => {
   });
 
   it('loadState refreshes head_sha even when prior state exists', async () => {
-    const pr: PrRef = { owner: 'o', repo: 'r', number: 1003 };
+    const pr: PrRef = { owner: 'o', repo: 'r', number: 1003, platform: 'github' as const };
     await cleanup(pr);
     const state = await loadState(pr, 'old-sha');
     await saveState(state);
@@ -346,7 +384,7 @@ describe('listReviews', () => {
   });
 
   it('lists a saved review with correct summary fields', async () => {
-    const pr: PrRef = { owner: 'list-test', repo: 'repo', number: 5001 };
+    const pr: PrRef = { owner: 'list-test', repo: 'repo', number: 5001, platform: 'github' as const };
     await cleanup(pr);
     let state = await loadState(pr, 'sha-list');
     state = applyAction(state, {
@@ -377,7 +415,7 @@ describe('listReviews', () => {
   });
 
   it('includes meta when saved in state', async () => {
-    const pr: PrRef = { owner: 'list-test', repo: 'repo', number: 5002 };
+    const pr: PrRef = { owner: 'list-test', repo: 'repo', number: 5002, platform: 'github' as const };
     await cleanup(pr);
     let state = await loadState(pr, 'sha-meta');
     state = {
@@ -402,7 +440,7 @@ describe('listReviews', () => {
   });
 
   it('skips .tmp.json files in the state directory', async () => {
-    const pr: PrRef = { owner: 'tmp-test', repo: 'repo', number: 7001 };
+    const pr: PrRef = { owner: 'tmp-test', repo: 'repo', number: 7001, platform: 'github' as const };
     await cleanup(pr);
     await saveState(await loadState(pr, 'sha1'));
     // Write a stray .tmp.json file
@@ -432,8 +470,8 @@ describe('listReviews', () => {
   });
 
   it('sorts reviews newest first by started_at', async () => {
-    const pr1: PrRef = { owner: 'sort-test', repo: 'r', number: 5003 };
-    const pr2: PrRef = { owner: 'sort-test', repo: 'r', number: 5004 };
+    const pr1: PrRef = { owner: 'sort-test', repo: 'r', number: 5003, platform: 'github' as const };
+    const pr2: PrRef = { owner: 'sort-test', repo: 'r', number: 5004, platform: 'github' as const };
     await cleanup(pr1);
     await cleanup(pr2);
 
@@ -454,7 +492,7 @@ describe('listReviews', () => {
 
 describe('deleteReview', () => {
   it('removes the state file so listReviews no longer returns it', async () => {
-    const pr: PrRef = { owner: 'del-test', repo: 'repo', number: 6001 };
+    const pr: PrRef = { owner: 'del-test', repo: 'repo', number: 6001, platform: 'github' as const };
     await rm(statePath(pr), { force: true });
     await saveState(await loadState(pr, 'sha-del'));
 
@@ -467,7 +505,7 @@ describe('deleteReview', () => {
   });
 
   it('throws when the file does not exist', async () => {
-    const pr: PrRef = { owner: 'del-test', repo: 'repo', number: 6002 };
+    const pr: PrRef = { owner: 'del-test', repo: 'repo', number: 6002, platform: 'github' as const };
     await rm(statePath(pr), { force: true });
     await expect(deleteReview(pr)).rejects.toThrow();
   });

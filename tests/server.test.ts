@@ -24,19 +24,19 @@ vi.mock('../src/review', () => ({
 
 vi.mock('../src/submit', async (importOriginal) => {
   const actual = await importOriginal<typeof import('../src/submit')>();
-  return { ...actual, submitReview: vi.fn() };
+  return { ...actual, submitReview: vi.fn(), submitGitLabReview: vi.fn() };
 });
 
 import { startServer, type AppContext } from '../src/server';
 import { applyAction, saveState, deleteReview, listReviews } from '../src/state';
 import { loadReview } from '../src/review';
-import { submitReview } from '../src/submit';
+import { submitReview, submitGitLabReview } from '../src/submit';
 import type { Review, ReviewState } from '../src/types';
 import { STATE_VERSION, OVERVIEW_ID } from '../src/types';
 
 // ---- fixtures ----
 
-const pr = { owner: 'alice', repo: 'proj', number: 42 };
+const pr = { owner: 'alice', repo: 'proj', number: 42, platform: 'github' as const };
 
 const chunk = {
   id: 'c1',
@@ -228,6 +228,26 @@ describe('POST /api/submit', () => {
     const res = await post(url, '/api/submit', { verdict: 'REQUEST_CHANGES', body: '' });
     expect(res.status).toBe(409);
   });
+
+  it('routes GitLab review to submitGitLabReview', async () => {
+    const glReview: Review = { ...review, pr: { ...review.pr, platform: 'gitlab' } };
+    vi.mocked(submitGitLabReview).mockClear();
+    vi.mocked(submitReview).mockClear();
+    vi.mocked(submitGitLabReview).mockResolvedValueOnce({ ok: true });
+    const url = await makeServer({ review: glReview, state });
+    const res = await post(url, '/api/submit', { verdict: 'comment', body: '' });
+    expect(res.status).toBe(200);
+    expect(vi.mocked(submitGitLabReview)).toHaveBeenCalledTimes(1);
+    expect(vi.mocked(submitReview)).toHaveBeenCalledTimes(0);
+  });
+
+  it('accepts GitLab verdicts on server level (platform-gating is UI-only)', async () => {
+    vi.mocked(submitReview).mockResolvedValueOnce({ ok: true, html_url: 'https://github.com/r' });
+    const url = await makeServer({ review, state });
+    // 'approve' is a GitLab verdict but the server accepts any known verdict string
+    const res = await post(url, '/api/submit', { verdict: 'approve', body: '' });
+    expect(res.status).toBe(200);
+  });
 });
 
 describe('GET /api/reviews', () => {
@@ -251,18 +271,31 @@ describe('GET /api/reviews', () => {
   });
 });
 
-describe('DELETE /api/reviews/:owner/:repo/:num', () => {
-  it('deletes the specified review', async () => {
+describe('DELETE /api/reviews/:platform/:owner/:repo/:num', () => {
+  it('deletes the specified GitHub review', async () => {
     const url = await makeServer({ review: null, state: null });
-    const res = await del(url, '/api/reviews/alice/proj/42');
+    const res = await del(url, '/api/reviews/github/alice/proj/42');
     expect(res.status).toBe(200);
-    expect(vi.mocked(deleteReview)).toHaveBeenCalledWith({ owner: 'alice', repo: 'proj', number: 42 });
+    expect(vi.mocked(deleteReview)).toHaveBeenCalledWith({ owner: 'alice', repo: 'proj', number: 42, platform: 'github' });
+  });
+
+  it('decodes URL-encoded owner for GitLab', async () => {
+    const url = await makeServer({ review: null, state: null });
+    const res = await del(url, '/api/reviews/gitlab/group%2Fsubteam/proj/7');
+    expect(res.status).toBe(200);
+    expect(vi.mocked(deleteReview)).toHaveBeenCalledWith({ owner: 'group/subteam', repo: 'proj', number: 7, platform: 'gitlab' });
   });
 
   it('returns 404 when the review file is not found', async () => {
     vi.mocked(deleteReview).mockRejectedValueOnce(new Error('not found'));
     const url = await makeServer({ review: null, state: null });
-    const res = await del(url, '/api/reviews/alice/proj/99');
+    const res = await del(url, '/api/reviews/github/alice/proj/99');
+    expect(res.status).toBe(404);
+  });
+
+  it('returns 404 for the old URL format without platform', async () => {
+    const url = await makeServer({ review: null, state: null });
+    const res = await del(url, '/api/reviews/alice/proj/42');
     expect(res.status).toBe(404);
   });
 });
