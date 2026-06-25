@@ -41,14 +41,8 @@ To update: `npm update -g assisted-review`. To remove: `npm uninstall -g assiste
 
 ```bash
 pnpm install
-pnpm build:web                        # build the UI once
+pnpm build                            # compile server + bundle UI
 pnpm cli <owner/repo#N | PR URL>      # fetch, serve, open the browser
-```
-
-Example:
-
-```bash
-pnpm cli https://github.com/owner/repo/pull/123
 ```
 
 ## Configuration
@@ -101,8 +95,12 @@ JIRA_BASE_URL=https://your-org.atlassian.net JIRA_USER=you@example.com JIRA_TOKE
 ## Usage
 
 ```bash
-assisted-review <owner/repo#N | PR URL>
+assisted-review [<ref>]
 ```
+
+With no ref, the server starts and shows a splash screen where you can enter a ref.
+
+Accepts `owner/repo#123` shorthand or a full GitHub PR URL.
 
 ### Flags
 
@@ -136,10 +134,10 @@ If the PR was force-pushed since you started, the head SHA the comments were dra
 ## Architecture
 
 ```
-src/         TypeScript backend (CommonJS, ts-node)
+src/         TypeScript backend (CommonJS, compiled to build/)
   cli.ts        entry: parse ref → gh fetch → chunks → Jira → serve
   fetch.ts · parse-ref.ts · parse-diff.ts   diff/PR ingestion
-  server.ts     localhost server: /api/review, /api/state, /api/action, /api/claude (SSE), /api/submit
+  server.ts     localhost HTTP server: /api/review, /api/state, /api/action, /api/claude (SSE), /api/submit
   state.ts      persisted review state (~/.assisted-review/<owner>-<repo>-<n>.json)
   claude.ts     headless Claude bridge (stream-json)
   submit.ts     publish drafted comments as a real PR review via `gh api`
@@ -147,9 +145,9 @@ src/         TypeScript backend (CommonJS, ts-node)
 web/         Vite + React + Tailwind UI → builds into dist/, served by the server
 ```
 
-- **`cli.ts`** — entry point; parses the PR ref, fetches the diff and metadata, extracts Jira keys, and hands off to the server.
+- **`cli.ts`** — entry point; parses the PR ref, fetches the diff and metadata, extracts Jira keys, and hands off to the server. Starts in splash-screen mode when no ref is given.
 - **`fetch.ts` / `parse-ref.ts` / `parse-diff.ts`** — fetch the raw diff and PR metadata via `gh`, parse the ref format, and slice the unified diff into reviewable chunks.
-- **`server.ts`** — Express server providing the REST and SSE API. Serves the pre-built React UI from `dist/` unless `--api-only` is set.
+- **`server.ts`** — Node.js HTTP server providing the REST and SSE API. Serves the pre-built React UI from `dist/` unless `--api-only` is set.
 - **`state.ts`** — loads and persists review state (viewed, flagged, comments, AI notes) as JSON in `~/.assisted-review/`.
 - **`claude.ts`** — spawns headless `claude` as a subprocess and streams JSON-formatted commentary back to the server.
 - **`submit.ts`** — assembles drafted comments into a single PR review payload and posts it via `gh api`.
@@ -175,8 +173,9 @@ Open `http://localhost:5173` for the live-reloading UI. Set a default PR with `P
 | `dev` | Starts the API server and Vite HMR server concurrently |
 | `build` | Compiles TypeScript (server → `build/`) and bundles the UI (→ `dist/`) |
 | `build:web` | Builds only the React UI with Vite |
-| `test` | Runs Jest unit tests |
-| `test:watch` | Runs Jest in watch mode |
+| `test` | Runs Vitest unit tests |
+| `test:e2e` | Runs Playwright end-to-end smoke test (requires a prior `pnpm build`) |
+| `test:watch` | Runs Vitest in watch mode |
 | `lint` | Runs ESLint |
 | `format` | Runs Prettier |
 
@@ -186,4 +185,4 @@ Syntax highlighting is registered in `web/src/highlight.ts`. Import the language
 
 ### PRs welcome
 
-Open a PR against `main`. CI runs lint and tests on every push. Please keep commits focused and include tests for new behavior where applicable.
+Open a PR against `main`. CI runs lint, build, tests, and an end-to-end smoke test on every PR. Please keep commits focused and include tests for new behavior where applicable.
