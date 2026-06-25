@@ -1,11 +1,3 @@
-## [Unreleased]
-
-### Added
-
-- **GitLab MR support.** Pass `namespace/repo!123` or a `gitlab.com` MR URL to review a GitLab merge request. Fetches the diff and metadata via the `glab` CLI. Submitting posts each inline comment as a separate MR discussion and (optionally) calls the approve endpoint — mirroring GitHub's single-review model as closely as the GitLab API allows. Stale-SHA protection works the same way. State files for GitLab reviews are prefixed with `gitlab-` to avoid collisions with same-named GitHub repos.
-
----
-
 # [1.2.0](https://github.com/moui72/assisted-review/compare/v1.1.0...v1.2.0) (2026-06-23)
 
 
