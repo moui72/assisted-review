@@ -292,14 +292,20 @@ describe('statePath', () => {
     expect(p).not.toContain('gitlab');
   });
 
-  it('GitLab: prefixes with gitlab- and encodes slashes in owner', () => {
+  it('GitLab: prefixes with gitlab~ and encodes slashes in owner', () => {
     const p = statePath({ owner: 'group/subteam', repo: 'proj', number: 7, platform: 'gitlab' });
-    expect(p).toMatch(/gitlab-group%2Fsubteam-proj-7\.json$/);
+    expect(p).toMatch(/gitlab~group%2Fsubteam~proj~7\.json$/);
   });
 
-  it('GitLab simple namespace (no slash) still prefixes with gitlab-', () => {
+  it('GitLab simple namespace (no slash) still prefixes with gitlab~', () => {
     const p = statePath({ owner: 'mygroup', repo: 'proj', number: 1, platform: 'gitlab' });
-    expect(p).toMatch(/gitlab-mygroup-proj-1\.json$/);
+    expect(p).toMatch(/gitlab~mygroup~proj~1\.json$/);
+  });
+
+  it('GitHub owner named "gitlab-alice" does not collide with GitLab owner "alice"', () => {
+    const gh = statePath({ owner: 'gitlab-alice', repo: 'proj', number: 42, platform: 'github' });
+    const gl = statePath({ owner: 'alice', repo: 'proj', number: 42, platform: 'gitlab' });
+    expect(gh).not.toBe(gl);
   });
 });
 

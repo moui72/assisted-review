@@ -29,7 +29,7 @@ const STATE_DIR =
 function statePath(pr: PrRef): string {
   if (pr.platform === 'gitlab') {
     const encodedOwner = pr.owner.replace(/\//g, '%2F');
-    return join(STATE_DIR, `gitlab-${encodedOwner}-${pr.repo}-${pr.number}.json`);
+    return join(STATE_DIR, `gitlab~${encodedOwner}~${pr.repo}~${pr.number}.json`);
   }
   return join(STATE_DIR, `${pr.owner}-${pr.repo}-${pr.number}.json`);
 }

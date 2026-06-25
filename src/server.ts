@@ -183,11 +183,12 @@ export function startServer(
         verdict?: string;
         body?: string;
       };
-      const allVerdicts: readonly string[] = [...VERDICTS, ...GITLAB_VERDICTS];
-      if (!verdict || !allVerdicts.includes(verdict)) {
+      const validVerdicts: readonly string[] =
+        review.pr.platform === 'gitlab' ? GITLAB_VERDICTS : VERDICTS;
+      if (!verdict || !validVerdicts.includes(verdict)) {
         return sendJson(res, 400, {
           ok: false,
-          error: `verdict must be one of ${allVerdicts.join(', ')}`,
+          error: `verdict must be one of ${validVerdicts.join(', ')}`,
         });
       }
       if (state.submitted) {
@@ -206,6 +207,9 @@ export function startServer(
           body ?? '',
           state.head_sha,
         );
+        if (result.ok && !result.html_url && review.meta?.url) {
+          result = { ...result, html_url: review.meta.url };
+        }
       } else {
         const payload = buildReviewPayload(
           review.chunks,

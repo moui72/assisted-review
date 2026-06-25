@@ -210,9 +210,10 @@ describe('submitGitLabReview', () => {
     expect(vi.mocked(spawn)).toHaveBeenCalledTimes(1);
   });
 
-  it('skips note POST when body is empty', async () => {
+  it('returns error when comment verdict has no body and no inline comments', async () => {
     const result = await submitGitLabReview(glRef, [], [], 'comment', '', 'headsha');
-    expect(result.ok).toBe(true);
+    expect(result.ok).toBe(false);
+    expect(result.error).toMatch(/nothing to submit/i);
     expect(vi.mocked(spawn)).toHaveBeenCalledTimes(0);
   });
 

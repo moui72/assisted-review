@@ -235,18 +235,41 @@ describe('POST /api/submit', () => {
     vi.mocked(submitReview).mockClear();
     vi.mocked(submitGitLabReview).mockResolvedValueOnce({ ok: true });
     const url = await makeServer({ review: glReview, state });
-    const res = await post(url, '/api/submit', { verdict: 'comment', body: '' });
+    const res = await post(url, '/api/submit', { verdict: 'comment', body: 'summary' });
     expect(res.status).toBe(200);
     expect(vi.mocked(submitGitLabReview)).toHaveBeenCalledTimes(1);
     expect(vi.mocked(submitReview)).toHaveBeenCalledTimes(0);
   });
 
-  it('accepts GitLab verdicts on server level (platform-gating is UI-only)', async () => {
-    vi.mocked(submitReview).mockResolvedValueOnce({ ok: true, html_url: 'https://github.com/r' });
-    const url = await makeServer({ review, state });
-    // 'approve' is a GitLab verdict but the server accepts any known verdict string
+  it('injects html_url from review meta when submitGitLabReview returns none', async () => {
+    const glReview: Review = { ...review, pr: { ...review.pr, platform: 'gitlab' } };
+    vi.mocked(submitGitLabReview).mockResolvedValueOnce({ ok: true });
+    const url = await makeServer({ review: glReview, state });
+    const res = await post(url, '/api/submit', { verdict: 'comment', body: 'summary' });
+    const body = (await res.json()) as { html_url?: string };
+    expect(body.html_url).toBe(meta.url);
+  });
+
+  it('does not override html_url when submitGitLabReview already returns one', async () => {
+    const glReview: Review = { ...review, pr: { ...review.pr, platform: 'gitlab' } };
+    vi.mocked(submitGitLabReview).mockResolvedValueOnce({ ok: true, html_url: 'https://gitlab.com/x/y/-/merge_requests/1' });
+    const url = await makeServer({ review: glReview, state });
+    const res = await post(url, '/api/submit', { verdict: 'comment', body: 'summary' });
+    const body = (await res.json()) as { html_url?: string };
+    expect(body.html_url).toBe('https://gitlab.com/x/y/-/merge_requests/1');
+  });
+
+  it('rejects GitLab verdict for a GitHub PR', async () => {
+    const url = await makeServer({ review, state }); // review.pr.platform = 'github'
     const res = await post(url, '/api/submit', { verdict: 'approve', body: '' });
-    expect(res.status).toBe(200);
+    expect(res.status).toBe(400);
+  });
+
+  it('rejects GitHub verdict for a GitLab MR', async () => {
+    const glReview: Review = { ...review, pr: { ...review.pr, platform: 'gitlab' } };
+    const url = await makeServer({ review: glReview, state });
+    const res = await post(url, '/api/submit', { verdict: 'APPROVE', body: 'LGTM' });
+    expect(res.status).toBe(400);
   });
 });
 

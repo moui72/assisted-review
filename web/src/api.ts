@@ -41,6 +41,7 @@ export interface SubmitResponse {
   ok: boolean;
   html_url?: string;
   stale?: { old: string; new_head: string; inline_count: number };
+  comment_errors?: Array<{ path: string; line: number | null; error: string }>;
   error?: string;
   state: ReviewState;
 }

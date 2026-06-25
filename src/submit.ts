@@ -197,8 +197,6 @@ async function glabCurrentHeadSha(ref: PrRef): Promise<string> {
   const { code, stdout } = await glab([
     'api',
     `projects/${glabProjectId(ref)}/merge_requests/${ref.number}`,
-    '-f',
-    'sha',
   ]);
   if (code !== 0) return 'unknown';
   try {
@@ -234,6 +232,10 @@ export async function submitGitLabReview(
   const inlineComments = comments
     .map((c) => ({ draft: c, chunk: byId.get(c.chunk_id) }))
     .filter((x): x is { draft: DraftComment; chunk: Chunk } => x.chunk !== undefined);
+
+  if (verdict === 'comment' && !body.trim() && inlineComments.length === 0) {
+    return { ok: false, error: 'nothing to submit: provide a body or at least one comment' };
+  }
 
   // Stale SHA check when there are inline comments.
   if (inlineComments.length > 0) {
