@@ -437,10 +437,6 @@ describe('submitGitLabReview', () => {
       'headsha',
     );
     const discussionCall = vi.mocked(spawn).mock.calls[2];
-    const input = (discussionCall[0] === 'glab')
-      ? vi.mocked(spawn).mock.instances[2]
-      : undefined;
-    // The position was sent as JSON stdin — just verify the call was to 'glab'
     expect(discussionCall[0]).toBe('glab');
   });
 });
