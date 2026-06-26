@@ -48,6 +48,13 @@ describe('submitReview (GitHub)', () => {
     vi.mocked(spawn).mockReset();
   });
 
+  it('returns error when COMMENT has no body and no inline comments', async () => {
+    const result = await submitReview(ghRef, { ...payload(), body: '' });
+    expect(result.ok).toBe(false);
+    expect(result.error).toMatch(/nothing to submit/i);
+    expect(vi.mocked(spawn)).toHaveBeenCalledTimes(0);
+  });
+
   it('happy path — no inline comments — posts the review and returns html_url', async () => {
     setupSpawnMock({
       stdout: '{"html_url":"https://github.com/alice/proj/pull/42#pullrequestreview-1"}',

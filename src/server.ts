@@ -345,10 +345,15 @@ export function startServer(
             suggested_action: suggestedAction,
           });
           ctx.state = nextState;
-          void saveState(nextState).then(() => {
-            sse('done', { state: nextState });
-            res.end();
-          });
+          void saveState(nextState)
+            .then(() => {
+              sse('done', { state: nextState });
+              res.end();
+            })
+            .catch((err: unknown) => {
+              sse('error', { message: err instanceof Error ? err.message : String(err) });
+              res.end();
+            });
         },
       });
       currentCancel = cancel;

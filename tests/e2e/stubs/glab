@@ -1,0 +1,57 @@
+#!/usr/bin/env node
+'use strict';
+
+const args = process.argv.slice(2);
+const sub = args[0];
+const sub2 = args[1];
+
+const MR_SHA = 'abc123def456abc123def456abc123def456abc123';
+const MR_URL = 'https://gitlab.com/testgroup/testrepo/-/merge_requests/42';
+
+if (sub === 'mr' && sub2 === 'diff') {
+  process.stdout.write(
+    'diff --git a/lib/helper.rb b/lib/helper.rb\n' +
+    'index 1111aaa..2222bbb 100644\n' +
+    '--- a/lib/helper.rb\n' +
+    '+++ b/lib/helper.rb\n' +
+    '@@ -10,3 +10,4 @@\n' +
+    ' def process(data)\n' +
+    '-  data.strip\n' +
+    '+  result = data.strip\n' +
+    '+  result\n' +
+    ' end\n',
+  );
+} else if (sub === 'mr' && sub2 === 'view') {
+  process.stdout.write(JSON.stringify({
+    title: 'E2E Test MR',
+    author: { username: 'testuser' },
+    target_branch: 'main',
+    source_branch: 'feat/e2e-test',
+    draft: false,
+    web_url: MR_URL,
+    sha: MR_SHA,
+    description: 'Test merge request for e2e testing',
+  }));
+} else if (sub === 'api') {
+  const apiPath = args[1] ?? '';
+  const isPost = args.includes('POST');
+
+  if (isPost && apiPath.endsWith('/approve')) {
+    process.stdout.write(JSON.stringify({ id: 1, approved: true }));
+  } else if (isPost && apiPath.endsWith('/discussions')) {
+    process.stdout.write(JSON.stringify({ id: 1 }));
+  } else if (isPost && apiPath.endsWith('/notes')) {
+    process.stdout.write(JSON.stringify({ id: 1 }));
+  } else if (apiPath.endsWith('/versions')) {
+    process.stdout.write(JSON.stringify([{
+      base_commit_sha: 'base0000000000000000000000000000000000000',
+      start_commit_sha: 'start000000000000000000000000000000000000',
+      head_commit_sha: MR_SHA,
+    }]));
+  } else if (apiPath.endsWith('/commits')) {
+    process.stdout.write(JSON.stringify([{ id: MR_SHA }]));
+  } else {
+    // Base MR info — used by glabCurrentHeadSha for stale detection
+    process.stdout.write(JSON.stringify({ sha: MR_SHA, web_url: MR_URL }));
+  }
+}

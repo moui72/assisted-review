@@ -1,0 +1,20 @@
+#!/usr/bin/env node
+'use strict';
+
+// Emits the minimal stream-json format that streamClaude() in src/claude.ts
+// expects: one content delta followed by the result event.
+const text = 'Stub AI note: this diff looks reasonable.';
+
+process.stdout.write(
+  JSON.stringify({
+    type: 'stream_event',
+    event: {
+      type: 'content_block_delta',
+      delta: { type: 'text_delta', text },
+    },
+  }) + '\n',
+);
+
+process.stdout.write(
+  JSON.stringify({ type: 'result', is_error: false, result: text }) + '\n',
+);

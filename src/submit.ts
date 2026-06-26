@@ -128,6 +128,10 @@ async function shaOnPr(ref: PrRef, sha: string): Promise<boolean | null> {
 const STALE_RE = /Path could not be resolved/i;
 
 export async function submitReview(ref: PrRef, payload: ReviewPayload): Promise<SubmitResult> {
+  if (payload.event === 'COMMENT' && !payload.body.trim() && payload.comments.length === 0) {
+    return { ok: false, error: 'nothing to submit: provide a body or at least one comment' };
+  }
+
   if (payload.comments.length > 0) {
     const present = await shaOnPr(ref, payload.commit_id);
     if (present === false) {
