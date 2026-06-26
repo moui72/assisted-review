@@ -13,7 +13,7 @@ import { ErrorBanner } from './ErrorBanner.tsx';
 
 type AnyVerdict = Verdict | GitLabVerdict;
 
-const VERDICT_META: Record<AnyVerdict, { label: string; hint: string; tone: string }> = {
+const VERDICT_META: Record<Verdict, { label: string; hint: string; tone: string }> = {
   COMMENT: { label: 'Comment', hint: 'Leave feedback without an explicit verdict', tone: 'text-fg' },
   APPROVE: { label: 'Approve', hint: 'Sign off on the changes', tone: 'text-emerald-300' },
   REQUEST_CHANGES: {
@@ -21,9 +21,12 @@ const VERDICT_META: Record<AnyVerdict, { label: string; hint: string; tone: stri
     hint: 'Block until the feedback is addressed',
     tone: 'text-orange-300',
   },
-  comment: { label: 'Comment', hint: 'Leave feedback without an explicit verdict', tone: 'text-fg' },
-  approve: { label: 'Approve', hint: 'Sign off on the changes', tone: 'text-emerald-300' },
 };
+
+function metaFor(v: AnyVerdict): { label: string; hint: string; tone: string } {
+  const key = v === 'comment' ? 'COMMENT' : v === 'approve' ? 'APPROVE' : v;
+  return VERDICT_META[key];
+}
 
 type Phase = 'edit' | 'sending' | 'done';
 
@@ -65,6 +68,9 @@ export function SubmitModal({
     null,
   );
   const [url, setUrl] = useState<string | undefined>();
+  const [commentErrors, setCommentErrors] = useState<
+    Array<{ path: string; line: number | null; error: string }>
+  >([]);
 
   const grouped = useGrouped(chunks, state.comments);
   const commentCount = state.comments.length;
@@ -75,10 +81,12 @@ export function SubmitModal({
     setPhase('sending');
     setError(null);
     setStale(null);
+    setCommentErrors([]);
     try {
       const res = await submitReview(verdict, body.trim());
       if (res.ok) {
         setUrl(res.html_url);
+        setCommentErrors(res.comment_errors ?? []);
         setPhase('done');
         onSubmitted(res.state);
       } else if (res.stale) {
@@ -126,7 +134,7 @@ export function SubmitModal({
               ✓
             </div>
             <p className="font-sans text-[14px] text-fg">
-              Posted as <span className="font-semibold">{VERDICT_META[verdict].label}</span>
+              Posted as <span className="font-semibold">{metaFor(verdict).label}</span>
               {commentCount > 0 && ` with ${commentCount} inline comment${commentCount === 1 ? '' : 's'}`}.
             </p>
             {url && (
@@ -139,13 +147,27 @@ export function SubmitModal({
                 {viewLabel}
               </a>
             )}
+            {commentErrors.length > 0 && (
+              <div className="mt-3 rounded-md border border-orange-400/40 bg-orange-400/[0.08] px-3 py-2 text-left font-sans text-[12.5px] text-orange-200">
+                <div className="font-semibold">
+                  {commentErrors.length} inline comment{commentErrors.length === 1 ? '' : 's'} failed to post.
+                </div>
+                <ul className="mt-1 space-y-0.5">
+                  {commentErrors.map((e, i) => (
+                    <li key={i} className="font-mono text-[11px] text-orange-200/80">
+                      {e.path}:{e.line ?? '?'} — {e.error}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
           </div>
         ) : (
           <div className="thin-scroll min-h-0 flex-1 overflow-auto px-5 py-4">
             {/* Verdict */}
             <div className="space-y-1.5">
               {verdicts.map((v) => {
-                const m = VERDICT_META[v];
+                const m = metaFor(v);
                 const on = verdict === v;
                 return (
                   <button
@@ -245,7 +267,7 @@ export function SubmitModal({
                 disabled={sending}
                 className="rounded-md bg-accent px-4 py-1.5 text-[12.5px] font-semibold text-bg transition hover:brightness-110 disabled:opacity-50"
               >
-                {sending ? 'Submitting…' : `Submit as ${VERDICT_META[verdict].label}`}
+                {sending ? 'Submitting…' : `Submit as ${metaFor(verdict).label}`}
               </button>
             </div>
           </div>

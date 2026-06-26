@@ -278,8 +278,8 @@ export async function submitGitLabReview(
       position_type: 'text' as const,
       old_path: chunk.file,
       new_path: chunk.file,
-      old_line: side === 'LEFT' ? line : null,
-      new_line: side === 'RIGHT' ? line : null,
+      ...(side === 'LEFT'  ? { old_line: line } : {}),
+      ...(side === 'RIGHT' ? { new_line: line } : {}),
     };
     const discussionBody = { body: draft.body, position };
     const { code, stderr } = await glab(

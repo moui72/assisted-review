@@ -420,7 +420,7 @@ describe('submitGitLabReview', () => {
     expect((args as string[]).join(' ')).toContain('mygroup%2Fsubteam%2Fproj');
   });
 
-  it('LEFT-side comment sends old_line, null new_line', async () => {
+  it('LEFT-side comment sends old_line, omits new_line', async () => {
     setupSpawnMock(
       { stdout: JSON.stringify([{ id: 'headsha' }]), stderr: '', code: 0 },
       { stdout: versionsResponse, stderr: '', code: 0 },

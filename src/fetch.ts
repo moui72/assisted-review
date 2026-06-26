@@ -9,12 +9,12 @@ const execFileAsync = promisify(execFile);
 
 // ---- GitHub ----------------------------------------------------------------
 
-function ghTarget({ owner, repo, number }: PrRef): { repo: string; number: string } {
+function cliTarget({ owner, repo, number }: PrRef): { repo: string; number: string } {
   return { repo: `${owner}/${repo}`, number: String(number) };
 }
 
 async function fetchGitHubDiff(ref: PrRef): Promise<string> {
-  const { repo, number } = ghTarget(ref);
+  const { repo, number } = cliTarget(ref);
   const { stdout } = await execFileAsync('gh', ['pr', 'diff', number, '--repo', repo], {
     maxBuffer: 64 * 1024 * 1024,
   });
@@ -33,7 +33,7 @@ interface GhPrView {
 }
 
 async function fetchGitHubMeta(ref: PrRef): Promise<PrMeta> {
-  const { repo, number } = ghTarget(ref);
+  const { repo, number } = cliTarget(ref);
   const fields = [
     'title',
     'author',
@@ -64,12 +64,8 @@ async function fetchGitHubMeta(ref: PrRef): Promise<PrMeta> {
 
 // ---- GitLab ----------------------------------------------------------------
 
-function glabTarget({ owner, repo, number }: PrRef): { repo: string; number: string } {
-  return { repo: `${owner}/${repo}`, number: String(number) };
-}
-
 async function fetchGitLabDiff(ref: PrRef): Promise<string> {
-  const { repo, number } = glabTarget(ref);
+  const { repo, number } = cliTarget(ref);
   const { stdout } = await execFileAsync(
     'glab',
     ['mr', 'diff', number, '--repo', repo],
@@ -91,7 +87,7 @@ interface GlabMrView {
 }
 
 async function fetchGitLabMeta(ref: PrRef): Promise<PrMeta> {
-  const { repo, number } = glabTarget(ref);
+  const { repo, number } = cliTarget(ref);
   const { stdout } = await execFileAsync(
     'glab',
     ['mr', 'view', number, '--repo', repo, '--output', 'json'],
