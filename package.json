@@ -32,7 +32,8 @@
     "test:e2e": "playwright test",
     "test:watch": "vitest",
     "format": "prettier --write .",
-    "format:check": "prettier --check ."
+    "format:check": "prettier --check .",
+    "prepare": "husky"
   },
   "pnpm": {
     "onlyBuiltDependencies": [
@@ -62,6 +63,7 @@
     "eslint-config-prettier": "^10",
     "globals": "^16",
     "highlight.js": "^11.11.1",
+    "husky": "^9.1.7",
     "jsdom": "^29.1.1",
     "motion": "^12.40.0",
     "prettier": "^3",
