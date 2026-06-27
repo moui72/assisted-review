@@ -8,6 +8,7 @@ vi.mock('node:child_process', () => ({ spawn: vi.fn() }));
 
 import { spawn } from 'node:child_process';
 import { submitReview, submitGitLabReview } from '../src/submit';
+import { _setGlabAvailable } from '../src/gitlab-rest';
 import type { PrRef, ReviewPayload } from '../src/submit';
 
 const ghRef: PrRef = { owner: 'alice', repo: 'proj', number: 42, platform: 'github' };
@@ -205,7 +206,11 @@ const versionsResponse = JSON.stringify([{
 }]);
 
 describe('submitGitLabReview', () => {
-  afterEach(() => vi.mocked(spawn).mockReset());
+  beforeEach(() => _setGlabAvailable(true));
+  afterEach(() => {
+    vi.mocked(spawn).mockReset();
+    _setGlabAvailable(undefined);
+  });
 
   it('happy path — no inline comments — posts note, returns ok', async () => {
     setupSpawnMock(
@@ -438,5 +443,93 @@ describe('submitGitLabReview', () => {
     );
     const discussionCall = vi.mocked(spawn).mock.calls[2];
     expect(discussionCall[0]).toBe('glab');
+  });
+});
+
+// ---- GitLab REST fallback (glab not installed) -----------------------------
+
+describe('submitGitLabReview — REST fallback', () => {
+  beforeEach(() => {
+    _setGlabAvailable(false);
+    process.env.GITLAB_TOKEN = 'test-token';
+  });
+
+  afterEach(() => {
+    delete process.env.GITLAB_TOKEN;
+    vi.restoreAllMocks();
+    _setGlabAvailable(undefined);
+  });
+
+  function mockFetch(responses: Array<{ ok: boolean; status?: number; statusText?: string; body: unknown }>) {
+    let idx = 0;
+    vi.spyOn(globalThis, 'fetch').mockImplementation(() => {
+      const r = responses[idx++] ?? { ok: false, status: 500, statusText: 'no mock', body: '' };
+      return Promise.resolve({
+        ok: r.ok,
+        status: r.status ?? 200,
+        statusText: r.statusText ?? 'OK',
+        json: () => Promise.resolve(r.body),
+        text: () => Promise.resolve(String(r.body)),
+        headers: { get: () => null },
+      } as unknown as Response);
+    });
+  }
+
+  const versionsBody = [{ base_commit_sha: 'base1', start_commit_sha: 'start2', head_commit_sha: 'head3' }];
+
+  it('happy path — no inline comments — posts note via REST', async () => {
+    mockFetch([{ ok: true, body: {} }]); // POST /notes
+    const result = await submitGitLabReview(glRef, [], [], 'comment', 'summary', 'sha');
+    expect(result.ok).toBe(true);
+    expect(vi.mocked(spawn)).not.toHaveBeenCalled();
+    const [[url, init]] = (globalThis.fetch as ReturnType<typeof vi.spyOn>).mock.calls as [[string, RequestInit]];
+    expect(url).toContain('/notes');
+    expect((init.headers as Record<string, string>)['PRIVATE-TOKEN']).toBe('test-token');
+  });
+
+  it('happy path — with inline comment — uses REST for commits, versions, discussion, note', async () => {
+    mockFetch([
+      { ok: true, body: [{ id: 'headsha' }] },  // commits
+      { ok: true, body: versionsBody },           // versions
+      { ok: true, body: {} },                     // discussion
+      { ok: true, body: {} },                     // note
+    ]);
+
+    const result = await submitGitLabReview(
+      glRef,
+      [chunk('c1', 'src/app.ts')],
+      [draft('c1')],
+      'comment',
+      'summary',
+      'headsha',
+    );
+    expect(result.ok).toBe(true);
+    expect(vi.mocked(spawn)).not.toHaveBeenCalled();
+  });
+
+  it('throws when GITLAB_TOKEN is missing', async () => {
+    delete process.env.GITLAB_TOKEN;
+    const result = await submitGitLabReview(glRef, [], [], 'comment', 'body', 'sha');
+    expect(result.ok).toBe(false);
+    expect(result.error).toContain('GITLAB_TOKEN');
+  });
+
+  it('REST note failure returns ok:false', async () => {
+    mockFetch([{ ok: false, status: 403, statusText: 'Forbidden', body: 'nope' }]);
+    const result = await submitGitLabReview(glRef, [], [], 'comment', 'summary', 'sha');
+    expect(result.ok).toBe(false);
+    expect(result.error).toContain('403');
+  });
+
+  it('approve — POSTs note then approve via REST', async () => {
+    mockFetch([
+      { ok: true, body: {} }, // note
+      { ok: true, body: {} }, // approve
+    ]);
+    const result = await submitGitLabReview(glRef, [], [], 'approve', 'LGTM', 'sha');
+    expect(result.ok).toBe(true);
+    const calls = (globalThis.fetch as ReturnType<typeof vi.spyOn>).mock.calls as [string, RequestInit][];
+    expect(calls[1][0]).toContain('/approve');
+    expect(calls[1][1].method).toBe('POST');
   });
 });
