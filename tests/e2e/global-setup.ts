@@ -1,7 +1,20 @@
 import { rm } from 'node:fs/promises';
+import type { Server } from 'node:http';
+import { startMockGitLabApi } from './mock-gitlab-api.js';
 
-export default async function globalSetup() {
-  await rm('/tmp/ar-e2e', { recursive: true, force: true });
-  // Clear in-memory state if a server from a prior run is still up.
-  await fetch('http://127.0.0.1:4320/api/review', { method: 'DELETE' }).catch(() => {});
+export default async function globalSetup(): Promise<() => Promise<void>> {
+  await Promise.all([
+    rm('/tmp/ar-e2e-github', { recursive: true, force: true }),
+    rm('/tmp/ar-e2e-gitlab-glab', { recursive: true, force: true }),
+    rm('/tmp/ar-e2e-gitlab-rest', { recursive: true, force: true }),
+  ]);
+
+  const mockServer: Server | null = await startMockGitLabApi();
+
+  return async () => {
+    await new Promise<void>((resolve) => {
+      if (mockServer) mockServer.close(() => resolve());
+      else resolve();
+    });
+  };
 }

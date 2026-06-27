@@ -6,6 +6,15 @@ test.beforeEach(async ({ request }) => {
   await request.delete('/api/review');
 });
 
+test('app renders and shows splash', async ({ page }) => {
+  const errors: string[] = [];
+  page.on('pageerror', (err) => errors.push(err.message));
+
+  await page.goto('/');
+  await expect(page.getByPlaceholder('owner/repo#123 or PR URL')).toBeVisible();
+  expect(errors, 'uncaught JS errors on load').toEqual([]);
+});
+
 test('open a GitHub PR and submit an approval', async ({ page }) => {
   const errors: string[] = [];
   page.on('pageerror', (err) => errors.push(err.message));
