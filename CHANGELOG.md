@@ -1,3 +1,10 @@
+# [1.4.0](https://github.com/moui72/assisted-review/compare/v1.3.0...v1.4.0) (2026-06-27)
+
+
+### Features
+
+* add GitLab MR review support ([#47](https://github.com/moui72/assisted-review/issues/47)) ([7119b16](https://github.com/moui72/assisted-review/commit/7119b1698ddea872a0d7acb93a882970f4162a52))
+
 # [1.3.0](https://github.com/moui72/assisted-review/compare/v1.2.1...v1.3.0) (2026-06-24)
 
 
@@ -54,4 +61,3 @@
 * pixel-art logo + light mode ([#37](https://github.com/moui72/assisted-review/issues/37)) ([e8629b2](https://github.com/moui72/assisted-review/commit/e8629b257d20c1a954ec4dab1c1b979edcaf164c)), closes [#f5f1e6](https://github.com/moui72/assisted-review/issues/f5f1e6) [#39454f](https://github.com/moui72/assisted-review/issues/39454f)
 * publish to npm on merge to main ([af306b5](https://github.com/moui72/assisted-review/commit/af306b5e5047d8c60ca1f572f4a04d6527d9013e))
 * review picker + launch new reviews from UI ([c30b308](https://github.com/moui72/assisted-review/commit/c30b308e887f0b2354a4569d658705e8bc2291ee)), closes [owner/repo#N](https://github.com/owner/repo/issues/N)
-
