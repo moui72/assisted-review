@@ -2,11 +2,13 @@
 //
 // GitHub: assembles a single review payload {event, body, commit_id, comments}
 //   and POSTs it as one document via `gh api`.
-// GitLab: posts each inline comment as a separate discussion via `glab api`,
-//   then posts the whole-MR note and optionally approves.
+// GitLab: posts each inline comment as a separate discussion via the unified
+//   glab-or-REST transport (see gitlab-rest.ts), then posts the whole-MR note
+//   and optionally approves.
 
 import { spawn } from 'node:child_process';
 import type { Chunk, DraftComment, GitLabVerdict, PrRef, Side } from './types.js';
+import { glabApiJson, glabApiPaginatedJson, glProjectId } from './gitlab-rest.js';
 
 export { VERDICTS, GITLAB_VERDICTS } from './types.js';
 export type { Verdict, GitLabVerdict } from './types.js';
@@ -97,10 +99,6 @@ function gh(args: string[], input?: string): Promise<CliResult> {
   return spawnCli('gh', args, input);
 }
 
-function glab(args: string[], input?: string): Promise<CliResult> {
-  return spawnCli('glab', args, input);
-}
-
 // ---- GitHub ----------------------------------------------------------------
 
 function repoPath({ owner, repo }: PrRef): string {
@@ -176,10 +174,6 @@ export async function submitReview(ref: PrRef, payload: ReviewPayload): Promise<
 
 // ---- GitLab ----------------------------------------------------------------
 
-function glabProjectId({ owner, repo }: PrRef): string {
-  return encodeURIComponent(`${owner}/${repo}`);
-}
-
 interface GitLabVersion {
   base_commit_sha: string;
   start_commit_sha: string;
@@ -187,37 +181,29 @@ interface GitLabVersion {
 }
 
 async function fetchGitLabVersions(ref: PrRef): Promise<GitLabVersion> {
-  const { code, stdout, stderr } = await glab([
-    'api',
-    `projects/${glabProjectId(ref)}/merge_requests/${ref.number}/versions`,
-  ]);
-  if (code !== 0) throw new Error(`glab api versions: ${stderr.trim()}`);
-  const versions = JSON.parse(stdout) as GitLabVersion[];
+  const versions = await glabApiJson<GitLabVersion[]>(
+    `projects/${glProjectId(ref)}/merge_requests/${ref.number}/versions`,
+  );
   if (!versions.length) throw new Error('no MR diff versions found');
   return versions[0];
 }
 
 async function glabCurrentHeadSha(ref: PrRef): Promise<string> {
-  const { code, stdout } = await glab([
-    'api',
-    `projects/${glabProjectId(ref)}/merge_requests/${ref.number}`,
-  ]);
-  if (code !== 0) return 'unknown';
   try {
-    return (JSON.parse(stdout) as { sha?: string }).sha ?? 'unknown';
+    const mr = await glabApiJson<{ sha?: string }>(
+      `projects/${glProjectId(ref)}/merge_requests/${ref.number}`,
+    );
+    return mr.sha ?? 'unknown';
   } catch {
     return 'unknown';
   }
 }
 
 async function glabShaOnMr(ref: PrRef, sha: string): Promise<boolean | null> {
-  const { code, stdout } = await glab([
-    'api',
-    `projects/${glabProjectId(ref)}/merge_requests/${ref.number}/commits`,
-  ]);
-  if (code !== 0) return null;
   try {
-    const commits = JSON.parse(stdout) as Array<{ id: string }>;
+    const commits = await glabApiPaginatedJson<{ id: string }>(
+      `projects/${glProjectId(ref)}/merge_requests/${ref.number}/commits`,
+    );
     return commits.some((c) => c.id === sha);
   } catch {
     return null;
@@ -281,36 +267,27 @@ export async function submitGitLabReview(
       ...(side === 'LEFT'  ? { old_line: line } : {}),
       ...(side === 'RIGHT' ? { new_line: line } : {}),
     };
-    const discussionBody = { body: draft.body, position };
-    const { code, stderr } = await glab(
-      [
-        'api',
-        `projects/${glabProjectId(ref)}/merge_requests/${ref.number}/discussions`,
-        '-X', 'POST',
-        '--input', '-',
-      ],
-      JSON.stringify(discussionBody),
-    );
-    if (code !== 0) {
-      commentErrors.push({ path: chunk.file, line, error: stderr.trim() || `glab exited with code ${code}` });
+    try {
+      await glabApiJson(
+        `projects/${glProjectId(ref)}/merge_requests/${ref.number}/discussions`,
+        { method: 'POST', body: { body: draft.body, position } },
+      );
+    } catch (err) {
+      commentErrors.push({ path: chunk.file, line, error: (err as Error).message });
     }
   }
 
   // Post the whole-MR summary note.
   if (body.trim()) {
-    const { code, stderr } = await glab(
-      [
-        'api',
-        `projects/${glabProjectId(ref)}/merge_requests/${ref.number}/notes`,
-        '-X', 'POST',
-        '--input', '-',
-      ],
-      JSON.stringify({ body }),
-    );
-    if (code !== 0) {
+    try {
+      await glabApiJson(
+        `projects/${glProjectId(ref)}/merge_requests/${ref.number}/notes`,
+        { method: 'POST', body: { body } },
+      );
+    } catch (err) {
       return {
         ok: false,
-        error: stderr.trim() || `glab exited with code ${code}`,
+        error: (err as Error).message,
         comment_errors: commentErrors.length > 0 ? commentErrors : undefined,
       };
     }
@@ -318,15 +295,15 @@ export async function submitGitLabReview(
 
   // Approve if requested.
   if (verdict === 'approve') {
-    const { code, stderr } = await glab([
-      'api',
-      `projects/${glabProjectId(ref)}/merge_requests/${ref.number}/approve`,
-      '-X', 'POST',
-    ]);
-    if (code !== 0) {
+    try {
+      await glabApiJson(
+        `projects/${glProjectId(ref)}/merge_requests/${ref.number}/approve`,
+        { method: 'POST' },
+      );
+    } catch (err) {
       return {
         ok: false,
-        error: stderr.trim() || `glab approve exited with code ${code}`,
+        error: (err as Error).message,
         comment_errors: commentErrors.length > 0 ? commentErrors : undefined,
       };
     }

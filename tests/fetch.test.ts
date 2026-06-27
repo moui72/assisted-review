@@ -4,6 +4,7 @@ vi.mock('node:child_process', () => ({ execFile: vi.fn() }));
 
 import { execFile } from 'node:child_process';
 import { fetchDiff, fetchMeta } from '../src/fetch';
+import { _setGlabAvailable } from '../src/gitlab-rest';
 import type { PrRef } from '../src/types';
 
 const ghRef: PrRef = { owner: 'alice', repo: 'proj', number: 42, platform: 'github' };
@@ -25,7 +26,10 @@ function fail(err: Error) {
   });
 }
 
-afterEach(() => vi.mocked(execFile).mockReset());
+afterEach(() => {
+  vi.mocked(execFile).mockReset();
+  _setGlabAvailable(undefined);
+});
 
 describe('fetchDiff — GitHub', () => {
   it('invokes gh pr diff with owner/repo and returns stdout', async () => {
@@ -89,7 +93,9 @@ describe('fetchMeta — GitHub', () => {
   });
 });
 
-describe('fetchDiff — GitLab', () => {
+describe('fetchDiff — GitLab (glab available)', () => {
+  beforeEach(() => _setGlabAvailable(true));
+
   it('invokes glab mr diff with owner/repo and returns stdout', async () => {
     succeed('diff content');
     const result = await fetchDiff(glRef);
@@ -108,7 +114,9 @@ describe('fetchDiff — GitLab', () => {
   });
 });
 
-describe('fetchMeta — GitLab', () => {
+describe('fetchMeta — GitLab (glab available)', () => {
+  beforeEach(() => _setGlabAvailable(true));
+
   const glabView = {
     title: 'Add feature',
     author: { username: 'alice' },
@@ -165,5 +173,154 @@ describe('fetchMeta — GitLab', () => {
   it('rejects when glab fails', async () => {
     fail(new Error('authentication required'));
     await expect(fetchMeta(glRef)).rejects.toThrow('authentication required');
+  });
+});
+
+// ---- REST fallback (glab not installed) ------------------------------------
+
+const glabView = {
+  title: 'MR title',
+  author: { username: 'bob' },
+  target_branch: 'main',
+  source_branch: 'feat/y',
+  draft: false,
+  web_url: 'https://gitlab.com/mygroup/subteam/proj/-/merge_requests/42',
+  sha: 'deadbeef',
+  description: 'body text',
+};
+
+const diffFiles = [
+  {
+    old_path: 'src/a.ts',
+    new_path: 'src/a.ts',
+    diff: '@@ -1,3 +1,4 @@\n ctx\n-old\n+new\n ctx2\n',
+    new_file: false,
+    deleted_file: false,
+  },
+];
+
+function mockFetch(responses: Array<{ ok: boolean; status?: number; statusText?: string; body: unknown; headers?: Record<string, string> }>) {
+  let idx = 0;
+  vi.spyOn(globalThis, 'fetch').mockImplementation(() => {
+    const r = responses[idx++] ?? { ok: false, status: 500, statusText: 'no mock', body: '' };
+    return Promise.resolve({
+      ok: r.ok,
+      status: r.status ?? 200,
+      statusText: r.statusText ?? 'OK',
+      json: () => Promise.resolve(r.body),
+      text: () => Promise.resolve(String(r.body)),
+      headers: { get: (k: string) => (r.headers ?? {})[k] ?? null },
+    } as unknown as Response);
+  });
+}
+
+describe('fetchMeta — GitLab REST fallback', () => {
+  beforeEach(() => {
+    _setGlabAvailable(false);
+    process.env.GITLAB_TOKEN = 'test-token';
+  });
+
+  afterEach(() => {
+    delete process.env.GITLAB_TOKEN;
+    vi.restoreAllMocks();
+  });
+
+  it('fetches MR metadata via REST and maps to PrMeta', async () => {
+    mockFetch([{ ok: true, body: glabView }]);
+    const meta = await fetchMeta(glRef);
+    expect(meta.title).toBe('MR title');
+    expect(meta.author).toBe('bob');
+    expect(meta.base_ref).toBe('main');
+    expect(meta.head_sha).toBe('deadbeef');
+    expect(meta.body).toBe('body text');
+    const [[url, init]] = (globalThis.fetch as ReturnType<typeof vi.spyOn>).mock.calls as [[string, RequestInit]];
+    expect(url).toContain('gitlab.com/api/v4/projects/mygroup%2Fsubteam%2Fproj/merge_requests/42');
+    expect((init.headers as Record<string, string>)['PRIVATE-TOKEN']).toBe('test-token');
+  });
+
+  it('throws when GITLAB_TOKEN is missing', async () => {
+    delete process.env.GITLAB_TOKEN;
+    await expect(fetchMeta(glRef)).rejects.toThrow('GITLAB_TOKEN');
+  });
+
+  it('throws on non-ok REST response', async () => {
+    mockFetch([{ ok: false, status: 404, statusText: 'Not Found', body: 'not found' }]);
+    await expect(fetchMeta(glRef)).rejects.toThrow('404');
+  });
+
+  it('respects GITLAB_HOST env var', async () => {
+    process.env.GITLAB_HOST = 'gitlab.example.com';
+    mockFetch([{ ok: true, body: glabView }]);
+    await fetchMeta(glRef);
+    const [[url]] = (globalThis.fetch as ReturnType<typeof vi.spyOn>).mock.calls as [[string]];
+    expect(url).toContain('gitlab.example.com');
+    delete process.env.GITLAB_HOST;
+  });
+});
+
+describe('fetchDiff — GitLab REST fallback', () => {
+  beforeEach(() => {
+    _setGlabAvailable(false);
+    process.env.GITLAB_TOKEN = 'test-token';
+  });
+
+  afterEach(() => {
+    delete process.env.GITLAB_TOKEN;
+    vi.restoreAllMocks();
+  });
+
+  it('fetches diffs via REST and reconstructs unified diff', async () => {
+    mockFetch([{ ok: true, body: diffFiles, headers: {} }]);
+    const diff = await fetchDiff(glRef);
+    expect(diff).toContain('--- a/src/a.ts');
+    expect(diff).toContain('+++ b/src/a.ts');
+    expect(diff).toContain('@@ -1,3 +1,4 @@');
+  });
+
+  it('uses /dev/null for new files', async () => {
+    mockFetch([{
+      ok: true,
+      body: [{ ...diffFiles[0], new_file: true, old_path: '/dev/null' }],
+      headers: {},
+    }]);
+    const diff = await fetchDiff(glRef);
+    expect(diff).toContain('--- /dev/null');
+  });
+
+  it('uses /dev/null for deleted files', async () => {
+    mockFetch([{
+      ok: true,
+      body: [{ ...diffFiles[0], deleted_file: true, new_path: '/dev/null' }],
+      headers: {},
+    }]);
+    const diff = await fetchDiff(glRef);
+    expect(diff).toContain('+++ /dev/null');
+  });
+
+  it('skips binary files (empty diff field)', async () => {
+    mockFetch([{
+      ok: true,
+      body: [{ ...diffFiles[0], diff: '' }],
+      headers: {},
+    }]);
+    const diff = await fetchDiff(glRef);
+    expect(diff).toBe('');
+  });
+
+  it('paginates when x-next-page is set', async () => {
+    const page2 = [{ ...diffFiles[0], old_path: 'src/b.ts', new_path: 'src/b.ts' }];
+    mockFetch([
+      { ok: true, body: diffFiles, headers: { 'x-next-page': '2' } },
+      { ok: true, body: page2, headers: {} },
+    ]);
+    const diff = await fetchDiff(glRef);
+    expect(diff).toContain('a/src/a.ts');
+    expect(diff).toContain('a/src/b.ts');
+    expect((globalThis.fetch as ReturnType<typeof vi.spyOn>).mock.calls).toHaveLength(2);
+  });
+
+  it('throws when GITLAB_TOKEN is missing', async () => {
+    delete process.env.GITLAB_TOKEN;
+    await expect(fetchDiff(glRef)).rejects.toThrow('GITLAB_TOKEN');
   });
 });

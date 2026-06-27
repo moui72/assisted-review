@@ -93,7 +93,7 @@ async function main(): Promise<void> {
     } catch (err) {
       console.error(`error: failed to fetch/parse PR: ${(err as Error).message}`);
       const authHint = pr.platform === 'gitlab'
-        ? 'is `glab` installed and authenticated? try `glab auth status`.'
+        ? 'is `glab` installed and authenticated? try `glab auth status`. Alternatively, set GITLAB_TOKEN to use the REST API without glab.'
         : 'is `gh` installed and authenticated? try `gh auth status`.';
       console.error(`hint: ${authHint}`);
       process.exit(1);
