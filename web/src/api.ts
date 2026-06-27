@@ -1,5 +1,6 @@
 import type {
   Action,
+  GitLabVerdict,
   PrRef,
   Review,
   ReviewState,
@@ -40,13 +41,14 @@ export interface SubmitResponse {
   ok: boolean;
   html_url?: string;
   stale?: { old: string; new_head: string; inline_count: number };
+  comment_errors?: Array<{ path: string; line: number | null; error: string }>;
   error?: string;
   state: ReviewState;
 }
 
-/** Publish the drafted comments as a real GitHub PR review. */
+/** Publish the drafted comments as a real GitHub/GitLab review. */
 export async function submitReview(
-  verdict: Verdict,
+  verdict: Verdict | GitLabVerdict,
   body: string,
 ): Promise<SubmitResponse> {
   const res = await fetch('/api/submit', {
@@ -123,7 +125,8 @@ export async function fetchReviews(): Promise<ReviewSummary[]> {
 }
 
 export async function deleteReview(pr: PrRef): Promise<void> {
-  const res = await fetch(`/api/reviews/${pr.owner}/${pr.repo}/${pr.number}`, {
+  const encodedOwner = encodeURIComponent(pr.owner);
+  const res = await fetch(`/api/reviews/${pr.platform}/${encodedOwner}/${pr.repo}/${pr.number}`, {
     method: 'DELETE',
   });
   if (!res.ok) throw new Error(`DELETE /api/reviews returned ${res.status}`);
@@ -146,8 +149,8 @@ export async function openReview(ref: string): Promise<OpenReviewResponse> {
   return data;
 }
 
-export { OVERVIEW_ID, VERDICTS } from '../../src/types.ts';
-export type { Verdict, ReviewSummary } from '../../src/types.ts';
+export { OVERVIEW_ID, VERDICTS, GITLAB_VERDICTS } from '../../src/types.ts';
+export type { Verdict, GitLabVerdict, ReviewSummary } from '../../src/types.ts';
 export type { Review };
 export type {
   Chunk,

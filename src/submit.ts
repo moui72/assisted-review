@@ -1,22 +1,15 @@
-// Publish drafted comments as a real GitHub PR review via `gh api`.
+// Publish drafted comments as a real GitHub/GitLab review.
 //
-// Ports the essential behavior of the assisted-review `submit-review.sh`:
-//   - assemble a single review payload {event, body, commit_id, comments}
-//   - pre-flight stale-SHA detection (head_sha must still be on the PR's
-//     commit list; a force-push orphans it and inline anchors 422)
-//   - catch the "Path could not be resolved" 422 the pre-flight can miss
-//   - POST the whole payload as one JSON document on stdin (`--input -`);
-//     gh's -f/--raw-field would encode `comments` as a string and the API
-//     rejects that with "not an array".
-//
-// Our model has no replies (every draft is a new inline comment) and no
-// start/end ranges, so the reply pass and multi-line shaping are dropped.
+// GitHub: assembles a single review payload {event, body, commit_id, comments}
+//   and POSTs it as one document via `gh api`.
+// GitLab: posts each inline comment as a separate discussion via `glab api`,
+//   then posts the whole-MR note and optionally approves.
 
 import { spawn } from 'node:child_process';
-import type { Chunk, DraftComment, PrRef, Side } from './types.js';
+import type { Chunk, DraftComment, GitLabVerdict, PrRef, Side } from './types.js';
 
-export { VERDICTS } from './types.js';
-export type { Verdict } from './types.js';
+export { VERDICTS, GITLAB_VERDICTS } from './types.js';
+export type { Verdict, GitLabVerdict } from './types.js';
 import type { Verdict } from './types.js';
 
 export interface ReviewComment {
@@ -35,11 +28,13 @@ export interface ReviewPayload {
 
 export interface SubmitResult {
   ok: boolean;
-  /** PR review permalink on success. */
+  /** Review permalink on success. */
   html_url?: string;
   /** Set when the head SHA the comments were drafted against is gone. */
   stale?: { old: string; new_head: string; inline_count: number };
-  /** gh stderr (or a synthesized message) on a non-stale failure. */
+  /** Errors from individual GitLab discussion POSTs (partial success). */
+  comment_errors?: Array<{ path: string; line: number | null; error: string }>;
+  /** gh/glab stderr (or a synthesized message) on a non-stale failure. */
   error?: string;
   /** Echoed on failure so the UI can offer a manual-submit fallback. */
   payload?: ReviewPayload;
@@ -78,16 +73,15 @@ export function buildReviewPayload(
   return { event: verdict, body, commit_id: headSha, comments: reviewComments };
 }
 
-interface GhResult {
+interface CliResult {
   code: number;
   stdout: string;
   stderr: string;
 }
 
-/** Run `gh` with optional stdin (execFile drops `input`, so we spawn). */
-function gh(args: string[], input?: string): Promise<GhResult> {
+function spawnCli(bin: string, args: string[], input?: string): Promise<CliResult> {
   return new Promise((resolve, reject) => {
-    const child = spawn('gh', args, { stdio: ['pipe', 'pipe', 'pipe'] });
+    const child = spawn(bin, args, { stdio: ['pipe', 'pipe', 'pipe'] });
     let stdout = '';
     let stderr = '';
     child.stdout.on('data', (d) => (stdout += d));
@@ -99,20 +93,25 @@ function gh(args: string[], input?: string): Promise<GhResult> {
   });
 }
 
+function gh(args: string[], input?: string): Promise<CliResult> {
+  return spawnCli('gh', args, input);
+}
+
+function glab(args: string[], input?: string): Promise<CliResult> {
+  return spawnCli('glab', args, input);
+}
+
+// ---- GitHub ----------------------------------------------------------------
+
 function repoPath({ owner, repo }: PrRef): string {
   return `repos/${owner}/${repo}`;
 }
 
-/** Fetch the PR's current head SHA (for stale-SHA reporting). */
 async function currentHeadSha(ref: PrRef): Promise<string> {
   const { code, stdout } = await gh(['api', `${repoPath(ref)}/pulls/${ref.number}`, '-q', '.head.sha']);
   return code === 0 ? stdout.trim() : 'unknown';
 }
 
-/**
- * Is `sha` still on the PR's commit list? Returns null if the lookup itself
- * failed (network/permissions) — caller should not block submission on null.
- */
 async function shaOnPr(ref: PrRef, sha: string): Promise<boolean | null> {
   const { code, stdout } = await gh([
     'api',
@@ -128,9 +127,11 @@ async function shaOnPr(ref: PrRef, sha: string): Promise<boolean | null> {
 
 const STALE_RE = /Path could not be resolved/i;
 
-/** Submit the assembled review. Posts the whole payload as one document. */
 export async function submitReview(ref: PrRef, payload: ReviewPayload): Promise<SubmitResult> {
-  // Pre-flight: a stale head SHA only matters when we have inline anchors.
+  if (payload.event === 'COMMENT' && !payload.body.trim() && payload.comments.length === 0) {
+    return { ok: false, error: 'nothing to submit: provide a body or at least one comment' };
+  }
+
   if (payload.comments.length > 0) {
     const present = await shaOnPr(ref, payload.commit_id);
     if (present === false) {
@@ -171,4 +172,168 @@ export async function submitReview(ref: PrRef, payload: ReviewPayload): Promise<
     /* response wasn't JSON; success without a URL */
   }
   return { ok: true, html_url };
+}
+
+// ---- GitLab ----------------------------------------------------------------
+
+function glabProjectId({ owner, repo }: PrRef): string {
+  return encodeURIComponent(`${owner}/${repo}`);
+}
+
+interface GitLabVersion {
+  base_commit_sha: string;
+  start_commit_sha: string;
+  head_commit_sha: string;
+}
+
+async function fetchGitLabVersions(ref: PrRef): Promise<GitLabVersion> {
+  const { code, stdout, stderr } = await glab([
+    'api',
+    `projects/${glabProjectId(ref)}/merge_requests/${ref.number}/versions`,
+  ]);
+  if (code !== 0) throw new Error(`glab api versions: ${stderr.trim()}`);
+  const versions = JSON.parse(stdout) as GitLabVersion[];
+  if (!versions.length) throw new Error('no MR diff versions found');
+  return versions[0];
+}
+
+async function glabCurrentHeadSha(ref: PrRef): Promise<string> {
+  const { code, stdout } = await glab([
+    'api',
+    `projects/${glabProjectId(ref)}/merge_requests/${ref.number}`,
+  ]);
+  if (code !== 0) return 'unknown';
+  try {
+    return (JSON.parse(stdout) as { sha?: string }).sha ?? 'unknown';
+  } catch {
+    return 'unknown';
+  }
+}
+
+async function glabShaOnMr(ref: PrRef, sha: string): Promise<boolean | null> {
+  const { code, stdout } = await glab([
+    'api',
+    `projects/${glabProjectId(ref)}/merge_requests/${ref.number}/commits`,
+  ]);
+  if (code !== 0) return null;
+  try {
+    const commits = JSON.parse(stdout) as Array<{ id: string }>;
+    return commits.some((c) => c.id === sha);
+  } catch {
+    return null;
+  }
+}
+
+export async function submitGitLabReview(
+  ref: PrRef,
+  chunks: Chunk[],
+  comments: DraftComment[],
+  verdict: GitLabVerdict,
+  body: string,
+  headSha: string,
+): Promise<SubmitResult> {
+  const byId = new Map(chunks.map((c) => [c.id, c]));
+  const inlineComments = comments
+    .map((c) => ({ draft: c, chunk: byId.get(c.chunk_id) }))
+    .filter((x): x is { draft: DraftComment; chunk: Chunk } => x.chunk !== undefined);
+
+  if (verdict === 'comment' && !body.trim() && inlineComments.length === 0) {
+    return { ok: false, error: 'nothing to submit: provide a body or at least one comment' };
+  }
+
+  // Stale SHA check when there are inline comments.
+  if (inlineComments.length > 0) {
+    const present = await glabShaOnMr(ref, headSha);
+    if (present === false) {
+      return {
+        ok: false,
+        stale: {
+          old: headSha,
+          new_head: await glabCurrentHeadSha(ref),
+          inline_count: inlineComments.length,
+        },
+      };
+    }
+  }
+
+  // Fetch diff version SHAs needed for position objects.
+  let version: GitLabVersion | undefined;
+  if (inlineComments.length > 0) {
+    try {
+      version = await fetchGitLabVersions(ref);
+    } catch (err) {
+      return { ok: false, error: (err as Error).message };
+    }
+  }
+
+  const commentErrors: SubmitResult['comment_errors'] = [];
+
+  // Post each inline comment as a separate discussion.
+  for (const { draft, chunk } of inlineComments) {
+    const { side, line } = commentAnchor(draft, chunk);
+    const position = {
+      base_sha: version!.base_commit_sha,
+      start_sha: version!.start_commit_sha,
+      head_sha: version!.head_commit_sha,
+      position_type: 'text' as const,
+      old_path: chunk.file,
+      new_path: chunk.file,
+      ...(side === 'LEFT'  ? { old_line: line } : {}),
+      ...(side === 'RIGHT' ? { new_line: line } : {}),
+    };
+    const discussionBody = { body: draft.body, position };
+    const { code, stderr } = await glab(
+      [
+        'api',
+        `projects/${glabProjectId(ref)}/merge_requests/${ref.number}/discussions`,
+        '-X', 'POST',
+        '--input', '-',
+      ],
+      JSON.stringify(discussionBody),
+    );
+    if (code !== 0) {
+      commentErrors.push({ path: chunk.file, line, error: stderr.trim() || `glab exited with code ${code}` });
+    }
+  }
+
+  // Post the whole-MR summary note.
+  if (body.trim()) {
+    const { code, stderr } = await glab(
+      [
+        'api',
+        `projects/${glabProjectId(ref)}/merge_requests/${ref.number}/notes`,
+        '-X', 'POST',
+        '--input', '-',
+      ],
+      JSON.stringify({ body }),
+    );
+    if (code !== 0) {
+      return {
+        ok: false,
+        error: stderr.trim() || `glab exited with code ${code}`,
+        comment_errors: commentErrors.length > 0 ? commentErrors : undefined,
+      };
+    }
+  }
+
+  // Approve if requested.
+  if (verdict === 'approve') {
+    const { code, stderr } = await glab([
+      'api',
+      `projects/${glabProjectId(ref)}/merge_requests/${ref.number}/approve`,
+      '-X', 'POST',
+    ]);
+    if (code !== 0) {
+      return {
+        ok: false,
+        error: stderr.trim() || `glab approve exited with code ${code}`,
+        comment_errors: commentErrors.length > 0 ? commentErrors : undefined,
+      };
+    }
+  }
+
+  return {
+    ok: true,
+    comment_errors: commentErrors.length > 0 ? commentErrors : undefined,
+  };
 }

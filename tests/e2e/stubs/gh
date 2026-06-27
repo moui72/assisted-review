@@ -1,0 +1,43 @@
+#!/usr/bin/env node
+'use strict';
+
+const args = process.argv.slice(2);
+const sub = args[0];
+const sub2 = args[1];
+
+const PR_SHA = 'abc123def456abc123def456abc123def456abc123';
+
+if (sub === 'pr' && sub2 === 'diff') {
+  process.stdout.write(
+    'diff --git a/src/app.ts b/src/app.ts\n' +
+    'index abc1234..def5678 100644\n' +
+    '--- a/src/app.ts\n' +
+    '+++ b/src/app.ts\n' +
+    '@@ -1,5 +1,6 @@\n' +
+    ' function greet(name: string) {\n' +
+    '-  return `Hello, ${name}`;\n' +
+    '+  const greeting = `Hello, ${name}`;\n' +
+    '+  return greeting;\n' +
+    ' }\n' +
+    ' \n' +
+    ' export { greet };\n',
+  );
+} else if (sub === 'pr' && sub2 === 'view') {
+  process.stdout.write(JSON.stringify({
+    title: 'E2E Test PR',
+    author: { login: 'testuser' },
+    baseRefName: 'main',
+    headRefName: 'feat/e2e-test',
+    isDraft: false,
+    url: 'https://github.com/testowner/testrepo/pull/42',
+    headRefOid: PR_SHA,
+    body: 'Test pull request for e2e testing',
+  }));
+} else if (sub === 'api') {
+  // Any GitHub API call from the submit path — return a review object
+  process.stdout.write(JSON.stringify({
+    id: 99,
+    html_url: 'https://github.com/testowner/testrepo/pull/42#pullrequestreview-99',
+    state: 'APPROVED',
+  }));
+}

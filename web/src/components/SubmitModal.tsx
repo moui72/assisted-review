@@ -2,12 +2,16 @@ import { useMemo, useState } from 'react';
 import {
   submitReview,
   VERDICTS,
+  GITLAB_VERDICTS,
   type Chunk,
   type DraftComment,
+  type GitLabVerdict,
   type ReviewState,
   type Verdict,
 } from '../api.ts';
 import { ErrorBanner } from './ErrorBanner.tsx';
+
+type AnyVerdict = Verdict | GitLabVerdict;
 
 const VERDICT_META: Record<Verdict, { label: string; hint: string; tone: string }> = {
   COMMENT: { label: 'Comment', hint: 'Leave feedback without an explicit verdict', tone: 'text-fg' },
@@ -18,6 +22,11 @@ const VERDICT_META: Record<Verdict, { label: string; hint: string; tone: string 
     tone: 'text-orange-300',
   },
 };
+
+function metaFor(v: AnyVerdict): { label: string; hint: string; tone: string } {
+  const key = v === 'comment' ? 'COMMENT' : v === 'approve' ? 'APPROVE' : v;
+  return VERDICT_META[key];
+}
 
 type Phase = 'edit' | 'sending' | 'done';
 
@@ -47,7 +56,11 @@ export function SubmitModal({
   state: ReviewState;
   onSubmitted: (state: ReviewState) => void;
 }) {
-  const [verdict, setVerdict] = useState<Verdict>('COMMENT');
+  const platform = state.pr.platform;
+  const verdicts: readonly AnyVerdict[] = platform === 'gitlab' ? GITLAB_VERDICTS : VERDICTS;
+  const defaultVerdict: AnyVerdict = platform === 'gitlab' ? 'comment' : 'COMMENT';
+
+  const [verdict, setVerdict] = useState<AnyVerdict>(defaultVerdict);
   const [body, setBody] = useState('');
   const [phase, setPhase] = useState<Phase>('edit');
   const [error, setError] = useState<string | null>(null);
@@ -55,6 +68,9 @@ export function SubmitModal({
     null,
   );
   const [url, setUrl] = useState<string | undefined>();
+  const [commentErrors, setCommentErrors] = useState<
+    Array<{ path: string; line: number | null; error: string }>
+  >([]);
 
   const grouped = useGrouped(chunks, state.comments);
   const commentCount = state.comments.length;
@@ -65,10 +81,12 @@ export function SubmitModal({
     setPhase('sending');
     setError(null);
     setStale(null);
+    setCommentErrors([]);
     try {
       const res = await submitReview(verdict, body.trim());
       if (res.ok) {
         setUrl(res.html_url);
+        setCommentErrors(res.comment_errors ?? []);
         setPhase('done');
         onSubmitted(res.state);
       } else if (res.stale) {
@@ -85,6 +103,8 @@ export function SubmitModal({
   };
 
   const sending = phase === 'sending';
+  const viewLabel = platform === 'gitlab' ? 'View on GitLab →' : 'View on GitHub →';
+  const isComment = verdict === 'COMMENT' || verdict === 'comment';
 
   return (
     <div
@@ -114,7 +134,7 @@ export function SubmitModal({
               ✓
             </div>
             <p className="font-sans text-[14px] text-fg">
-              Posted as <span className="font-semibold">{VERDICT_META[verdict].label}</span>
+              Posted as <span className="font-semibold">{metaFor(verdict).label}</span>
               {commentCount > 0 && ` with ${commentCount} inline comment${commentCount === 1 ? '' : 's'}`}.
             </p>
             {url && (
@@ -124,16 +144,30 @@ export function SubmitModal({
                 rel="noreferrer"
                 className="mt-3 inline-block rounded-md bg-accent px-4 py-1.5 text-[12.5px] font-semibold text-bg transition hover:brightness-110"
               >
-                View on GitHub →
+                {viewLabel}
               </a>
+            )}
+            {commentErrors.length > 0 && (
+              <div className="mt-3 rounded-md border border-orange-400/40 bg-orange-400/[0.08] px-3 py-2 text-left font-sans text-[12.5px] text-orange-200">
+                <div className="font-semibold">
+                  {commentErrors.length} inline comment{commentErrors.length === 1 ? '' : 's'} failed to post.
+                </div>
+                <ul className="mt-1 space-y-0.5">
+                  {commentErrors.map((e, i) => (
+                    <li key={i} className="font-mono text-[11px] text-orange-200/80">
+                      {e.path}:{e.line ?? '?'} — {e.error}
+                    </li>
+                  ))}
+                </ul>
+              </div>
             )}
           </div>
         ) : (
           <div className="thin-scroll min-h-0 flex-1 overflow-auto px-5 py-4">
             {/* Verdict */}
             <div className="space-y-1.5">
-              {VERDICTS.map((v) => {
-                const m = VERDICT_META[v];
+              {verdicts.map((v) => {
+                const m = metaFor(v);
                 const on = verdict === v;
                 return (
                   <button
@@ -162,7 +196,7 @@ export function SubmitModal({
             {/* Summary body */}
             <div className="mt-4">
               <label className="mb-1 block font-sans text-[10px] font-semibold tracking-[0.18em] text-faint uppercase">
-                Summary {verdict === 'COMMENT' && <span className="normal-case">(recommended)</span>}
+                Summary {isComment && <span className="normal-case">(recommended)</span>}
               </label>
               <textarea
                 value={body}
@@ -199,12 +233,12 @@ export function SubmitModal({
 
             {stale && (
               <div className="mt-4 rounded-md border border-orange-400/40 bg-orange-400/[0.08] px-3 py-2 font-sans text-[12.5px] text-orange-200">
-                <div className="font-semibold">The PR moved since you started.</div>
+                <div className="font-semibold">The {platform === 'gitlab' ? 'MR' : 'PR'} moved since you started.</div>
                 <p className="mt-0.5 text-orange-200/80">
                   Your {stale.inline_count} inline comment{stale.inline_count === 1 ? '' : 's'} anchor to{' '}
                   <code className="font-mono">{stale.old.slice(0, 7)}</code>, but HEAD is now{' '}
-                  <code className="font-mono">{stale.new_head.slice(0, 7)}</code>. Re-fetch the PR to
-                  re-anchor before submitting inline comments.
+                  <code className="font-mono">{stale.new_head.slice(0, 7)}</code>. Re-fetch the{' '}
+                  {platform === 'gitlab' ? 'MR' : 'PR'} to re-anchor before submitting inline comments.
                 </p>
               </div>
             )}
@@ -233,7 +267,7 @@ export function SubmitModal({
                 disabled={sending}
                 className="rounded-md bg-accent px-4 py-1.5 text-[12.5px] font-semibold text-bg transition hover:brightness-110 disabled:opacity-50"
               >
-                {sending ? 'Submitting…' : `Submit as ${VERDICT_META[verdict].label}`}
+                {sending ? 'Submitting…' : `Submit as ${metaFor(verdict).label}`}
               </button>
             </div>
           </div>

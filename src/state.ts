@@ -27,6 +27,10 @@ const STATE_DIR =
   process.env.ASSISTED_REVIEW_STATE_DIR || join(homedir(), '.assisted-review');
 
 function statePath(pr: PrRef): string {
+  if (pr.platform === 'gitlab') {
+    const encodedOwner = pr.owner.replace(/\//g, '%2F');
+    return join(STATE_DIR, `gitlab~${encodedOwner}~${pr.repo}~${pr.number}.json`);
+  }
   return join(STATE_DIR, `${pr.owner}-${pr.repo}-${pr.number}.json`);
 }
 
@@ -46,11 +50,16 @@ function emptyState(pr: PrRef, headSha: string): ReviewState {
 // Migrate raw parsed JSON from any prior version to the current ReviewState shape.
 // v0 (no version field): original format, notes array may be absent
 // v1: added version + guaranteed notes array
+// (unversioned): backfill platform: 'github' on pr field (added for GitLab support)
 export function migrate(raw: unknown): ReviewState {
   const s = { ...(raw as Record<string, unknown>) };
   if (typeof s.version !== 'number') {
     if (!Array.isArray(s.notes)) s.notes = [];
     s.version = STATE_VERSION;
+  }
+  // Backfill platform on existing GitHub state files (which predate this field).
+  if (s.pr && typeof (s.pr as Record<string, unknown>).platform !== 'string') {
+    s.pr = { ...(s.pr as Record<string, unknown>), platform: 'github' };
   }
   return s as unknown as ReviewState;
 }

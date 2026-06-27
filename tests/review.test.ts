@@ -26,7 +26,7 @@ import { loadReview } from '../src/review';
 import type { Chunk, PrMeta, ReviewState } from '../src/types';
 import { STATE_VERSION } from '../src/types';
 
-const pr = { owner: 'alice', repo: 'proj', number: 1 };
+const pr = { owner: 'alice', repo: 'proj', number: 1, platform: 'github' as const };
 
 const meta: PrMeta = {
   title: 'Add feature',

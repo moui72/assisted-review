@@ -1,4 +1,4 @@
-import { buildReviewPayload, commentAnchor, VERDICTS } from '../src/submit';
+import { buildReviewPayload, commentAnchor, VERDICTS, GITLAB_VERDICTS } from '../src/submit';
 import type { Chunk, DraftComment } from '../src/types';
 
 const chunk = (over: Partial<Chunk> = {}): Chunk => ({
@@ -98,5 +98,11 @@ describe('buildReviewPayload', () => {
 describe('VERDICTS', () => {
   it('contains exactly the three GitHub review events', () => {
     expect([...VERDICTS]).toEqual(['APPROVE', 'COMMENT', 'REQUEST_CHANGES']);
+  });
+});
+
+describe('GITLAB_VERDICTS', () => {
+  it('contains exactly the two GitLab review events', () => {
+    expect([...GITLAB_VERDICTS]).toEqual(['approve', 'comment']);
   });
 });

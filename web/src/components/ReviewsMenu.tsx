@@ -12,7 +12,9 @@ import {
 import { ErrorBanner } from './ErrorBanner.tsx';
 
 function prKey(pr: PrRef) {
-  return `${pr.owner}/${pr.repo}#${pr.number}`;
+  return pr.platform === 'gitlab'
+    ? `${pr.owner}/${pr.repo}!${pr.number}`
+    : `${pr.owner}/${pr.repo}#${pr.number}`;
 }
 
 function prLabel(s: ReviewSummary) {

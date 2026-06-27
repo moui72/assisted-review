@@ -76,7 +76,8 @@ async function main(): Promise<void> {
       process.exit(2);
     }
 
-    console.error(`Fetching ${pr.owner}/${pr.repo}#${pr.number} ...`);
+    const sep = pr.platform === 'gitlab' ? '!' : '#';
+    console.error(`Fetching ${pr.owner}/${pr.repo}${sep}${pr.number} ...`);
     try {
       ({ review, state } = await loadReview(pr, { mockAi }));
       console.error(`Parsed ${review.chunks.length} chunk(s) across the diff.`);
@@ -91,9 +92,10 @@ async function main(): Promise<void> {
       }
     } catch (err) {
       console.error(`error: failed to fetch/parse PR: ${(err as Error).message}`);
-      console.error(
-        'hint: is `gh` installed and authenticated? try `gh auth status`.',
-      );
+      const authHint = pr.platform === 'gitlab'
+        ? 'is `glab` installed and authenticated? try `glab auth status`.'
+        : 'is `gh` installed and authenticated? try `gh auth status`.';
+      console.error(`hint: ${authHint}`);
       process.exit(1);
     }
 

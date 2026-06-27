@@ -18,8 +18,11 @@ import {
 import {
   buildReviewPayload,
   submitReview,
+  submitGitLabReview,
   VERDICTS,
+  GITLAB_VERDICTS,
   type Verdict,
+  type GitLabVerdict,
 } from './submit.js';
 import { parseRef } from './parse-ref.js';
 import { loadReview } from './review.js';
@@ -27,6 +30,7 @@ import {
   OVERVIEW_ID,
   type Action,
   type AiNoteKind,
+  type Platform,
   type PrRef,
   type Review,
   type ReviewState,
@@ -179,10 +183,12 @@ export function startServer(
         verdict?: string;
         body?: string;
       };
-      if (!verdict || !VERDICTS.includes(verdict as Verdict)) {
+      const validVerdicts: readonly string[] =
+        review.pr.platform === 'gitlab' ? GITLAB_VERDICTS : VERDICTS;
+      if (!verdict || !validVerdicts.includes(verdict)) {
         return sendJson(res, 400, {
           ok: false,
-          error: `verdict must be one of ${VERDICTS.join(', ')}`,
+          error: `verdict must be one of ${validVerdicts.join(', ')}`,
         });
       }
       if (state.submitted) {
@@ -191,14 +197,29 @@ export function startServer(
           error: 'this review was already submitted',
         });
       }
-      const payload = buildReviewPayload(
-        review.chunks,
-        state.comments,
-        verdict as Verdict,
-        body ?? '',
-        state.head_sha,
-      );
-      const result = await submitReview(review.pr, payload);
+      let result;
+      if (review.pr.platform === 'gitlab') {
+        result = await submitGitLabReview(
+          review.pr,
+          review.chunks,
+          state.comments,
+          verdict as GitLabVerdict,
+          body ?? '',
+          state.head_sha,
+        );
+        if (result.ok && !result.html_url && review.meta?.url) {
+          result = { ...result, html_url: review.meta.url };
+        }
+      } else {
+        const payload = buildReviewPayload(
+          review.chunks,
+          state.comments,
+          verdict as Verdict,
+          body ?? '',
+          state.head_sha,
+        );
+        result = await submitReview(review.pr, payload);
+      }
       const nextState = result.ok
         ? { ...state, submitted: { at: new Date().toISOString(), verdict, url: result.html_url } }
         : state;
@@ -216,12 +237,18 @@ export function startServer(
     }
 
     // Delete a review's persisted state file.
+    // URL: /api/reviews/:platform/:encodedOwner/:repo/:number
     const deleteMatch = url.pathname.match(
-      /^\/api\/reviews\/([^/]+)\/([^/]+)\/(\d+)$/,
+      /^\/api\/reviews\/(github|gitlab)\/([^/]+)\/([^/]+)\/(\d+)$/,
     );
     if (deleteMatch && req.method === 'DELETE') {
-      const [, owner, repo, num] = deleteMatch;
-      const pr: PrRef = { owner, repo, number: Number(num) };
+      const [, platform, encodedOwner, repo, num] = deleteMatch;
+      const pr: PrRef = {
+        platform: platform as Platform,
+        owner: decodeURIComponent(encodedOwner),
+        repo,
+        number: Number(num),
+      };
       try {
         await deleteReview(pr);
         return sendJson(res, 200, { ok: true });
@@ -318,10 +345,15 @@ export function startServer(
             suggested_action: suggestedAction,
           });
           ctx.state = nextState;
-          void saveState(nextState).then(() => {
-            sse('done', { state: nextState });
-            res.end();
-          });
+          void saveState(nextState)
+            .then(() => {
+              sse('done', { state: nextState });
+              res.end();
+            })
+            .catch((err: unknown) => {
+              sse('error', { message: err instanceof Error ? err.message : String(err) });
+              res.end();
+            });
         },
       });
       currentCancel = cancel;

@@ -37,10 +37,13 @@ export interface Chunk extends RawHunk {
   ai_notes?: AiNote[];
 }
 
+export type Platform = 'github' | 'gitlab';
+
 export interface PrRef {
-  owner: string;
+  owner: string;   // for GitLab: full namespace, e.g. "group/subgroup"
   repo: string;
   number: number;
+  platform: Platform;
 }
 
 export interface PrMeta {
@@ -100,6 +103,10 @@ export const VERDICTS: readonly Verdict[] = [
   'COMMENT',
   'REQUEST_CHANGES',
 ];
+
+/** GitLab MR review events (approvals are separate from discussion notes). */
+export type GitLabVerdict = 'approve' | 'comment';
+export const GITLAB_VERDICTS: readonly GitLabVerdict[] = ['approve', 'comment'];
 
 /** A reviewer's drafted comment. A null anchor = comment on the whole chunk. */
 export interface DraftComment {
