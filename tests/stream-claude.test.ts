@@ -13,7 +13,7 @@ function makeChild() {
   return Object.assign(new EventEmitter(), {
     stdout: new EventEmitter(),
     stderr: new EventEmitter(),
-    stdin: { write: vi.fn(), end: vi.fn() },
+    stdin: Object.assign(new EventEmitter(), { write: vi.fn(), end: vi.fn() }),
     killed: false,
     kill: vi.fn(),
   });

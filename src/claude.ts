@@ -170,6 +170,11 @@ export function streamClaude(prompt: string, handlers: ClaudeHandlers): () => vo
 
   child.stdin.write(prompt);
   child.stdin.end();
+  // If the subprocess exits before reading stdin, writing emits EPIPE. Suppress
+  // it here — child.on('close') will fire and call finishErr/finishOk normally.
+  child.stdin.on('error', (e: NodeJS.ErrnoException) => {
+    if (e.code !== 'EPIPE') finishErr(`stdin write failed: ${e.message}`);
+  });
 
   return () => {
     if (!child.killed) child.kill();
