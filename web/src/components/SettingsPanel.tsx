@@ -88,7 +88,7 @@ export function SettingsPanel({
             <ChipGroup
               options={['dark', 'light'] as const}
               value={theme}
-              onChange={(v) => { if (v !== theme) toggle(); }}
+              onChange={() => toggle()}
             />
           </Row>
         </div>

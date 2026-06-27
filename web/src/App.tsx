@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
 import {
+  errMsg,
   fetchReview,
   fetchState,
   fetchConfig,
@@ -84,7 +85,7 @@ export function App() {
         }
       })
       .catch((e: unknown) =>
-        setError(e instanceof Error ? e.message : String(e)),
+        setError(errMsg(e)),
       );
   }, []);
 
@@ -132,6 +133,14 @@ export function App() {
     localStorage.setItem('ar-preload-chunks', String(cfg.preload_chunks));
     localStorage.setItem('ar-preload-overview', String(cfg.preload_overview));
     setPreloadConfig(cfg);
+    preloadAttemptedRef.current = new Set();
+  }, []);
+
+  const cancelInFlight = useCallback(() => {
+    claudeCloseRef.current?.();
+    claudeCloseRef.current = null;
+    preloadCancelRef.current?.();
+    preloadCancelRef.current = null;
     preloadAttemptedRef.current = new Set();
   }, []);
 
@@ -474,11 +483,7 @@ export function App() {
         currentPr={review.pr}
         onClose={() => setReviewsOpen(false)}
         onSwitched={(nextReview, nextState) => {
-          claudeCloseRef.current?.();
-          claudeCloseRef.current = null;
-          preloadCancelRef.current?.();
-          preloadCancelRef.current = null;
-          preloadAttemptedRef.current = new Set();
+          cancelInFlight();
           setReview(nextReview);
           setState(nextState);
           setIndex(-1);
@@ -489,11 +494,7 @@ export function App() {
           setClaudeError(null);
         }}
         onCleared={() => {
-          claudeCloseRef.current?.();
-          claudeCloseRef.current = null;
-          preloadCancelRef.current?.();
-          preloadCancelRef.current = null;
-          preloadAttemptedRef.current = new Set();
+          cancelInFlight();
           setReview(null);
           setState(null);
           setReviewsOpen(false);

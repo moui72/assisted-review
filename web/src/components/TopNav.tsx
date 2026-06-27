@@ -1,4 +1,5 @@
-import type { Chunk, PrMeta, PrRef } from '../api.ts';
+import { useMemo } from 'react';
+import { prKey, type Chunk, type PrMeta, type PrRef } from '../api.ts';
 import { Logo } from './Logo.tsx';
 
 function pad(n: number) {
@@ -36,6 +37,11 @@ export function TopNav({
   onOpenSettings: () => void;
   onSubmit: () => void;
 }) {
+  const flaggedSet = useMemo(() => new Set(flagged), [flagged]);
+  const commentedSet = useMemo(() => new Set(commented), [commented]);
+  const viewedSet = useMemo(() => new Set(viewed), [viewed]);
+  const platform = pr.platform ?? 'github';
+  const platformLabel = platform === 'gitlab' ? 'GitLab' : 'GitHub';
   return (
     <header className="shrink-0 border-b border-edge bg-surface">
       <div className="shell flex items-center justify-between gap-6 pt-3">
@@ -47,7 +53,7 @@ export function TopNav({
               {meta.title}
             </div>
             <div className="mt-0.5 font-mono text-[11px] text-faint">
-              {pr.owner}/{pr.repo}#{pr.number}
+              {prKey(pr)}
               <span className="text-edge-strong"> · </span>
               {meta.base_ref} ← {meta.head_ref}
               {meta.is_draft && <span className="ml-2 text-accent">draft</span>}
@@ -67,7 +73,7 @@ export function TopNav({
           </div>
           {submitted ? (
             <span
-              title="Review submitted to GitHub"
+              title={`Review submitted to ${platformLabel}`}
               className="rounded-md border border-emerald-400/40 bg-emerald-400/[0.08] px-2.5 py-1 font-sans text-[11.5px] font-semibold text-emerald-300"
             >
               ✓ Submitted
@@ -75,7 +81,7 @@ export function TopNav({
           ) : (
             <button
               onClick={onSubmit}
-              title="Submit review to GitHub"
+              title={`Submit review to ${platformLabel}`}
               className="flex items-center gap-1.5 rounded-md bg-accent px-3 py-1 text-[12px] font-semibold text-bg transition hover:brightness-110"
             >
               Submit
@@ -130,11 +136,11 @@ export function TopNav({
           const isCur = i === index;
           // Previews the (eventual colorblind-safe) tick grammar:
           // flagged=orange, commented=purple, viewed=green, unviewed=grey.
-          const state = flagged.includes(c.id)
+          const state = flaggedSet.has(c.id)
             ? 'flagged'
-            : commented.includes(c.id)
+            : commentedSet.has(c.id)
               ? 'commented'
-              : viewed.includes(c.id)
+              : viewedSet.has(c.id)
                 ? 'viewed'
                 : 'unviewed';
           const tone = isCur
