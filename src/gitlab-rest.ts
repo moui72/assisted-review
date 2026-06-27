@@ -9,6 +9,7 @@
 
 import { spawn } from 'node:child_process';
 import type { PrRef } from './types.js';
+import { getGitLabToken, GitLabAuthError } from './gitlab-token.js';
 
 let _glabAvailable: boolean | undefined;
 
@@ -65,10 +66,10 @@ export function spawnGlab(args: string[], input?: string): Promise<SpawnResult> 
 }
 
 function requireToken(): string {
-  const token = process.env.GITLAB_TOKEN;
+  const token = getGitLabToken();
   if (!token) {
-    throw new Error(
-      'GitLab REST fallback requires GITLAB_TOKEN — set it in your environment (or install glab)',
+    throw new GitLabAuthError(
+      'GitLab REST requires a token — connect via the browser UI or set GITLAB_TOKEN',
     );
   }
   return token;

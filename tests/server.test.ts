@@ -1,11 +1,15 @@
 import { vi } from 'vitest';
 
-vi.mock('../src/state', () => ({
-  applyAction: vi.fn((state: unknown) => state),
-  saveState: vi.fn().mockResolvedValue(undefined),
-  deleteReview: vi.fn().mockResolvedValue(undefined),
-  listReviews: vi.fn().mockResolvedValue([]),
-}));
+vi.mock('../src/state', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../src/state')>();
+  return {
+    ...actual,
+    applyAction: vi.fn((state: unknown) => state),
+    saveState: vi.fn().mockResolvedValue(undefined),
+    deleteReview: vi.fn().mockResolvedValue(undefined),
+    listReviews: vi.fn().mockResolvedValue([]),
+  };
+});
 
 vi.mock('../src/claude', () => ({
   streamClaude: vi.fn((_prompt: unknown, handlers: { onDone: (full: string) => void }) => {
@@ -27,10 +31,27 @@ vi.mock('../src/submit', async (importOriginal) => {
   return { ...actual, submitReview: vi.fn(), submitGitLabReview: vi.fn() };
 });
 
+vi.mock('../src/gitlab-token', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../src/gitlab-token')>();
+  return {
+    ...actual,
+    loadGitLabToken: vi.fn().mockResolvedValue(undefined),
+    setGitLabToken: vi.fn().mockResolvedValue(undefined),
+    clearGitLabToken: vi.fn().mockResolvedValue(undefined),
+    gitLabTokenSource: vi.fn().mockReturnValue(null),
+  };
+});
+
 import { startServer, type AppContext } from '../src/server';
 import { applyAction, saveState, deleteReview, listReviews } from '../src/state';
 import { loadReview } from '../src/review';
 import { submitReview, submitGitLabReview } from '../src/submit';
+import {
+  GitLabAuthError,
+  gitLabTokenSource,
+  setGitLabToken,
+  clearGitLabToken,
+} from '../src/gitlab-token';
 import type { Review, ReviewState } from '../src/types';
 import { STATE_VERSION, OVERVIEW_ID } from '../src/types';
 
@@ -359,6 +380,81 @@ describe('POST /api/reviews/open', () => {
     const url = await makeServer({ review: null, state: null });
     const res = await post(url, '/api/reviews/open', { ref: 'alice/proj#42' });
     expect(res.status).toBe(502);
+  });
+
+  it('returns 401 with auth_required when GitLabAuthError is thrown', async () => {
+    vi.mocked(loadReview).mockRejectedValueOnce(new GitLabAuthError('token required'));
+    const url = await makeServer({ review: null, state: null });
+    const res = await post(url, '/api/reviews/open', { ref: 'alice/proj#42' });
+    expect(res.status).toBe(401);
+    const body = await res.json() as { error: string; auth_required: string };
+    expect(body.auth_required).toBe('gitlab');
+  });
+});
+
+describe('GET /api/auth/gitlab', () => {
+  it('returns authenticated: false when no token is set', async () => {
+    vi.mocked(gitLabTokenSource).mockReturnValueOnce(null);
+    const url = await makeServer({ review: null, state: null });
+    const res = await get(url, '/api/auth/gitlab');
+    expect(res.status).toBe(200);
+    const body = await res.json() as { authenticated: boolean; source: null };
+    expect(body.authenticated).toBe(false);
+    expect(body.source).toBeNull();
+  });
+
+  it('returns authenticated: true with source when a token is set', async () => {
+    vi.mocked(gitLabTokenSource).mockReturnValueOnce('browser');
+    const url = await makeServer({ review: null, state: null });
+    const res = await get(url, '/api/auth/gitlab');
+    expect(res.status).toBe(200);
+    const body = await res.json() as { authenticated: boolean; source: string };
+    expect(body.authenticated).toBe(true);
+    expect(body.source).toBe('browser');
+  });
+});
+
+describe('POST /api/auth/gitlab', () => {
+  it('saves the token and returns ok: true', async () => {
+    const url = await makeServer({ review: null, state: null });
+    const res = await post(url, '/api/auth/gitlab', { token: 'glpat-abc123' });
+    expect(res.status).toBe(200);
+    const body = await res.json() as { ok: boolean };
+    expect(body.ok).toBe(true);
+    expect(vi.mocked(setGitLabToken)).toHaveBeenCalledWith('glpat-abc123');
+  });
+
+  it('returns 400 when token field is missing', async () => {
+    const url = await makeServer({ review: null, state: null });
+    const res = await post(url, '/api/auth/gitlab', {});
+    expect(res.status).toBe(400);
+  });
+
+  it('returns 400 when token is blank', async () => {
+    const url = await makeServer({ review: null, state: null });
+    const res = await post(url, '/api/auth/gitlab', { token: '   ' });
+    expect(res.status).toBe(400);
+  });
+
+  it('returns 400 for invalid JSON body', async () => {
+    const url = await makeServer({ review: null, state: null });
+    const res = await fetch(`${url}/api/auth/gitlab`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: 'not-json',
+    });
+    expect(res.status).toBe(400);
+  });
+});
+
+describe('DELETE /api/auth/gitlab', () => {
+  it('clears the token and returns ok: true', async () => {
+    const url = await makeServer({ review: null, state: null });
+    const res = await del(url, '/api/auth/gitlab');
+    expect(res.status).toBe(200);
+    const body = await res.json() as { ok: boolean };
+    expect(body.ok).toBe(true);
+    expect(vi.mocked(clearGitLabToken)).toHaveBeenCalled();
   });
 });
 

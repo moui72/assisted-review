@@ -23,7 +23,7 @@ import type {
 } from './types.js';
 import { STATE_VERSION } from './types.js';
 
-const STATE_DIR =
+export const STATE_DIR =
   process.env.ASSISTED_REVIEW_STATE_DIR || join(homedir(), '.assisted-review');
 
 function statePath(pr: PrRef): string {
