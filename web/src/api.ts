@@ -149,6 +149,16 @@ export async function openReview(ref: string): Promise<OpenReviewResponse> {
   return data;
 }
 
+export function errMsg(e: unknown): string {
+  return e instanceof Error ? e.message : String(e);
+}
+
+export function prKey(pr: PrRef): string {
+  return pr.platform === 'gitlab'
+    ? `${pr.owner}/${pr.repo}!${pr.number}`
+    : `${pr.owner}/${pr.repo}#${pr.number}`;
+}
+
 export { OVERVIEW_ID, VERDICTS, GITLAB_VERDICTS } from '../../src/types.ts';
 export type { Verdict, GitLabVerdict, ReviewSummary } from '../../src/types.ts';
 export type { Review };

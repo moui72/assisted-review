@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 import {
+  errMsg,
   submitReview,
   VERDICTS,
   GITLAB_VERDICTS,
@@ -13,9 +14,11 @@ import { ErrorBanner } from './ErrorBanner.tsx';
 
 type AnyVerdict = Verdict | GitLabVerdict;
 
-const VERDICT_META: Record<Verdict, { label: string; hint: string; tone: string }> = {
+const VERDICT_META: Record<AnyVerdict, { label: string; hint: string; tone: string }> = {
   COMMENT: { label: 'Comment', hint: 'Leave feedback without an explicit verdict', tone: 'text-fg' },
+  comment: { label: 'Comment', hint: 'Leave feedback without an explicit verdict', tone: 'text-fg' },
   APPROVE: { label: 'Approve', hint: 'Sign off on the changes', tone: 'text-emerald-300' },
+  approve: { label: 'Approve', hint: 'Sign off on the changes', tone: 'text-emerald-300' },
   REQUEST_CHANGES: {
     label: 'Request changes',
     hint: 'Block until the feedback is addressed',
@@ -23,9 +26,8 @@ const VERDICT_META: Record<Verdict, { label: string; hint: string; tone: string 
   },
 };
 
-function metaFor(v: AnyVerdict): { label: string; hint: string; tone: string } {
-  const key = v === 'comment' ? 'COMMENT' : v === 'approve' ? 'APPROVE' : v;
-  return VERDICT_META[key];
+function metaFor(v: AnyVerdict) {
+  return VERDICT_META[v];
 }
 
 type Phase = 'edit' | 'sending' | 'done';
@@ -97,7 +99,7 @@ export function SubmitModal({
         setPhase('edit');
       }
     } catch (e) {
-      setError(e instanceof Error ? e.message : String(e));
+      setError(errMsg(e));
       setPhase('edit');
     }
   };
