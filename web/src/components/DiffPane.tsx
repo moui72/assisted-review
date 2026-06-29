@@ -1,4 +1,4 @@
-import { Fragment } from 'react';
+import { Fragment, useMemo } from 'react';
 import type { Chunk, DraftComment } from '../api.ts';
 import { diffRows, type Anchor, type DiffRow } from '../diff.ts';
 import { highlightLine, langFor } from '../highlight.ts';
@@ -14,11 +14,9 @@ const GUTTER: Record<string, string> = {
   ctx: 'text-faint',
 };
 
-// The (side, line) a comment on this row would anchor to. Context lines anchor
-// to the new (RIGHT) side, matching GitHub.
+// Context lines anchor to the new (RIGHT) side, matching GitHub.
 function rowAnchor(r: DiffRow): Anchor | null {
-  if (r.type === 'add') return { side: 'RIGHT', line: r.newLn! };
-  if (r.type === 'ctx') return { side: 'RIGHT', line: r.newLn! };
+  if (r.type === 'add' || r.type === 'ctx') return { side: 'RIGHT', line: r.newLn! };
   if (r.type === 'del') return { side: 'LEFT', line: r.oldLn! };
   return null;
 }
@@ -66,8 +64,20 @@ export function DiffPane({
   onDeleteComment: (id: string) => void;
 }) {
   const lang = langFor(chunk.file);
-  const rows = diffRows(chunk.diff);
-  const wholeChunk = comments.filter((c) => c.line === null);
+  const rows = useMemo(() => diffRows(chunk.diff), [chunk.diff]);
+  const wholeChunk = useMemo(() => comments.filter((c) => c.line === null), [comments]);
+  const commentsByAnchor = useMemo(() => {
+    const m = new Map<string, DraftComment[]>();
+    for (const c of comments) {
+      if (c.side && c.line !== null) {
+        const key = `${c.side}-${c.line}`;
+        const existing = m.get(key);
+        if (existing) existing.push(c);
+        else m.set(key, [c]);
+      }
+    }
+    return m;
+  }, [comments]);
 
   return (
     <div className="thin-scroll min-h-0 flex-1 overflow-auto bg-bg">
@@ -89,9 +99,7 @@ export function DiffPane({
               }
               const a = rowAnchor(r)!;
               const selected = anchor?.side === a.side && anchor?.line === a.line;
-              const lineComments = comments.filter(
-                (c) => c.side === a.side && c.line === a.line,
-              );
+              const lineComments = commentsByAnchor.get(`${a.side}-${a.line}`) ?? [];
               return (
                 <Fragment key={i}>
                   <tr

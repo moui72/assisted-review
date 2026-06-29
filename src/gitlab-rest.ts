@@ -28,11 +28,6 @@ export async function glabAvailable(): Promise<boolean> {
   return _glabAvailable;
 }
 
-export function gitlabHost(): string {
-  const h = process.env.GITLAB_HOST ?? 'gitlab.com';
-  return h.startsWith('http://') || h.startsWith('https://') ? new URL(h).host : h;
-}
-
 /** Full base URL for the GitLab API. Supports http:// when GITLAB_HOST starts with http://. */
 export function gitlabBaseUrl(): string {
   const h = process.env.GITLAB_HOST ?? 'gitlab.com';
@@ -50,9 +45,9 @@ interface SpawnResult {
   stderr: string;
 }
 
-export function spawnGlab(args: string[], input?: string): Promise<SpawnResult> {
+export function spawnCli(bin: string, args: string[], input?: string): Promise<SpawnResult> {
   return new Promise((resolve, reject) => {
-    const child = spawn('glab', args, { stdio: ['pipe', 'pipe', 'pipe'] });
+    const child = spawn(bin, args, { stdio: ['pipe', 'pipe', 'pipe'] });
     let stdout = '';
     let stderr = '';
     child.stdout.on('data', (d: Buffer) => (stdout += d));
@@ -62,6 +57,10 @@ export function spawnGlab(args: string[], input?: string): Promise<SpawnResult> 
     if (input != null) child.stdin.write(input);
     child.stdin.end();
   });
+}
+
+export function spawnGlab(args: string[], input?: string): Promise<SpawnResult> {
+  return spawnCli('glab', args, input);
 }
 
 function requireToken(): string {

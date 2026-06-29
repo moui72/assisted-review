@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import type { JiraContext, JiraIssue, PrMeta, PrRef } from '../api.ts';
+import { prKey, type JiraContext, type JiraIssue, type PrMeta, type PrRef } from '../api.ts';
 import type { AiPanelProps } from './ChunkView.tsx';
 import { ErrorBanner } from './ErrorBanner.tsx';
 import { Markdown } from './Markdown.tsx';
@@ -205,7 +205,7 @@ export function OverviewView({
             <h1 className="text-[20px] leading-snug font-semibold text-fg">{meta.title}</h1>
             <div className="mt-1 font-mono text-[12px] text-faint">
               <a href={meta.url} target="_blank" rel="noreferrer" className="hover:text-accent">
-                {pr.owner}/{pr.repo}#{pr.number}
+                {prKey(pr)}
               </a>
               <span className="text-edge-strong"> · </span>
               {meta.author} · {meta.base_ref} ← {meta.head_ref}
@@ -218,7 +218,7 @@ export function OverviewView({
           <Summary ai={ai} />
 
           <Collapsible
-            label="GH PR description"
+            label={`${pr.platform === 'gitlab' ? 'MR' : 'PR'} description`}
             enabled={meta.body.trim().length > 0}
             emptyHint="none"
           >
