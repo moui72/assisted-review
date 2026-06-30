@@ -136,6 +136,7 @@ export interface OpenReviewResponse {
   review?: Review;
   state?: ReviewState;
   error?: string;
+  auth_required?: string;
 }
 
 export async function openReview(ref: string): Promise<OpenReviewResponse> {
@@ -145,8 +146,26 @@ export async function openReview(ref: string): Promise<OpenReviewResponse> {
     body: JSON.stringify({ ref }),
   });
   const data = (await res.json()) as OpenReviewResponse;
-  if (!res.ok) throw new Error(data.error ?? `/api/reviews/open returned ${res.status}`);
+  if (!res.ok && !data.auth_required) {
+    throw new Error(data.error ?? `/api/reviews/open returned ${res.status}`);
+  }
   return data;
+}
+
+export async function authenticateGitLab(token: string): Promise<void> {
+  const res = await fetch('/api/auth/gitlab', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ token }),
+  });
+  if (!res.ok) {
+    const data = (await res.json()) as { error?: string };
+    throw new Error(data.error ?? `/api/auth/gitlab returned ${res.status}`);
+  }
+}
+
+export async function clearGitLabAuth(): Promise<void> {
+  await fetch('/api/auth/gitlab', { method: 'DELETE' });
 }
 
 export function errMsg(e: unknown): string {
