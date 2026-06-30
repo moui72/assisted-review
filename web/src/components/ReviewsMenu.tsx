@@ -2,20 +2,16 @@ import { useEffect, useRef, useState } from 'react';
 import {
   clearActiveReview,
   deleteReview,
+  errMsg,
   fetchReviews,
   openReview,
+  prKey,
   type PrRef,
   type Review,
   type ReviewState,
   type ReviewSummary,
 } from '../api.ts';
 import { ErrorBanner } from './ErrorBanner.tsx';
-
-function prKey(pr: PrRef) {
-  return pr.platform === 'gitlab'
-    ? `${pr.owner}/${pr.repo}!${pr.number}`
-    : `${pr.owner}/${pr.repo}#${pr.number}`;
-}
 
 function prLabel(s: ReviewSummary) {
   return s.meta?.title ?? prKey(s.pr);
@@ -62,7 +58,7 @@ export function ReviewsMenu({
     fetchReviews()
       .then(setReviews)
       .catch((e: unknown) =>
-        setLoadError(e instanceof Error ? e.message : String(e)),
+        setLoadError(errMsg(e)),
       );
     setTimeout(() => inputRef.current?.focus(), 0);
   }, [open]);
@@ -87,7 +83,7 @@ export function ReviewsMenu({
         setOpenError(result.error ?? 'Failed to open review');
       }
     } catch (e) {
-      setOpenError(e instanceof Error ? e.message : String(e));
+      setOpenError(errMsg(e));
     } finally {
       setOpening(false);
     }
@@ -120,7 +116,7 @@ export function ReviewsMenu({
           setOpenError('Failed to switch reviews');
         }
       } catch (e) {
-        setOpenError(e instanceof Error ? e.message : String(e));
+        setOpenError(errMsg(e));
       } finally {
         setOpening(false);
       }

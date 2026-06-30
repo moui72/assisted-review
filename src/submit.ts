@@ -6,9 +6,8 @@
 //   glab-or-REST transport (see gitlab-rest.ts), then posts the whole-MR note
 //   and optionally approves.
 
-import { spawn } from 'node:child_process';
 import type { Chunk, DraftComment, GitLabVerdict, PrRef, Side } from './types.js';
-import { glabApiJson, glabApiPaginatedJson, glProjectId } from './gitlab-rest.js';
+import { glabApiJson, glabApiPaginatedJson, glProjectId, spawnCli } from './gitlab-rest.js';
 
 export { VERDICTS, GITLAB_VERDICTS } from './types.js';
 export type { Verdict, GitLabVerdict } from './types.js';
@@ -75,27 +74,7 @@ export function buildReviewPayload(
   return { event: verdict, body, commit_id: headSha, comments: reviewComments };
 }
 
-interface CliResult {
-  code: number;
-  stdout: string;
-  stderr: string;
-}
-
-function spawnCli(bin: string, args: string[], input?: string): Promise<CliResult> {
-  return new Promise((resolve, reject) => {
-    const child = spawn(bin, args, { stdio: ['pipe', 'pipe', 'pipe'] });
-    let stdout = '';
-    let stderr = '';
-    child.stdout.on('data', (d) => (stdout += d));
-    child.stderr.on('data', (d) => (stderr += d));
-    child.on('error', reject);
-    child.on('close', (code) => resolve({ code: code ?? 0, stdout, stderr }));
-    if (input != null) child.stdin.write(input);
-    child.stdin.end();
-  });
-}
-
-function gh(args: string[], input?: string): Promise<CliResult> {
+function gh(args: string[], input?: string) {
   return spawnCli('gh', args, input);
 }
 
