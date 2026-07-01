@@ -1,7 +1,7 @@
 ---
 plan: plan-refactpr-2026-07-01.md
 generated: 2026-07-01
-status: in-progress
+status: completed
 ---
 
 # Tasks
@@ -43,14 +43,14 @@ status: in-progress
 
 ## Phase 2: Reconcile artifacts
 
-- [ ] T003 [artifacts: ui] Depends on T001/T002 landing. Run `/ardd-refine ui`
+- [x] T003 [artifacts: ui] Depends on T001/T002 landing. Run `/ardd-refine ui`
   to correct `ui.md`'s "Empty/zero-chunk PR" entry under States: it currently
   claims `jump()`'s clamp leaves "no view to render," which was already known
   to be inaccurate (`OverviewView` does render) — update it to describe the
   *implemented* empty-state message instead of the old "Confirmed gap, needs
   an explicit empty state" framing.
 
-- [ ] T004 [artifacts: none] Depends on T003. Remove the resolved
+- [x] T004 [artifacts: none] Depends on T003. Remove the resolved
   "Empty/zero-chunk PR" entry from `.project/DEFECTS.md` (it will no longer
   be accurate once `ui.md` and the code agree), or run `/ardd-verify` to
   regenerate `DEFECTS.md` from scratch and confirm it comes back empty.
