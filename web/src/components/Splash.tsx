@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { openReview, type Review, type ReviewState } from '../api.ts';
 import { Logo } from './Logo.tsx';
 import { ErrorBanner } from './ErrorBanner.tsx';
+import { GitLabAuthModal } from './GitLabAuthModal.tsx';
 
 export function Splash({
   onOpened,
@@ -11,6 +12,7 @@ export function Splash({
   const [ref, setRef] = useState('');
   const [opening, setOpening] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [gitlabAuthOpen, setGitlabAuthOpen] = useState(false);
 
   const handleOpen = async () => {
     if (!ref.trim() || opening) return;
@@ -18,6 +20,10 @@ export function Splash({
     setError(null);
     try {
       const result = await openReview(ref.trim());
+      if (result.auth_required === 'gitlab') {
+        setGitlabAuthOpen(true);
+        return;
+      }
       if (result.review && result.state) {
         onOpened(result.review, result.state);
       } else {
@@ -62,6 +68,14 @@ export function Splash({
           <ErrorBanner className="mt-3 text-[12px]">{error}</ErrorBanner>
         )}
       </div>
+      <GitLabAuthModal
+        open={gitlabAuthOpen}
+        onClose={() => setGitlabAuthOpen(false)}
+        onSuccess={() => {
+          setGitlabAuthOpen(false);
+          void handleOpen();
+        }}
+      />
     </div>
   );
 }

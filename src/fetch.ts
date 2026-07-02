@@ -8,6 +8,7 @@ import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import type { PrMeta, PrRef } from './types.js';
 import { glabAvailable, glProjectId, gitlabBaseUrl } from './gitlab-rest.js';
+import { getGitLabToken, GitLabAuthError } from './gitlab-token.js';
 
 const execFileAsync = promisify(execFile);
 
@@ -102,10 +103,10 @@ interface GitLabDiffFile {
 }
 
 async function fetchGitLabDiffREST(ref: PrRef): Promise<string> {
-  const token = process.env.GITLAB_TOKEN;
+  const token = getGitLabToken();
   if (!token) {
-    throw new Error(
-      'GitLab REST fallback requires GITLAB_TOKEN — set it in your environment (or install glab)',
+    throw new GitLabAuthError(
+      'GitLab REST requires a token — connect via the browser UI or set GITLAB_TOKEN',
     );
   }
   const projectId = glProjectId(ref);
@@ -137,10 +138,10 @@ async function fetchGitLabDiffREST(ref: PrRef): Promise<string> {
 }
 
 async function fetchGitLabMetaREST(ref: PrRef): Promise<PrMeta> {
-  const token = process.env.GITLAB_TOKEN;
+  const token = getGitLabToken();
   if (!token) {
-    throw new Error(
-      'GitLab REST fallback requires GITLAB_TOKEN — set it in your environment (or install glab)',
+    throw new GitLabAuthError(
+      'GitLab REST requires a token — connect via the browser UI or set GITLAB_TOKEN',
     );
   }
   const url = `${gitlabBaseUrl()}/api/v4/projects/${glProjectId(ref)}/merge_requests/${ref.number}`;
