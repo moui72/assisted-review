@@ -13,13 +13,13 @@ import {
   type PreloadConfig,
   type Review,
   type ReviewState,
+  type StoredNote,
 } from './api.ts';
 import { findNextPreload } from './preload.ts';
 import { ReviewsMenu } from './components/ReviewsMenu.tsx';
 import { SettingsPanel } from './components/SettingsPanel.tsx';
 import { Splash } from './components/Splash.tsx';
 import type { Anchor } from './diff.ts';
-import type { DisplayNote } from './components/AiCommentary.tsx';
 import { TopNav } from './components/TopNav.tsx';
 import { ChunkView } from './components/ChunkView.tsx';
 import { OverviewView } from './components/OverviewView.tsx';
@@ -27,6 +27,7 @@ import { ResponseBar } from './components/ResponseBar.tsx';
 import { HelpOverlay } from './components/HelpOverlay.tsx';
 import { SubmitModal } from './components/SubmitModal.tsx';
 import { Logo } from './components/Logo.tsx';
+import { detectMac } from './os.ts';
 
 const SLIDE = {
   enter: (d: number) => ({ opacity: 0, x: d * 28 }),
@@ -34,7 +35,7 @@ const SLIDE = {
   exit: (d: number) => ({ opacity: 0, x: d * -28 }),
 };
 
-const IS_MAC = /mac|iphone|ipad/i.test(navigator.userAgent);
+const IS_MAC = detectMac();
 
 
 export function App() {
@@ -355,31 +356,19 @@ export function App() {
   const isFlagged = chunk ? state.flagged.includes(chunk.id) : false;
   const isViewed = chunk ? state.viewed.includes(chunk.id) : false;
 
-  const storedNotes = (id: string): DisplayNote[] =>
-    state.notes
-      .filter((n) => n.chunk_id === id)
-      .map((n) => ({
-        id: n.id,
-        kind: n.kind,
-        prompt: n.prompt,
-        body: n.body,
-        suggested_action: n.suggested_action,
-      }));
+  const storedNotes = (id: string): StoredNote[] =>
+    state.notes.filter((n) => n.chunk_id === id);
 
   // Overview page → notes for OVERVIEW_ID; chunk page → mock notes + stored notes.
-  const displayNotes: DisplayNote[] = chunk
-    ? [
-        ...(chunk.ai_notes ?? []).map((n) => ({
-          kind: n.kind,
-          prompt: n.prompt,
-          body: n.body,
-          suggested_action: n.suggested_action,
-        })),
-        ...storedNotes(chunk.id),
-      ]
+  const displayNotes: StoredNote[] = chunk
+    ? [...(chunk.ai_notes ?? []), ...storedNotes(chunk.id)]
     : storedNotes(OVERVIEW_ID);
+  // Mock notes carry a fake id but were never written to ReviewState.notes —
+  // only real, persisted notes are safe to delete.
+  const deletableNoteIds = new Set(state.notes.map((n) => n.id));
   const aiPanel = {
     notes: displayNotes,
+    deletableNoteIds,
     streaming: streaming?.chunkId === activeId ? streaming : null,
     busy: streaming?.chunkId === activeId,
     error: claudeError,
