@@ -1,7 +1,7 @@
 ---
 plan: plan-refactpr-2026-07-02.md
 generated: 2026-07-02
-status: in-progress
+status: completed
 ---
 
 # Tasks
@@ -16,4 +16,4 @@ status: in-progress
 
 ## Phase 2: Verify
 
-- [ ] T004 [artifacts: ui] Run the full test suite (`npx vitest run`) and confirm `os.test.ts` passes and nothing else regresses. Manually verify in the browser (per the plan's demonstrable-increment criterion): keyboard-hint glyphs (Help overlay, response bar) and the ⌘/Ctrl+→/← skip-to-unviewed shortcut behave identically to before the change, on whatever platform/browser is available for testing. Depends on T002 and T003.
+- [x] T004 [artifacts: ui] Run the full test suite (`npx vitest run`) and confirm `os.test.ts` passes and nothing else regresses. Manually verify in the browser (per the plan's demonstrable-increment criterion): keyboard-hint glyphs (Help overlay, response bar) and the ⌘/Ctrl+→/← skip-to-unviewed shortcut behave identically to before the change, on whatever platform/browser is available for testing. Depends on T002 and T003.
