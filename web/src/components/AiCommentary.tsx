@@ -1,15 +1,11 @@
 import { useState, type RefObject } from 'react';
-import type { AiNoteKind } from '../api.ts';
+import type { AiNoteKind, StoredNote } from '../api.ts';
 import { ErrorBanner } from './ErrorBanner.tsx';
 
-/** A note to display — `id` present means it's persisted (and deletable). */
-export interface DisplayNote {
-  id?: string;
-  kind: AiNoteKind;
-  prompt?: string;
-  body: string;
-  suggested_action?: string;
-}
+/** A note not yet persisted — the live-streaming preview shown while a
+ *  Claude request is in flight. Same content fields as `StoredNote`, minus
+ *  the id/chunk_id/created_at it doesn't have yet. */
+type NotePreview = Pick<StoredNote, 'kind' | 'body' | 'prompt' | 'suggested_action'>;
 
 const KIND_LABEL: Partial<Record<AiNoteKind, string>> = {
   context: 'context',
@@ -22,7 +18,7 @@ function Note({
   onDelete,
   live,
 }: {
-  note: DisplayNote;
+  note: StoredNote | NotePreview;
   onDelete?: (id: string) => void;
   live?: boolean;
 }) {
@@ -39,9 +35,9 @@ function Note({
         )}
         {note.body}
         {live && <span className="ml-0.5 inline-block animate-pulse text-accent">▍</span>}
-        {note.id && onDelete && (
+        {onDelete && 'id' in note && (
           <button
-            onClick={() => onDelete(note.id!)}
+            onClick={() => onDelete(note.id)}
             className="ml-2 align-middle font-sans text-[10px] text-faint opacity-0 transition group-hover:opacity-100 hover:text-[var(--del-fg)]"
           >
             delete
@@ -67,6 +63,7 @@ function Note({
 // streams a live answer. Empty question = "explain this chunk".
 export function AiCommentary({
   notes,
+  deletableNoteIds,
   streaming,
   busy,
   error,
@@ -75,7 +72,11 @@ export function AiCommentary({
   onDeleteNote,
   subject = 'chunk',
 }: {
-  notes: DisplayNote[];
+  notes: StoredNote[];
+  /** Which of `notes` are actually persisted (and thus safe to delete) —
+   *  mock notes carry a fake id but were never written to
+   *  `ReviewState.notes`, so deleting one would silently no-op. */
+  deletableNoteIds: Set<string>;
   streaming: { kind: AiNoteKind; text: string } | null;
   busy: boolean;
   error: string | null;
@@ -129,8 +130,12 @@ export function AiCommentary({
         )}
 
         <div className="space-y-2 border-l border-accent/35 pl-4">
-          {notes.map((n, i) => (
-            <Note key={n.id ?? `mock-${i}`} note={n} onDelete={onDeleteNote} />
+          {notes.map((n) => (
+            <Note
+              key={n.id}
+              note={n}
+              onDelete={deletableNoteIds.has(n.id) ? onDeleteNote : undefined}
+            />
           ))}
           {streaming && (
             <Note

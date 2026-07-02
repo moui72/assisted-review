@@ -196,7 +196,13 @@ describe('parseDiff', () => {
     expect(hunks).toHaveLength(0);
   });
 
-  it('unexpected line inside a hunk ends the hunk and continues', () => {
+  it('a non-standard line inside a hunk is treated as context, not an error', () => {
+    // parse-diff (the underlying library) treats any line inside a hunk that
+    // isn't a +/-/space-prefixed change as a normal/context line rather than
+    // ending the hunk — more lenient than the old hand-rolled parser, but
+    // real gh/glab diffs (and our own GitLab REST reconstruction) never
+    // produce malformed hunk bodies, so this only affects defensive parsing
+    // of input that shouldn't occur in practice.
     const diff = [
       'diff --git a/f.ts b/f.ts',
       '--- a/f.ts',
@@ -206,12 +212,11 @@ describe('parseDiff', () => {
       'UNEXPECTED',
       '+new',
     ].join('\n');
-    // The hunk is finalized before UNEXPECTED, so c1 has only the -old line;
-    // UNEXPECTED and +new are then outside any hunk and skipped/warned.
     const hunks = parseDiff(diff);
     expect(hunks).toHaveLength(1);
     expect(hunks[0].diff).toContain('-old');
-    expect(hunks[0].diff).not.toContain('UNEXPECTED');
+    expect(hunks[0].diff).toContain('UNEXPECTED');
+    expect(hunks[0].diff).toContain('+new');
   });
 
   it('blank line between sections outside a hunk is silently skipped', () => {
@@ -228,8 +233,10 @@ describe('parseDiff', () => {
     expect(hunks).toHaveLength(1);
   });
 
-  it('unrecognized line outside a hunk emits a warning and is skipped', () => {
-    const warnSpy = vi.spyOn(console, 'error');
+  it('unrecognized line outside a hunk is silently skipped', () => {
+    // parse-diff has no unrecognized-line diagnostic (unlike the old
+    // hand-rolled parser) — lines that don't match any known marker are
+    // silently ignored rather than warned about. Parsing still succeeds.
     const diff = [
       'diff --git a/f.ts b/f.ts',
       'totally unknown metadata',
@@ -241,7 +248,6 @@ describe('parseDiff', () => {
     ].join('\n');
     const hunks = parseDiff(diff);
     expect(hunks).toHaveLength(1);
-    expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('skipping unrecognized line'));
   });
 
   it('hunk with no preceding path emits a warning and produces no chunk', () => {

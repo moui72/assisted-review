@@ -1,11 +1,12 @@
 import type { RefObject } from 'react';
-import type { AiNoteKind, Chunk, DraftComment } from '../api.ts';
+import type { AiNoteKind, Chunk, DraftComment, StoredNote } from '../api.ts';
 import { lineSpan, type Anchor } from '../diff.ts';
 import { DiffPane } from './DiffPane.tsx';
-import { AiCommentary, type DisplayNote } from './AiCommentary.tsx';
+import { AiCommentary } from './AiCommentary.tsx';
 
 export interface AiPanelProps {
-  notes: DisplayNote[];
+  notes: StoredNote[];
+  deletableNoteIds: Set<string>;
   streaming: { kind: AiNoteKind; text: string } | null;
   busy: boolean;
   error: string | null;

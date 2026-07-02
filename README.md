@@ -186,3 +186,177 @@ Syntax highlighting is registered in `web/src/highlight.ts`. Import the language
 ### PRs welcome
 
 Open a PR against `main`. CI runs lint, build, tests, and an end-to-end smoke test on every PR. Please keep commits focused and include tests for new behavior where applicable.
+
+## Datamodel
+
+```mermaid
+erDiagram
+    PrRef {
+        string owner
+        string repo
+        number number
+        string platform
+    }
+    PrMeta {
+        string title
+        string author
+        string base_ref
+        string head_ref
+        boolean is_draft
+        string url
+        string head_sha
+        string body
+    }
+    RawHunk {
+        string id
+        string file
+        string hunk_header
+        LineRange old_range
+        LineRange new_range
+        string context
+        string diff
+    }
+    HunkMember {
+        string hunk_header
+        LineRange old_range
+        LineRange new_range
+    }
+    Chunk {
+        string id
+        string file
+        string diff
+        HunkMember_array members
+        StoredNote_array ai_notes
+    }
+    JiraIssue {
+        string key
+        string summary
+        string status
+        string type
+        string description
+        string url
+        string epic_key
+    }
+    JiraContext {
+        boolean available
+        string reason
+        string setup_hint
+        string_array keys
+    }
+    Overview {
+        JiraContext jira
+    }
+    Review {
+        string generated_at
+    }
+    DraftComment {
+        string id
+        string chunk_id
+        Side side
+        number line
+        string body
+        string created_at
+        string updated_at
+    }
+    StoredNote {
+        string id
+        string chunk_id
+        AiNoteKind kind
+        string prompt
+        string body
+        string suggested_action
+        string created_at
+    }
+    ReviewState {
+        number version
+        string head_sha
+        string started_at
+    }
+    ReviewSummary {
+        string head_sha
+        string started_at
+        number comment_count
+        number flagged_count
+        number viewed_count
+    }
+    SubmitResult {
+        boolean ok
+        string html_url
+        string error
+    }
+
+    RawHunk ||--o{ HunkMember : "retained on grouping"
+    Chunk ||--o{ HunkMember : "members"
+    Chunk ||--o{ StoredNote : "ai_notes (mock, fake ids)"
+    JiraContext ||--o{ JiraIssue : "issues"
+    JiraContext ||--o| JiraIssue : "epic"
+    Overview ||--|| JiraContext : "jira"
+    Review ||--|| PrRef : "pr"
+    Review ||--|| PrMeta : "meta"
+    Review ||--o{ Chunk : "chunks"
+    Review ||--|| Overview : "overview"
+    ReviewState ||--|| PrRef : "pr"
+    ReviewState ||--o| PrMeta : "meta (cached)"
+    ReviewState ||--o{ DraftComment : "comments"
+    ReviewState ||--o{ StoredNote : "notes"
+    ReviewSummary ||--|| PrRef : "pr"
+    ReviewSummary ||--o| PrMeta : "meta"
+```
+
+## Infrastructure
+
+```mermaid
+graph TD
+    UI["Browser UI (React, web/src/)"]
+    CLI["CLI (src/cli.ts)"]
+    Server["Server (src/server.ts, 127.0.0.1:4319)"]
+    State[("State files (~/.assisted-review/*.json)")]
+    GitHub["GitHub (gh CLI)"]
+    GitLab["GitLab (glab CLI / REST v4 fallback)"]
+    Jira["Jira REST API"]
+    Claude["Claude CLI (headless subprocess)"]
+    OnePassword["1Password CLI (op, optional)"]
+
+    CLI -->|starts| Server
+    UI -->|"REST + SSE (/api/*)"| Server
+    Server -->|"save/load JSON (atomic write)"| State
+    Server -->|"gh pr diff / gh pr view / gh api"| GitHub
+    Server -->|"glab api / mr diff, REST fallback"| GitLab
+    Server -->|"GET /rest/api/3/issue/{key}"| Jira
+    Server -->|"resolve JIRA_TOKEN (op read)"| OnePassword
+    Server -->|"spawn, stream-json"| Claude
+```
+
+## UI
+
+```mermaid
+graph TD
+    App["App.tsx (navigation, drafts, Claude stream)"]
+
+    App --> Splash["Splash.tsx"]
+    App --> OverviewView["OverviewView.tsx"]
+    App --> ChunkView["ChunkView.tsx"]
+    App -->|"viewed/flagged/commented per chunk"| TopNav["TopNav.tsx"]
+    App --> ResponseBar["ResponseBar.tsx"]
+    App -->|"SubmitResponse (stale-SHA, comment_errors)"| SubmitModal["SubmitModal.tsx"]
+    App --> ReviewsMenu["ReviewsMenu.tsx"]
+    App --> SettingsPanel["SettingsPanel.tsx"]
+    App --> HelpOverlay["HelpOverlay.tsx"]
+
+    OverviewView -->|"StoredNote[] scoped to OVERVIEW_ID"| AiCommentary1["AiCommentary.tsx"]
+    OverviewView --> ErrorBanner["ErrorBanner.tsx (Jira setup banner)"]
+    OverviewView --> Markdown1["Markdown.tsx (PR description)"]
+
+    ChunkView --> DiffPane["DiffPane.tsx"]
+    ChunkView -->|"StoredNote[] scoped to chunk id"| AiCommentary2["AiCommentary.tsx"]
+
+    AiCommentary1 --> Markdown2["Markdown.tsx (note body)"]
+    AiCommentary2 --> Markdown2
+
+    ReviewsMenu --> OpenReviewForm["OpenReviewForm.tsx"]
+    ReviewsMenu --> ReviewsList["ReviewsList.tsx"]
+    ReviewsMenu -->|"dismissing the active review"| DeleteReviewConfirm["DeleteReviewConfirm.tsx"]
+
+    Splash --> Logo["Logo.tsx"]
+    TopNav --> Logo
+```
