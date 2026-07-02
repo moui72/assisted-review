@@ -1,5 +1,5 @@
 ---
-last_updated: 2026-07-01
+last_updated: 2026-07-02
 ---
 
 # Features
@@ -66,7 +66,7 @@ Opens the default browser to the running server's URL on start (`open`/`start`/`
 
 ## Platform-Aware Keyboard Hints
 _Added 2026-06-12 · ui_
-Keyboard shortcut labels in the UI (Help overlay, response bar) switch between Mac (⌘) and Windows/Linux (Ctrl) glyphs based on `navigator.userAgent` detection.
+Keyboard shortcut labels in the UI (Help overlay, response bar) switch between Mac (⌘) and Windows/Linux (Ctrl) glyphs based on OS detection (`detectMac()`, see `os-aware-keyboard-hints` below for its `navigator.userAgentData`-preferring implementation).
 
 ## Review Picker & In-App Review Launch
 _Added 2026-06-16 · ui, api, datamodel_
@@ -132,3 +132,74 @@ When a PR/MR has no reviewable chunks (e.g. a diff-less or fully-binary-file cha
 _Slug: `os-aware-keyboard-hints` · Status: implemented · Logged 2026-07-01 · Plan: plan-refactpr-2026-07-02.md · Tasks: tasks-refactpr-779d.md_
 Replace `navigator.userAgent` sniffing for Mac/Windows keyboard-hint glyphs (⌘ vs Ctrl, in the Help overlay and response bar) with a more robust OS-detection mechanism (e.g. `navigator.userAgentData` where available, with graceful fallback), so labels are less likely to mislabel on spoofed/frozen UA strings.
 Why: flagged as a low-stakes but fragile pattern during `/ardd-critique` (`critique.md`) — worth fixing properly rather than leaving as an accepted risk indefinitely.
+
+## Smarter Primary-Issue Selection
+_Slug: `smarter-primary-issue-selection` · Status: backlogged · Logged 2026-07-02_
+When a PR/MR references multiple Jira issues, automatically pick the most relevant one as the overview's "primary" issue instead of just using the first key found.
+Issue: moui72/assisted-review#36
+
+## AI Stream Stop & Regenerate Controls
+_Slug: `ai-stream-stop-regenerate` · Status: backlogged · Logged 2026-07-02_
+Let the reviewer stop an in-flight Claude stream and regenerate a note, rather than only being able to wait for it to finish or navigate away.
+Issue: moui72/assisted-review#35
+
+## Claude Model Selection
+_Slug: `claude-model-selection` · Status: backlogged · Logged 2026-07-02_
+Let the reviewer choose which Claude model generates AI commentary, rather than a fixed model baked into the invocation.
+Issue: moui72/assisted-review#34
+
+## Repo-Aware Investigation Mode
+_Slug: `repo-aware-investigation-mode` · Status: backlogged · Logged 2026-07-02_
+An optional `--repo <path>` mode that enables read-only Read/Grep/Glob tools so Claude can investigate cross-file context, instead of being strictly diff-grounded with all built-in tools disabled.
+Why: current design (`infrastructure.md`'s Claude section) deliberately disables all built-in tools so Claude answers only from the diff text — this is an explicit, opt-in escape hatch from that default, not a reversal of it.
+Issue: moui72/assisted-review#31
+
+## Comment Ranges & Thread Replies
+_Slug: `comment-ranges-thread-replies` · Status: backlogged · Logged 2026-07-02_
+Support multi-line comment anchors and replying to existing review threads on submit, instead of today's single-line-only draft comments with no threading.
+Issue: moui72/assisted-review#30
+
+## Inline Comment Editing UI
+_Slug: `inline-comment-editing-ui` · Status: backlogged · Logged 2026-07-02_
+Surface the existing `update_comment` backend action in the UI so a reviewer can edit a drafted comment in place instead of only add/delete.
+Issue: moui72/assisted-review#29
+
+## Smart Chunk Clustering
+_Slug: `smart-chunk-clustering` · Status: backlogged · Logged 2026-07-02_
+Use AI to group related code from across different files into one chunk view — the cross-file counterpart to today's adjacency-only grouping within a single file.
+Issue: moui72/assisted-review#28
+
+## Split Chunk On Demand
+_Slug: `split-chunk-on-demand` · Status: backlogged · Logged 2026-07-02_
+Let the reviewer break an already-grouped chunk into smaller chunks at unchanged-line boundaries while reviewing it, migrating existing comments/state to the right sub-chunk — the inverse of the parser's adjacency grouping.
+Issue: moui72/assisted-review#27
+
+## Collapse/Expand By File
+_Slug: `collapse-expand-by-file` · Status: backlogged · Logged 2026-07-02_
+Let the reviewer collapse or expand all chunks belonging to a single file at once.
+Issue: moui72/assisted-review#26
+
+## Side-by-Side Diff View
+_Slug: `side-by-side-diff-view` · Status: backlogged · Logged 2026-07-02_
+An alternative diff rendering mode showing old/new columns side by side, instead of today's single unified view.
+Issue: moui72/assisted-review#25
+
+## File-Tree Navigation View
+_Slug: `file-tree-navigation-view` · Status: backlogged · Logged 2026-07-02_
+A toggleable file-tree overview (chunks grouped under their file paths) for jump-to navigation, without a permanent sidebar cluttering the focused single-chunk view.
+Issue: moui72/assisted-review#24
+
+## Colorblind-Safe Tick States
+_Slug: `colorblind-safe-tick-states` · Status: backlogged · Logged 2026-07-02_
+Encode each top-strip progress tick with both color and texture (not hue alone) so viewed/commented/flagged/unviewed state is legible without relying on color perception, plus a hover tooltip explaining the encoding.
+Issue: moui72/assisted-review#23
+
+## Customizable Syntax-Highlighting Themes
+_Slug: `customizable-syntax-themes` · Status: backlogged · Logged 2026-07-02_
+Let the reviewer pick a syntax-highlighting token theme (ideally paired with the light/dark setting), instead of a single fixed highlight.js theme.
+Issue: moui72/assisted-review#22
+
+## Customizable Fonts & Colors
+_Slug: `customizable-fonts-colors` · Status: backlogged · Logged 2026-07-02_
+Let the reviewer customize typography and the full color palette via settings, building on the existing CSS-custom-property theming plumbing rather than requiring a refactor.
+Issue: moui72/assisted-review#21

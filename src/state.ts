@@ -47,20 +47,54 @@ function emptyState(pr: PrRef, headSha: string): ReviewState {
   };
 }
 
-// Migrate raw parsed JSON from any prior version to the current ReviewState shape.
-// v0 (no version field): original format, notes array may be absent
-// v1: added version + guaranteed notes array
-// (unversioned): backfill platform: 'github' on pr field (added for GitLab support)
+// Ordered migration steps applied to raw persisted state on load, so old
+// state files keep working across schema changes. Two step shapes:
+//  - `sinceVersion`: runs only if the stored state predates that version,
+//    then bumps `version` to it — for genuine STATE_VERSION increments.
+//  - `backfill`: runs unconditionally, gated on its own field-presence
+//    check rather than `version` — for schema additions that shipped
+//    without a STATE_VERSION bump (e.g. GitLab support adding `pr.platform`).
+// Add new gaps as a new entry here, in order, rather than growing migrate()'s
+// body with another one-off `if`.
+type VersionStep = { sinceVersion: number; apply: (s: Record<string, unknown>) => void };
+type BackfillStep = { backfill: (s: Record<string, unknown>) => void };
+type MigrationStep = VersionStep | BackfillStep;
+
+const MIGRATIONS: MigrationStep[] = [
+  {
+    // v0 (no version field) -> v1: guarantee a notes array.
+    sinceVersion: 1,
+    apply: (s) => {
+      if (!Array.isArray(s.notes)) s.notes = [];
+    },
+  },
+  {
+    // Backfill platform: 'github' on pr (state files predating GitLab support).
+    backfill: (s) => {
+      const pr = s.pr as Record<string, unknown> | undefined;
+      if (pr && typeof pr.platform !== 'string') {
+        s.pr = { ...pr, platform: 'github' };
+      }
+    },
+  },
+];
+
 export function migrate(raw: unknown): ReviewState {
   const s = { ...(raw as Record<string, unknown>) };
-  if (typeof s.version !== 'number') {
-    if (!Array.isArray(s.notes)) s.notes = [];
-    s.version = STATE_VERSION;
+  const currentVersion = typeof s.version === 'number' ? s.version : 0;
+
+  for (const step of MIGRATIONS) {
+    if ('sinceVersion' in step) {
+      if (currentVersion < step.sinceVersion) {
+        step.apply(s);
+        s.version = step.sinceVersion;
+      }
+    } else {
+      step.backfill(s);
+    }
   }
-  // Backfill platform on existing GitHub state files (which predate this field).
-  if (s.pr && typeof (s.pr as Record<string, unknown>).platform !== 'string') {
-    s.pr = { ...(s.pr as Record<string, unknown>), platform: 'github' };
-  }
+
+  if (typeof s.version !== 'number') s.version = STATE_VERSION;
   return s as unknown as ReviewState;
 }
 

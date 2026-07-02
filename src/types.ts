@@ -21,20 +21,16 @@ export interface RawHunk {
 
 export type AiNoteKind = 'initial' | 'context' | 'investigation' | 'error';
 
-/** A piece of AI commentary attached to a chunk. */
-export interface AiNote {
-  kind: AiNoteKind;
-  body: string;
-  /** For `investigation` notes: the question the user asked. */
-  prompt?: string;
-  /** A concrete next step the reviewer could take (on `initial` notes). */
-  suggested_action?: string;
-}
-
 /** A group of one or more adjacent hunks in the same file. */
 export interface Chunk extends RawHunk {
   members: HunkMember[];
-  ai_notes?: AiNote[];
+  /**
+   * Only set by `--mock-ai` (`attachMockNotes`), which fills in placeholder
+   * `id`/`chunk_id`/`created_at` values rather than using a separate
+   * in-memory-only shape — these notes are never written to
+   * `ReviewState.notes`, so the fake ids never collide with real ones.
+   */
+  ai_notes?: StoredNote[];
 }
 
 export type Platform = 'github' | 'gitlab';
@@ -181,3 +177,36 @@ export type Action =
       suggested_action?: string;
     }
   | { type: 'delete_note'; id: string };
+
+export interface ReviewComment {
+  path: string;
+  body: string;
+  side: Side;
+  line: number;
+}
+
+export interface ReviewPayload {
+  event: Verdict;
+  body: string;
+  commit_id: string;
+  comments: ReviewComment[];
+}
+
+/** Response from a submit adapter (`submitReview`/`submitGitLabReview`). The
+ *  `/api/submit` route handler adds a `state` field on top of this before it
+ *  reaches the client — see `web/src/api.ts`'s `SubmitResponse`, which shares
+ *  this type rather than re-declaring it. */
+export interface SubmitResult {
+  ok: boolean;
+  /** Review permalink on success. */
+  html_url?: string;
+  /** Set when the head SHA the comments were drafted against is gone. */
+  stale?: { old: string; new_head: string; inline_count: number };
+  /** Errors from individual GitLab discussion POSTs (partial success). */
+  comment_errors?: Array<{ path: string; line: number | null; error: string }>;
+  /** gh/glab stderr (or a synthesized message) on a non-stale failure. */
+  error?: string;
+  /** Echoed on failure so the UI can offer a manual-submit fallback. Never
+   *  serialized to the client (the route handler strips it before reply). */
+  payload?: ReviewPayload;
+}
