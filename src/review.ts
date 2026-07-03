@@ -48,7 +48,7 @@ export async function loadReview(
     generated_at: new Date().toISOString(),
   };
 
-  const state = await loadState(pr, meta.head_sha);
+  const state = await loadState(pr, meta.head_sha, chunks);
   // Cache meta in state so the reviews listing can show titles without re-fetching.
   state.meta = meta;
 

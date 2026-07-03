@@ -47,7 +47,7 @@ status: in-progress
 
 ## Phase 2: Reconciliation Pass
 
-- [ ] T005 [artifacts: infrastructure, datamodel] Depends on T001-T004.
+- [x] T005 [artifacts: infrastructure, datamodel] Depends on T001-T004.
   Implement an Anchor Reconciliation pass — a function (e.g.
   `reconcileAnchors(state, chunks)` in `src/state.ts`) called from
   `loadState()`'s load path immediately after `migrate()`, using the

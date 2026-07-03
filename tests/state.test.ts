@@ -5,10 +5,11 @@ import {
   listReviews,
   loadState,
   migrate,
+  reconcileAnchors,
   saveState,
   statePath,
 } from '../src/state';
-import type { Action, PrRef, ReviewState } from '../src/types';
+import type { Action, Chunk, PrRef, ReviewState } from '../src/types';
 import { OVERVIEW_ID, STATE_VERSION } from '../src/types';
 
 const baseState = (pr: PrRef): ReviewState => ({
@@ -380,6 +381,75 @@ describe('migrate', () => {
     const result = migrate(raw);
     expect(result.comments[0].file).toBe('a.ts');
     expect(result.comments[0].displaced).toBe(false);
+  });
+});
+
+describe('reconcileAnchors', () => {
+  const pr: PrRef = { owner: 'o', repo: 'r', number: 1, platform: 'github' as const };
+
+  const makeChunk = (id: string, file: string, hunk_header: string): Chunk => ({
+    id,
+    file,
+    hunk_header,
+    old_range: [1, 1],
+    new_range: [1, 1],
+    context: '',
+    diff: '',
+    members: [],
+  });
+
+  it('resyncs chunk_id and clears displaced for an entry whose anchor still matches', () => {
+    const state = baseState(pr);
+    state.comments = [
+      {
+        id: 'cm1', chunk_id: 'c1', side: 'RIGHT', line: 1, body: 'x',
+        file: 'a.ts', hunk_header: '@@ -1,3 +1,3 @@', displaced: true,
+        created_at: 't', updated_at: 't',
+      },
+    ];
+    // Same file+hunk_header, but renumbered to c5 in the fresh parse.
+    const chunks = [makeChunk('c5', 'a.ts', '@@ -1,3 +1,3 @@')];
+    const result = reconcileAnchors(state, chunks);
+    expect(result.comments[0].chunk_id).toBe('c5');
+    expect(result.comments[0].displaced).toBe(false);
+  });
+
+  it('marks an entry displaced and retains its last-known snapshot when its hunk changed', () => {
+    const state = baseState(pr);
+    state.comments = [
+      {
+        id: 'cm1', chunk_id: 'c1', side: 'RIGHT', line: 1, body: 'x',
+        file: 'a.ts', hunk_header: '@@ -1,3 +1,3 @@', displaced: false,
+        created_at: 't', updated_at: 't',
+      },
+    ];
+    // a.ts's hunk_header changed — no exact match in the fresh parse.
+    const chunks = [makeChunk('c1', 'a.ts', '@@ -1,5 +1,7 @@')];
+    const result = reconcileAnchors(state, chunks);
+    expect(result.comments[0].displaced).toBe(true);
+    expect(result.comments[0].chunk_id).toBe('c1'); // last-known, retained
+    expect(result.comments[0].file).toBe('a.ts');
+    expect(result.comments[0].hunk_header).toBe('@@ -1,3 +1,3 @@');
+  });
+
+  it('never reconciles overview notes (no file/hunk_header to match)', () => {
+    const state = baseState(pr);
+    state.notes = [
+      { id: 'n1', chunk_id: OVERVIEW_ID, kind: 'initial', body: 'summary', created_at: 't' },
+    ];
+    const result = reconcileAnchors(state, []);
+    expect(result.notes[0].chunk_id).toBe(OVERVIEW_ID);
+    expect(result.notes[0].displaced).toBeUndefined();
+  });
+
+  it('reconciles flagged entries the same way as comments', () => {
+    const state = baseState(pr);
+    state.flagged = [
+      { chunk_id: 'c1', file: 'a.ts', hunk_header: '@@ -1,3 +1,3 @@', displaced: false },
+    ];
+    const result = reconcileAnchors(state, []); // hunk no longer exists at all
+    expect(result.flagged[0].displaced).toBe(true);
+    expect(result.flagged[0].chunk_id).toBe('c1');
   });
 });
 
