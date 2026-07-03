@@ -169,6 +169,16 @@ export interface ReviewState {
   notes: StoredNote[];
   /** Set once the review has been published to GitHub. */
   submitted?: { at: string; verdict: string; url?: string };
+  /** GitLab only — tracks which parts of a submission already succeeded, so
+   *  a retry after partial failure skips them instead of reposting
+   *  duplicates. Cleared once a submission fully succeeds, the same moment
+   *  `submitted` is stamped. GitHub's single-POST review is atomic and
+   *  never uses this field. */
+  gitlab_submit_progress?: {
+    posted_comment_ids: string[];
+    note_posted: boolean;
+    approved: boolean;
+  };
 }
 
 export interface ReviewSummary {
