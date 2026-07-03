@@ -74,6 +74,35 @@ function requireToken(): string {
   return token;
 }
 
+/**
+ * Thrown by the REST fallback transport with a real HTTP `status` — the
+ * `glab` CLI path has no structured status (only an exit code + stderr
+ * text) and keeps throwing plain `Error`. `isRetryable()` treats that
+ * absence as "can't rule out transient" rather than "definitely fatal".
+ */
+export class GitLabApiError extends Error {
+  status?: number;
+  constructor(message: string, status?: number) {
+    super(message);
+    this.name = 'GitLabApiError';
+    this.status = status;
+  }
+}
+
+/** HTTP statuses a retry can never fix: bad request, missing/invalid auth,
+ *  not found, validation failure. Everything else (429, 5xx, a
+ *  `GitLabApiError` with no status, or any non-`GitLabApiError` — e.g. the
+ *  `glab` CLI path) is treated as retryable, since retrying only costs
+ *  latency and none of those can be confidently ruled out as transient. */
+const NON_RETRYABLE_STATUSES = new Set([400, 401, 403, 404, 422]);
+
+export function isRetryable(err: unknown): boolean {
+  if (err instanceof GitLabApiError && err.status !== undefined) {
+    return !NON_RETRYABLE_STATUSES.has(err.status);
+  }
+  return true;
+}
+
 async function restFetch(path: string, init: RequestInit = {}): Promise<Response> {
   const token = requireToken();
   const url = `${gitlabBaseUrl()}/api/v4/${path}`;
@@ -83,7 +112,10 @@ async function restFetch(path: string, init: RequestInit = {}): Promise<Response
   });
   if (!res.ok) {
     const text = await res.text();
-    throw new Error(`GitLab API ${path}: ${res.status} ${res.statusText} — ${text}`);
+    throw new GitLabApiError(
+      `GitLab API ${path}: ${res.status} ${res.statusText} — ${text}`,
+      res.status,
+    );
   }
   return res;
 }
