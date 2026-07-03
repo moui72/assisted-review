@@ -181,7 +181,12 @@ export function App() {
 
   const toggleFlag = useCallback(() => {
     if (!chunk) return;
-    void dispatch({ type: 'toggle_flag', chunk_id: chunk.id });
+    void dispatch({
+      type: 'toggle_flag',
+      chunk_id: chunk.id,
+      file: chunk.file,
+      hunk_header: chunk.hunk_header,
+    });
   }, [chunk, dispatch]);
 
   const markUnread = useCallback(() => {
@@ -355,7 +360,9 @@ export function App() {
   const chunkComments = chunk
     ? state.comments.filter((c) => c.chunk_id === chunk.id)
     : [];
-  const isFlagged = chunk ? state.flagged.includes(chunk.id) : false;
+  const isFlagged = chunk
+    ? state.flagged.some((f) => f.chunk_id === chunk.id)
+    : false;
   const isViewed = chunk ? state.viewed.includes(chunk.id) : false;
 
   const storedNotes = (id: string): StoredNote[] =>
@@ -387,7 +394,7 @@ export function App() {
         chunks={review.chunks}
         index={index}
         viewed={state.viewed}
-        flagged={state.flagged}
+        flagged={state.flagged.map((f) => f.chunk_id)}
         commented={commentedIds}
         commentCount={state.comments.length}
         submitted={!!state.submitted}

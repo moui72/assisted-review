@@ -1,5 +1,5 @@
 ---
-last_updated: 2026-07-02
+last_updated: 2026-07-03
 ---
 
 # Features
@@ -203,3 +203,13 @@ Issue: moui72/assisted-review#22
 _Slug: `customizable-fonts-colors` · Status: backlogged · Logged 2026-07-02_
 Let the reviewer customize typography and the full color palette via settings, building on the existing CSS-custom-property theming plumbing rather than requiring a refactor.
 Issue: moui72/assisted-review#21
+
+## Displaced Comment Re-Anchoring
+_Slug: `displaced-comment-reanchoring` · Status: tasked · Logged 2026-07-02 · Plan: plan-refactpr-2026-07-03.md · Tasks: tasks-refactpr-7f00.md_
+On reopening a review whose diff has changed shape, detect drafted comments/notes/flags whose `chunk_id` no longer resolves to a recognizably-similar chunk, de-anchor them instead of silently keeping a stale/wrong `chunk_id` or dropping them, warn the reviewer that comments were displaced, and let the reviewer pick a new anchor point (chunk + line) for each one.
+Why: `chunk_id`s remain unstable sequential ids (no id-scheme change) — flagged by `/ardd-critique` (`critique.md`) as a silent comment-drop/misattribution risk on reopen; this is the accepted remediation (de-anchor + warn + manual re-anchor) rather than content-derived stable ids.
+
+## Resilient GitLab Submit
+_Slug: `resilient-gitlab-submit` · Status: backlogged · Logged 2026-07-02_
+Make GitLab review submission resilient to partial failure: withhold the summary-note/approve call until every inline comment discussion has posted successfully, retry each request on transient failure, and — if a submission still ends up partial — persist which comments succeeded and which failed in `ReviewState` so the reviewer can retry later without reposting duplicates; the review is only marked `submitted` once the whole submission actually succeeds.
+Why: GitLab has no atomic "review" object like GitHub's single-POST review — each inline comment, the summary note, and the approve call are separate, independently-failing requests — flagged by `/ardd-critique` (`critique.md`) since today's behavior stamps `submitted` (blocking retry) even when some comments failed to post.

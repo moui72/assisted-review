@@ -22,7 +22,7 @@ status: in-progress
   (leave `undefined`) when `chunk_id === OVERVIEW_ID`. Test: unit test
   asserting a chunk note carries the fields and an overview note doesn't.
 
-- [ ] T003 [artifacts: datamodel] Introduce a `FlaggedEntry` type
+- [x] T003 [artifacts: datamodel] Introduce a `FlaggedEntry` type
   (`chunk_id: string, file: string, hunk_header: string, displaced: boolean`)
   in `src/types.ts`. Change `ReviewState.flagged` from `string[]` to
   `FlaggedEntry[]`. Update the `toggle_flag` case in `applyAction` to accept

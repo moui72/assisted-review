@@ -1,7 +1,7 @@
 ---
 name: ui
 status: stable
-last_updated: 2026-07-02
+last_updated: 2026-07-03
 diagram_status: stale
 ---
 
@@ -45,6 +45,16 @@ markdown), and Jira context (linked issue(s) + epic, or a setup banner via
 Hosts the AI panel scoped to `OVERVIEW_ID` — ask Claude to summarize the
 whole PR or answer a question about it. `onBegin` jumps to chunk 0.
 
+When `state.comments` contains any `displaced: true` entries (see
+`datamodel.md`'s Anchor Reconciliation), a **Displaced Comments** section
+renders here — the only place they're shown, since a displaced comment has
+no current chunk to attach to. Each entry shows the comment body plus its
+last-known `file`/`hunk_header` snapshot, with a "Re-anchor" button that
+jumps into `ChunkView` in anchor-picking mode (see `ResponseBar.tsx` below).
+Displaced notes and flags are surfaced in the same section for visibility,
+but read-only — no re-anchor affordance for them (see `api.md`'s
+`reanchor_comment`); a note can only be deleted and a flag only cleared.
+
 ### Chunk (`ChunkView.tsx`)
 
 The primary review screen — one per `Chunk`. Composes `DiffPane` (the actual
@@ -74,7 +84,12 @@ Shared across views, listed by concern:
   Ctrl-key labels driven by `isMac` passed down from `App.tsx`'s
   `detectMac()` helper (prefers `navigator.userAgentData.platform` where
   available — Chromium browsers — falling back to the `navigator.userAgent`
-  regex elsewhere).
+  regex elsewhere). When entered in re-anchor mode (from a displaced
+  comment's "Re-anchor" button on the Overview page), it reuses the existing
+  line-click-to-anchor flow (`DiffPane`'s `Anchor { side, line }` selection)
+  instead of the normal "new comment" flow — selecting a line dispatches
+  `reanchor_comment` for that specific comment id rather than `add_comment`,
+  and there's no textarea shown since the comment body already exists.
 - **`AiCommentary.tsx`** — renders the note list (`StoredNote[]`, see
   `datamodel.md`) for whichever id is active (chunk or `OVERVIEW_ID`), the
   ask-AI input, the live streaming buffer while a request is in flight
@@ -134,6 +149,12 @@ Shared across views, listed by concern:
   stale-SHA warning (offers re-fetch), and partial-failure
   (`comment_errors` list) — all handled inside `SubmitModal`, not lifted to
   `App.tsx`.
+- **Displaced comments** (Overview page only): rendered whenever
+  `state.comments`/`notes`/`flagged` contains any `displaced: true` entry
+  (see `datamodel.md`'s Anchor Reconciliation) — a dedicated section, not a
+  dismissible banner, since these need an actual action (re-anchor, delete,
+  or unflag) rather than just acknowledgment. Comments show a "Re-anchor"
+  button; notes and flags are read-only there (delete/unflag only).
 - **Empty/zero-chunk PR**: A PR/MR with zero chunks (e.g., a diff-less or
   fully-binary-file PR) still renders `OverviewView` — `index` defaults to
   `-1`, so there is always a view to render; `jump()`'s `!total` guard only

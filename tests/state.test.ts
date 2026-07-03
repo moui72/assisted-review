@@ -128,11 +128,20 @@ describe('applyAction', () => {
 
   it('toggle_flag adds then removes on repeat', () => {
     const state = baseState(pr);
-    const flagged = applyAction(state, { type: 'toggle_flag', chunk_id: 'c1' });
-    expect(flagged.flagged).toEqual(['c1']);
+    const flagged = applyAction(state, {
+      type: 'toggle_flag',
+      chunk_id: 'c1',
+      file: 'a.ts',
+      hunk_header: '@@ -1,3 +1,3 @@',
+    });
+    expect(flagged.flagged).toEqual([
+      { chunk_id: 'c1', file: 'a.ts', hunk_header: '@@ -1,3 +1,3 @@', displaced: false },
+    ]);
     const unflagged = applyAction(flagged, {
       type: 'toggle_flag',
       chunk_id: 'c1',
+      file: 'a.ts',
+      hunk_header: '@@ -1,3 +1,3 @@',
     });
     expect(unflagged.flagged).toEqual([]);
   });
@@ -374,7 +383,12 @@ describe('loadState / saveState persistence', () => {
       file: 'a.ts',
       hunk_header: '@@ -1,3 +1,3 @@',
     });
-    state = applyAction(state, { type: 'toggle_flag', chunk_id: 'c2' });
+    state = applyAction(state, {
+      type: 'toggle_flag',
+      chunk_id: 'c2',
+      file: 'b.ts',
+      hunk_header: '@@ -4,3 +4,3 @@',
+    });
     state = applyAction(state, {
       type: 'set_viewed',
       chunk_id: 'c3',
@@ -386,7 +400,9 @@ describe('loadState / saveState persistence', () => {
     expect(loaded.comments).toHaveLength(1);
     expect(loaded.comments[0].body).toBe('hi');
     expect(loaded.comments[0].chunk_id).toBe('c1');
-    expect(loaded.flagged).toEqual(['c2']);
+    expect(loaded.flagged).toEqual([
+      { chunk_id: 'c2', file: 'b.ts', hunk_header: '@@ -4,3 +4,3 @@', displaced: false },
+    ]);
     expect(loaded.viewed).toEqual(['c3']);
     await cleanup(pr);
   });
@@ -436,7 +452,12 @@ describe('listReviews', () => {
       file: 'a.ts',
       hunk_header: '@@ -1,3 +1,3 @@',
     });
-    state = applyAction(state, { type: 'toggle_flag', chunk_id: 'c2' });
+    state = applyAction(state, {
+      type: 'toggle_flag',
+      chunk_id: 'c2',
+      file: 'b.ts',
+      hunk_header: '@@ -4,3 +4,3 @@',
+    });
     state = applyAction(state, {
       type: 'set_viewed',
       chunk_id: 'c3',

@@ -1,7 +1,19 @@
 <!--
 SYNC IMPACT REPORT
 ==================
-Version change: 3.1.0 → 3.1.1
+Version change: 3.1.1 → 3.2.0
+Modified sections:
+- Development Workflow — added a rule that Production Annotations stay as
+  inline prose by default and are only promoted to a `features.md` backlog
+  entry when an `/ardd-critique` pass specifically flags one as worth acting
+  on now — codifying the pattern already followed by `os-aware-keyboard-hints`,
+  `displaced-comment-reanchoring`, and `resilient-gitlab-submit`, rather than
+  leaving the promotion decision as an unstated convention. Resolves the
+  `/ardd-critique` finding (`critique.md`) about inconsistent annotation-to-
+  backlog treatment. MINOR change (new workflow requirement, no principle
+  redefinition).
+
+--- Prior report (3.1.0 → 3.1.1) ---
 Modified sections:
 - Principle III — corrected a factual error: the backend was described as
   "CommonJS with extensionless imports"; it is actually ESM
@@ -199,6 +211,14 @@ Concretely:
   under a `## Production Annotations` heading — not inline prose elsewhere in
   the artifact — so `/ardd-plan`'s Production Annotation Summary and
   `/ardd-critique` can rely on a single, consistent place to find them.
+- A Production Annotation stays as inline prose by default — it does not need
+  its own `features.md` backlog entry just for being written down. It is only
+  promoted to a backlog entry (cross-referencing back to the annotation) when
+  an `/ardd-critique` pass specifically flags it as worth acting on now,
+  rather than left as an accepted, indefinitely-deferred limitation. This is
+  the pattern `os-aware-keyboard-hints`, `displaced-comment-reanchoring`, and
+  `resilient-gitlab-submit` already followed; this bullet makes it a rule
+  rather than an implicit convention.
 
 ## Governance
 
@@ -212,4 +232,4 @@ repository once confirmed. Amendments require:
    clarifications or wording fixes.
 4. `last_updated` date updated in frontmatter.
 
-**Version**: 3.1.1 | **Ratified**: 2026-06-30 | **Last Amended**: 2026-07-02
+**Version**: 3.2.0 | **Ratified**: 2026-06-30 | **Last Amended**: 2026-07-02

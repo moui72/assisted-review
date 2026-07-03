@@ -140,6 +140,19 @@ export interface StoredNote {
   created_at: string;
 }
 
+/** A flagged chunk, with the same anchor-snapshot fields as `DraftComment`/
+ *  `StoredNote` so flags participate in Anchor Reconciliation. Replaces a
+ *  bare chunk-id string, which couldn't carry a snapshot. */
+export interface FlaggedEntry {
+  /** Last-known chunk id. Not trustworthy for lookup when `displaced` is true. */
+  chunk_id: string;
+  file: string;
+  hunk_header: string;
+  /** Set by reconciliation on load. Unlike `DraftComment`, a flag has no
+   *  re-anchor action — a displaced flag can only be shown as displaced or unflagged. */
+  displaced: boolean;
+}
+
 export const STATE_VERSION = 1;
 
 /** Persisted review state (drafts, flags, viewed, AI notes). Resumed on restart. */
@@ -151,7 +164,7 @@ export interface ReviewState {
   head_sha: string;
   started_at: string;
   comments: DraftComment[];
-  flagged: string[]; // chunk ids
+  flagged: FlaggedEntry[];
   viewed: string[]; // chunk ids
   notes: StoredNote[];
   /** Set once the review has been published to GitHub. */
@@ -182,7 +195,7 @@ export type Action =
     }
   | { type: 'update_comment'; id: string; body: string }
   | { type: 'delete_comment'; id: string }
-  | { type: 'toggle_flag'; chunk_id: string }
+  | { type: 'toggle_flag'; chunk_id: string; file: string; hunk_header: string }
   | { type: 'set_viewed'; chunk_id: string; viewed: boolean }
   | {
       type: 'add_note';

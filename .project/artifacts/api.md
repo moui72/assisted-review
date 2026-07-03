@@ -1,7 +1,7 @@
 ---
 name: api
 status: stable
-last_updated: 2026-07-01
+last_updated: 2026-07-03
 ---
 
 # API
@@ -34,7 +34,8 @@ to prefetch AI commentary.
 ### `GET /api/review`
 
 Returns the active `Review` (`datamodel.md`), or `204 No Content` if none is
-open.
+open. No shape change for Anchor Reconciliation — it's a `ReviewState`
+concern (see `GET /api/state`), not part of `Review` itself.
 
 ### `DELETE /api/review`
 
@@ -44,7 +45,11 @@ out `ctx.review`/`ctx.state`. Returns `{ ok: true }`.
 
 ### `GET /api/state`
 
-Returns the active `ReviewState`, or `204` if none.
+Returns the active `ReviewState`, or `204` if none. `comments`/`notes`/
+`flagged` entries may carry `displaced: true` (set by the Anchor
+Reconciliation pass that already ran during the `loadReview()` call behind
+`GET /api/review` / `POST /api/reviews/open` — reconciliation happens once,
+at load time, not on every `GET /api/state` poll).
 
 ### `POST /api/action`
 
@@ -54,6 +59,14 @@ Body: an `Action` (see `datamodel.md`). Requires an active review/state
 endpoint for comments/flags/viewed — the frontend never manipulates state
 directly, always round-trips through here so the server remains the source
 of truth for what's persisted.
+
+`add_comment`/`toggle_flag`/`add_note` carry `file`/`hunk_header` snapshot
+fields (see `datamodel.md`'s Anchor Reconciliation) resolved by the frontend
+from the chunk it's currently viewing — `applyAction` itself has no access
+to `Chunk` data and stays a pure `(state, action) → state` reducer.
+`reanchor_comment` (id, chunk_id, side, line, file, hunk_header) is the only
+re-anchor action: only comments get a re-anchor UI/action (notes and flags
+can only be shown as displaced or deleted/unflagged — see `ui.md`).
 
 The read-`ctx.state` → `applyAction` → write-`ctx.state` → `saveState()`
 sequence runs inside `withStateLock` (`src/mutex.ts`), a small in-process

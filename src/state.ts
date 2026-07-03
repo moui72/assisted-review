@@ -155,9 +155,17 @@ export function applyAction(state: ReviewState, action: Action): ReviewState {
     case 'toggle_flag':
       return {
         ...state,
-        flagged: state.flagged.includes(action.chunk_id)
-          ? state.flagged.filter((id) => id !== action.chunk_id)
-          : [...state.flagged, action.chunk_id],
+        flagged: state.flagged.some((f) => f.chunk_id === action.chunk_id)
+          ? state.flagged.filter((f) => f.chunk_id !== action.chunk_id)
+          : [
+              ...state.flagged,
+              {
+                chunk_id: action.chunk_id,
+                file: action.file,
+                hunk_header: action.hunk_header,
+                displaced: false,
+              },
+            ],
       };
     case 'set_viewed':
       return {

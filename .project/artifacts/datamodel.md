@@ -1,8 +1,8 @@
 ---
 name: datamodel
 status: stable
-last_updated: 2026-07-02
-diagram_status: current
+last_updated: 2026-07-03
+diagram_status: stale
 ---
 
 # Data Model
@@ -150,12 +150,15 @@ whole chunk" (anchored at submit time — see `submit.ts`'s `commentAnchor`).
 | Field | Type | Notes |
 |-------|------|-------|
 | id | string | UUID |
-| chunk_id | string | |
+| chunk_id | string | When `displaced` is true, this is the *last-known* chunk id — no longer trustworthy for lookup, kept only as a hint |
 | side | Side \| null | `'RIGHT' \| 'LEFT'`; null for whole-chunk comments |
 | line | number \| null | null for whole-chunk comments |
 | body | string | |
+| file | string | Snapshot of the anchored chunk's `file` at anchor time — see Anchor Reconciliation below |
+| hunk_header | string | Snapshot of the anchored chunk's `hunk_header` at anchor time |
+| displaced | boolean | Set by reconciliation on load when the snapshot no longer matches any current chunk; cleared by `reanchor_comment` |
 | created_at | string | ISO |
-| updated_at | string | ISO; bumped by `update_comment` |
+| updated_at | string | ISO; bumped by `update_comment` and by `reanchor_comment` |
 
 ### StoredNote
 
@@ -168,11 +171,14 @@ values rather than reinventing the shape.
 | Field | Type | Notes |
 |-------|------|-------|
 | id | string | UUID for real notes; `mock-{chunk_id}-{n}` for mock notes |
-| chunk_id | string | Or `OVERVIEW_ID` for the overview page's note |
+| chunk_id | string | Or `OVERVIEW_ID` for the overview page's note. When `displaced` is true, this is the *last-known* chunk id, kept only as a hint |
 | kind | AiNoteKind | |
 | prompt | string? | |
 | body | string | |
 | suggested_action | string? | |
+| file | string? | Snapshot of the anchored chunk's `file` at creation time. Unset for overview notes (`chunk_id === OVERVIEW_ID`), which are never subject to reconciliation |
+| hunk_header | string? | Snapshot of the anchored chunk's `hunk_header` at creation time. Unset for overview notes |
+| displaced | boolean? | Set by reconciliation on load when the snapshot no longer matches any current chunk. Unlike `DraftComment`, notes have no re-anchor action (see Anchor Reconciliation below) — a displaced note can only be shown as displaced or deleted |
 | created_at | string | ISO; a fixed placeholder for mock notes (unused by rendering) |
 
 Frontend note: `AiCommentary.tsx`'s live-streaming preview (the in-progress
@@ -187,6 +193,19 @@ no-op. `NotePreview` is the *only* other note-shaped type in the frontend —
 there is no separate `DisplayNote` type; `AiCommentary.tsx` renders
 `StoredNote | NotePreview` directly.
 
+### FlaggedEntry
+
+A flagged chunk, with the same anchor-snapshot fields as `DraftComment`/
+`StoredNote` so flags participate in the same reconciliation pass. Replaces
+the earlier bare `chunk_id` string — a plain string can't carry a snapshot.
+
+| Field | Type | Notes |
+|-------|------|-------|
+| chunk_id | string | When `displaced` is true, this is the *last-known* chunk id, kept only as a hint |
+| file | string | Snapshot of the flagged chunk's `file` at flag time |
+| hunk_header | string | Snapshot of the flagged chunk's `hunk_header` at flag time |
+| displaced | boolean | Set by reconciliation on load. Like `StoredNote`, a flag has no re-anchor action — a displaced flag can only be shown as displaced or unflagged |
+
 ### ReviewState
 
 Persisted review state — one JSON file per `PrRef` (see `infrastructure.md`).
@@ -200,8 +219,8 @@ Resumed on next open of the same PR/MR.
 | head_sha | string | Refreshed to the latest fetched SHA on every load (staleness handling is otherwise deferred — see `state.ts` comment) |
 | started_at | string | ISO, set once on first load |
 | comments | DraftComment[] | |
-| flagged | string[] | Chunk ids |
-| viewed | string[] | Chunk ids |
+| flagged | FlaggedEntry[] | |
+| viewed | string[] | Chunk ids. Deliberately *not* reconciled like the fields above — a stale "viewed" marker pointing at the wrong chunk has no submission-time consequence and no meaningful "re-view" UI, so it's out of scope for Anchor Reconciliation, not an oversight |
 | notes | StoredNote[] | |
 | submitted | `{ at: string; verdict: string; url?: string }`? | Set once the review has been published; blocks a second submit (`410` response) |
 
@@ -246,12 +265,13 @@ the Claude SSE route applies internally for `add_note`). See
 
 | Variant | Fields |
 |---|---|
-| `add_comment` | chunk_id, side, line, body |
+| `add_comment` | chunk_id, side, line, body, file, hunk_header |
 | `update_comment` | id, body |
 | `delete_comment` | id |
-| `toggle_flag` | chunk_id |
+| `reanchor_comment` | id, chunk_id, side, line, file, hunk_header |
+| `toggle_flag` | chunk_id, file, hunk_header |
 | `set_viewed` | chunk_id, viewed |
-| `add_note` | chunk_id, kind, prompt?, body, suggested_action? |
+| `add_note` | chunk_id, kind, prompt?, body, suggested_action?, file?, hunk_header? |
 | `delete_note` | id |
 
 ## Normalization Rules
@@ -271,6 +291,24 @@ the Claude SSE route applies internally for `add_note`). See
 - **State file naming** doubles as normalization of `PrRef` into a filesystem
   key — see `infrastructure.md` for the exact scheme (differs between GitHub
   and GitLab because GitLab's `owner` can contain `/`).
+- **Anchor Reconciliation** runs once per `loadState()` call (see
+  `infrastructure.md`), after `migrate()`, using the freshly-parsed `Chunk[]`
+  from the same `loadReview()` call. For every `DraftComment`, `StoredNote`
+  (excluding overview notes), and `FlaggedEntry`: look up a chunk with an
+  exact `file` + `hunk_header` match in the new chunk list. Match found →
+  resync `chunk_id` to that chunk's (possibly renumbered) id, `displaced:
+  false`. No match → `displaced: true`, `chunk_id`/`file`/`hunk_header` left
+  as the last-known snapshot rather than cleared, so the reviewer can still
+  see what a displaced comment used to be about. The match is exact, not
+  fuzzy (e.g. overlapping line ranges) — a hunk whose content changed at all
+  displaces anything anchored to it, which is intentional: `chunk_id`s
+  themselves stay unstable sequential ids (no id-scheme change), so this
+  reconciliation is the accepted remediation rather than content-derived
+  stable ids. `add_comment`/`toggle_flag`/`add_note` populate `file`/
+  `hunk_header` from the chunk the reviewer was actually looking at when the
+  entry was created (resolved by the caller, not `applyAction` itself, which
+  stays a pure `(state, action) → state` reducer per `constitution.md`
+  Principle II with no chunk data as an implicit input).
 - **`migrate()`** applies an ordered list of migration steps on load, rather
   than one-off `if` checks accumulated in the function body — new gaps are
   added as a new list entry. Two step shapes: a **version step** runs only

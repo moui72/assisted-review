@@ -194,7 +194,10 @@ describe('POST /api/action', () => {
   });
 
   it('applies action, saves, and returns the new state', async () => {
-    const nextState = { ...state, flagged: ['c1'] };
+    const nextState = {
+      ...state,
+      flagged: [{ chunk_id: 'c1', file: 'a.ts', hunk_header: '@@ -1,3 +1,3 @@', displaced: false }],
+    };
     vi.mocked(applyAction).mockReturnValueOnce(nextState);
 
     const url = await makeServer({ review, state });
