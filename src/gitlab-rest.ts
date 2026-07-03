@@ -103,6 +103,34 @@ export function isRetryable(err: unknown): boolean {
   return true;
 }
 
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+/**
+ * Retries `fn` up to `delaysMs.length` additional times (linear backoff
+ * between attempts) as long as each failure is retryable per
+ * `isRetryable()`. Stops immediately — no further attempts — the moment a
+ * non-retryable error is thrown. Not a general backoff framework: this is
+ * specifically scoped to GitLab submit's individual API calls.
+ */
+export async function withRetry<T>(
+  fn: () => Promise<T>,
+  delaysMs: number[] = [50, 100, 150],
+): Promise<T> {
+  let lastErr: unknown;
+  for (let attempt = 0; attempt <= delaysMs.length; attempt++) {
+    try {
+      return await fn();
+    } catch (err) {
+      lastErr = err;
+      if (!isRetryable(err) || attempt === delaysMs.length) throw err;
+      await sleep(delaysMs[attempt]);
+    }
+  }
+  throw lastErr;
+}
+
 async function restFetch(path: string, init: RequestInit = {}): Promise<Response> {
   const token = requireToken();
   const url = `${gitlabBaseUrl()}/api/v4/${path}`;

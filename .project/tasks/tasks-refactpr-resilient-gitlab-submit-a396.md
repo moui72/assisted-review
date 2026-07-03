@@ -29,7 +29,7 @@ status: in-progress
   (each of the 5 non-retryable codes → `false`; `429`, `500`, `undefined`
   status, and a plain `Error` → `true`).
 
-- [ ] T003 [artifacts: infrastructure] Depends on T002. Add
+- [x] T003 [artifacts: infrastructure] Depends on T002. Add
   `withRetry<T>(fn: () => Promise<T>, delaysMs = [50, 100, 150]):
   Promise<T>` to `src/gitlab-rest.ts`: calls `fn()`; on failure, calls
   `isRetryable(err)` — if `false`, rethrow immediately with no further
