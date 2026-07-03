@@ -1,7 +1,7 @@
 ---
 plan: plan-refactpr-2026-07-03.md
 generated: 2026-07-03
-status: in-progress
+status: completed
 ---
 
 # Tasks
@@ -94,7 +94,7 @@ status: in-progress
   Re-anchor button appear, and that a non-displaced fixture renders nothing
   extra.
 
-- [ ] T008 [artifacts: ui, api] Depends on T006 and T007. Wire the
+- [x] T008 [artifacts: ui, api] Depends on T006 and T007. Wire the
   "Re-anchor" button from T007: clicking it enters `ChunkView` in
   anchor-picking mode (navigate to a chunk, arm a "picking anchor for
   comment `<id>`" state in `App.tsx`). Selecting a line via `DiffPane`'s
