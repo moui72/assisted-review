@@ -81,7 +81,7 @@ status: in-progress
 
 ## Phase 4: UI
 
-- [ ] T007 [artifacts: ui] [parallel] Can start once T001-T004 land (needs
+- [x] T007 [artifacts: ui] [parallel] Can start once T001-T004 land (needs
   the `displaced`/`FlaggedEntry` types) — doesn't need T005/T006 implemented
   to build the display, only a fixture with `displaced: true` data. Add a
   "Displaced Comments" section to `OverviewView.tsx`, rendered when

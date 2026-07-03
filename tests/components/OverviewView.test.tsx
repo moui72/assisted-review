@@ -32,11 +32,31 @@ const ai: AiPanelProps = {
   onDeleteNote: vi.fn(),
 };
 
+// No displaced comments/notes/flags by default — Displaced Comments tests
+// below cover that section explicitly.
+const noDisplaced = {
+  displacedComments: [],
+  displacedNotes: [],
+  displacedFlags: [],
+  onReanchorComment: vi.fn(),
+  onDeleteComment: vi.fn(),
+  onDeleteNote: vi.fn(),
+  onUnflag: vi.fn(),
+};
+
 describe('OverviewView', () => {
   it('renders an empty-state message and no Begin Review button when there are zero chunks', () => {
     const onBegin = vi.fn();
     render(
-      <OverviewView pr={pr} meta={meta} jira={jira} ai={ai} onBegin={onBegin} chunkCount={0} />,
+      <OverviewView
+        pr={pr}
+        meta={meta}
+        jira={jira}
+        ai={ai}
+        onBegin={onBegin}
+        chunkCount={0}
+        {...noDisplaced}
+      />,
     );
     expect(screen.getByText('No reviewable changes in this PR.')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /begin review/i })).not.toBeInTheDocument();
@@ -51,6 +71,7 @@ describe('OverviewView', () => {
         ai={ai}
         onBegin={vi.fn()}
         chunkCount={0}
+        {...noDisplaced}
       />,
     );
     expect(screen.getByText('No reviewable changes in this MR.')).toBeInTheDocument();
@@ -60,11 +81,71 @@ describe('OverviewView', () => {
     const user = userEvent.setup();
     const onBegin = vi.fn();
     render(
-      <OverviewView pr={pr} meta={meta} jira={jira} ai={ai} onBegin={onBegin} chunkCount={3} />,
+      <OverviewView
+        pr={pr}
+        meta={meta}
+        jira={jira}
+        ai={ai}
+        onBegin={onBegin}
+        chunkCount={3}
+        {...noDisplaced}
+      />,
     );
     expect(screen.getByText('Review 3 chunks one at a time.')).toBeInTheDocument();
     const button = screen.getByRole('button', { name: /begin review/i });
     await user.click(button);
     expect(onBegin).toHaveBeenCalledTimes(1);
+  });
+
+  it('renders a displaced comment with re-anchor and delete actions, and none when there are none', () => {
+    const onReanchorComment = vi.fn();
+    const onDeleteComment = vi.fn();
+    const displacedComment = {
+      id: 'cm1',
+      chunk_id: 'c1',
+      side: 'RIGHT' as const,
+      line: 3,
+      body: 'still relevant?',
+      file: 'a.ts',
+      hunk_header: '@@ -1,3 +1,3 @@',
+      displaced: true,
+      created_at: 't',
+      updated_at: 't',
+    };
+    render(
+      <OverviewView
+        pr={pr}
+        meta={meta}
+        jira={jira}
+        ai={ai}
+        onBegin={vi.fn()}
+        chunkCount={3}
+        {...noDisplaced}
+        displacedComments={[displacedComment]}
+        onReanchorComment={onReanchorComment}
+        onDeleteComment={onDeleteComment}
+      />,
+    );
+    expect(screen.getByText('Displaced comments')).toBeInTheDocument();
+    expect(screen.getByText('still relevant?')).toBeInTheDocument();
+    screen.getByRole('button', { name: /re-anchor/i }).click();
+    expect(onReanchorComment).toHaveBeenCalledWith(displacedComment);
+    screen.getByRole('button', { name: /delete/i }).click();
+    expect(onDeleteComment).toHaveBeenCalledWith('cm1');
+  });
+
+  it('does not render the Displaced Comments section when nothing is displaced', () => {
+    render(
+      <OverviewView
+        pr={pr}
+        meta={meta}
+        jira={jira}
+        ai={ai}
+        onBegin={vi.fn()}
+        chunkCount={3}
+        {...noDisplaced}
+      />,
+    );
+    expect(screen.queryByText('Displaced comments')).not.toBeInTheDocument();
   });
 });
