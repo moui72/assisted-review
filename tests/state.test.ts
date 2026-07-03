@@ -324,6 +324,63 @@ describe('migrate', () => {
     const result = migrate(state);
     expect(result.pr.platform).toBe('gitlab');
   });
+
+  it('v1 -> v2 backfills anchor-snapshot fields as displaced on legacy comments/notes/flagged', () => {
+    const raw = {
+      version: 1,
+      pr,
+      head_sha: 'sha',
+      started_at: '2020-01-01T00:00:00.000Z',
+      comments: [
+        { id: 'cm1', chunk_id: 'c1', side: 'RIGHT', line: 1, body: 'x', created_at: 't', updated_at: 't' },
+      ],
+      flagged: ['c2'],
+      viewed: ['c3'],
+      notes: [
+        { id: 'n1', chunk_id: 'c1', kind: 'initial', body: 'note body', created_at: 't' },
+        { id: 'n2', chunk_id: OVERVIEW_ID, kind: 'initial', body: 'overview note', created_at: 't' },
+      ],
+    };
+    const result = migrate(raw);
+    expect(result.version).toBe(STATE_VERSION);
+
+    expect(result.comments[0].file).toBe('');
+    expect(result.comments[0].hunk_header).toBe('');
+    expect(result.comments[0].displaced).toBe(true);
+
+    expect(result.flagged).toEqual([
+      { chunk_id: 'c2', file: '', hunk_header: '', displaced: true },
+    ]);
+
+    expect(result.notes[0].file).toBe('');
+    expect(result.notes[0].hunk_header).toBe('');
+    expect(result.notes[0].displaced).toBe(true);
+    // Overview notes are never subject to reconciliation — left untouched.
+    expect(result.notes[1].file).toBeUndefined();
+    expect(result.notes[1].displaced).toBeUndefined();
+  });
+
+  it('v1 -> v2 leaves already-migrated comments/notes untouched', () => {
+    const raw = {
+      version: 1,
+      pr,
+      head_sha: 'sha',
+      started_at: '2020-01-01T00:00:00.000Z',
+      comments: [
+        {
+          id: 'cm1', chunk_id: 'c1', side: 'RIGHT', line: 1, body: 'x',
+          file: 'a.ts', hunk_header: '@@ -1,3 +1,3 @@', displaced: false,
+          created_at: 't', updated_at: 't',
+        },
+      ],
+      flagged: [],
+      viewed: [],
+      notes: [],
+    };
+    const result = migrate(raw);
+    expect(result.comments[0].file).toBe('a.ts');
+    expect(result.comments[0].displaced).toBe(false);
+  });
 });
 
 describe('statePath', () => {

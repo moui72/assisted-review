@@ -153,7 +153,7 @@ export interface FlaggedEntry {
   displaced: boolean;
 }
 
-export const STATE_VERSION = 1;
+export const STATE_VERSION = 2;
 
 /** Persisted review state (drafts, flags, viewed, AI notes). Resumed on restart. */
 export interface ReviewState {

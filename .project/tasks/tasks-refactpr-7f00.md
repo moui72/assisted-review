@@ -32,7 +32,7 @@ status: in-progress
   with given snapshot) and toggle-off (removes by `chunk_id`) with the new
   shape.
 
-- [ ] T004 [artifacts: datamodel, infrastructure] Bump `STATE_VERSION` in
+- [x] T004 [artifacts: datamodel, infrastructure] Bump `STATE_VERSION` in
   `src/state.ts` and add a new step to the `MIGRATIONS` list: for state at
   the prior version, convert `flagged` from `string[]` to `FlaggedEntry[]`
   using empty-string `file`/`hunk_header` and `displaced: true` per entry;

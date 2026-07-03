@@ -21,7 +21,7 @@ import type {
   ReviewSummary,
   StoredNote,
 } from './types.js';
-import { STATE_VERSION } from './types.js';
+import { OVERVIEW_ID, STATE_VERSION } from './types.js';
 
 export const STATE_DIR =
   process.env.ASSISTED_REVIEW_STATE_DIR || join(homedir(), '.assisted-review');
@@ -75,6 +75,41 @@ const MIGRATIONS: MigrationStep[] = [
       if (pr && typeof pr.platform !== 'string') {
         s.pr = { ...pr, platform: 'github' };
       }
+    },
+  },
+  {
+    // v1 -> v2: DraftComment/StoredNote/flagged gained anchor-snapshot fields
+    // (file, hunk_header, displaced) for Anchor Reconciliation. There's no way
+    // to know what a pre-existing entry used to be anchored to, so legacy
+    // entries get an empty-string snapshot (which can never match a real
+    // chunk) and displaced: true — they surface in the Displaced Comments
+    // section immediately rather than silently reconciling against the wrong
+    // chunk. `flagged` also converts from a bare chunk-id string[] to
+    // FlaggedEntry[] in this same step.
+    sinceVersion: 2,
+    apply: (s) => {
+      const comments = Array.isArray(s.comments)
+        ? (s.comments as Record<string, unknown>[])
+        : [];
+      s.comments = comments.map((c) =>
+        typeof c.file === 'string'
+          ? c
+          : { ...c, file: '', hunk_header: '', displaced: true },
+      );
+
+      const notes = Array.isArray(s.notes) ? (s.notes as Record<string, unknown>[]) : [];
+      s.notes = notes.map((n) =>
+        n.chunk_id === OVERVIEW_ID || typeof n.file === 'string'
+          ? n
+          : { ...n, file: '', hunk_header: '', displaced: true },
+      );
+
+      const flagged = Array.isArray(s.flagged) ? (s.flagged as unknown[]) : [];
+      s.flagged = flagged.map((f) =>
+        typeof f === 'string'
+          ? { chunk_id: f, file: '', hunk_header: '', displaced: true }
+          : f,
+      );
     },
   },
 ];
