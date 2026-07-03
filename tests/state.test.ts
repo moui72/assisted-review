@@ -9,7 +9,7 @@ import {
   statePath,
 } from '../src/state';
 import type { Action, PrRef, ReviewState } from '../src/types';
-import { STATE_VERSION } from '../src/types';
+import { OVERVIEW_ID, STATE_VERSION } from '../src/types';
 
 const baseState = (pr: PrRef): ReviewState => ({
   version: STATE_VERSION,
@@ -176,6 +176,8 @@ describe('applyAction', () => {
       kind: 'initial',
       body: 'looks risky',
       suggested_action: 'ask the author',
+      file: 'a.ts',
+      hunk_header: '@@ -1,3 +1,3 @@',
     });
     expect(next.notes).toHaveLength(1);
     const n = next.notes[0];
@@ -185,7 +187,24 @@ describe('applyAction', () => {
     expect(n.kind).toBe('initial');
     expect(n.body).toBe('looks risky');
     expect(n.suggested_action).toBe('ask the author');
+    expect(n.file).toBe('a.ts');
+    expect(n.hunk_header).toBe('@@ -1,3 +1,3 @@');
+    expect(n.displaced).toBe(false);
     expect(n.created_at).toEqual(expect.any(String));
+  });
+
+  it('add_note for the overview page (no file/hunk_header) leaves anchor fields undefined', () => {
+    const next = applyAction(baseState(pr), {
+      type: 'add_note',
+      chunk_id: OVERVIEW_ID,
+      kind: 'initial',
+      body: 'PR summary',
+    });
+    const n = next.notes[0];
+    expect(n.chunk_id).toBe(OVERVIEW_ID);
+    expect(n.file).toBeUndefined();
+    expect(n.hunk_header).toBeUndefined();
+    expect(n.displaced).toBeUndefined();
   });
 
   it('add_note without optional fields leaves them undefined', () => {

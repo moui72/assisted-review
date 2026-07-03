@@ -174,6 +174,9 @@ export function applyAction(state: ReviewState, action: Action): ReviewState {
         prompt: action.prompt,
         body: action.body,
         suggested_action: action.suggested_action,
+        file: action.file,
+        hunk_header: action.hunk_header,
+        displaced: action.file !== undefined ? false : undefined,
         created_at: now,
       };
       return { ...state, notes: [...state.notes, note] };

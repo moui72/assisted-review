@@ -15,7 +15,7 @@ status: in-progress
   Test: extend `tests/state.test.ts`'s `add_comment` coverage to assert the
   new fields are stored as given.
 
-- [ ] T002 [artifacts: datamodel] Add optional `file?: string`,
+- [x] T002 [artifacts: datamodel] Add optional `file?: string`,
   `hunk_header?: string`, `displaced?: boolean` fields to `StoredNote` in
   `src/types.ts`. Update the `add_note` case in `applyAction` to set them
   from the action payload for chunk-scoped notes, and explicitly omit them

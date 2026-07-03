@@ -386,6 +386,8 @@ export function startServer(
               prompt: question.trim() || undefined,
               body,
               suggested_action: suggestedAction,
+              file: isOverview ? undefined : chunk!.file,
+              hunk_header: isOverview ? undefined : chunk!.hunk_header,
             });
             ctx.state = nextState;
             await saveState(nextState);
