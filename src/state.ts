@@ -132,6 +132,9 @@ export function applyAction(state: ReviewState, action: Action): ReviewState {
         side: action.side,
         line: action.line,
         body: action.body,
+        file: action.file,
+        hunk_header: action.hunk_header,
+        displaced: false,
         created_at: now,
         updated_at: now,
       };

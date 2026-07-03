@@ -199,6 +199,8 @@ export function App() {
       side: anchor?.side ?? null,
       line: anchor?.line ?? null,
       body,
+      file: chunk.file,
+      hunk_header: chunk.hunk_header,
     });
     setDrafts((d) => ({ ...d, [chunk.id]: '' }));
     setAnchor(null);

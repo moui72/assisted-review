@@ -33,6 +33,8 @@ describe('applyAction', () => {
       side: 'RIGHT',
       line: 12,
       body: 'looks good',
+      file: 'a.ts',
+      hunk_header: '@@ -1,3 +1,3 @@',
     };
     const next = applyAction(state, action);
     expect(next.comments).toHaveLength(1);
@@ -43,6 +45,9 @@ describe('applyAction', () => {
     expect(c.side).toBe('RIGHT');
     expect(c.line).toBe(12);
     expect(c.body).toBe('looks good');
+    expect(c.file).toBe('a.ts');
+    expect(c.hunk_header).toBe('@@ -1,3 +1,3 @@');
+    expect(c.displaced).toBe(false);
     expect(c.created_at).toEqual(expect.any(String));
     expect(c.updated_at).toEqual(expect.any(String));
   });
@@ -55,6 +60,8 @@ describe('applyAction', () => {
       side: 'LEFT',
       line: null,
       body: 'x',
+      file: 'a.ts',
+      hunk_header: '@@ -1,3 +1,3 @@',
     };
     const next = applyAction(state, action);
     expect(state.comments).toHaveLength(0);
@@ -70,6 +77,8 @@ describe('applyAction', () => {
       side: 'RIGHT',
       line: 1,
       body: 'first',
+      file: 'a.ts',
+      hunk_header: '@@ -1,3 +1,3 @@',
     });
     state = applyAction(state, {
       type: 'add_comment',
@@ -77,6 +86,8 @@ describe('applyAction', () => {
       side: 'RIGHT',
       line: 2,
       body: 'second',
+      file: 'b.ts',
+      hunk_header: '@@ -4,3 +4,3 @@',
     });
     const targetId = state.comments[0].id;
     const otherBefore = state.comments[1];
@@ -107,6 +118,8 @@ describe('applyAction', () => {
       side: 'RIGHT',
       line: 1,
       body: 'a',
+      file: 'a.ts',
+      hunk_header: '@@ -1,3 +1,3 @@',
     });
     const id = state.comments[0].id;
     const next = applyAction(state, { type: 'delete_comment', id });
@@ -339,6 +352,8 @@ describe('loadState / saveState persistence', () => {
       side: 'RIGHT',
       line: 5,
       body: 'hi',
+      file: 'a.ts',
+      hunk_header: '@@ -1,3 +1,3 @@',
     });
     state = applyAction(state, { type: 'toggle_flag', chunk_id: 'c2' });
     state = applyAction(state, {
@@ -399,6 +414,8 @@ describe('listReviews', () => {
       side: 'RIGHT',
       line: 1,
       body: 'hi',
+      file: 'a.ts',
+      hunk_header: '@@ -1,3 +1,3 @@',
     });
     state = applyAction(state, { type: 'toggle_flag', chunk_id: 'c2' });
     state = applyAction(state, {

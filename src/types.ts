@@ -107,10 +107,17 @@ export const GITLAB_VERDICTS: readonly GitLabVerdict[] = ['approve', 'comment'];
 /** A reviewer's drafted comment. A null anchor = comment on the whole chunk. */
 export interface DraftComment {
   id: string;
+  /** Last-known chunk id. Not trustworthy for lookup when `displaced` is true. */
   chunk_id: string;
   side: Side | null;
   line: number | null;
   body: string;
+  /** Snapshot of the anchored chunk's `file` at anchor time (Anchor Reconciliation). */
+  file: string;
+  /** Snapshot of the anchored chunk's `hunk_header` at anchor time. */
+  hunk_header: string;
+  /** Set when the snapshot no longer matches any chunk on reload; cleared by `reanchor_comment`. */
+  displaced: boolean;
   created_at: string;
   updated_at: string;
 }
@@ -163,6 +170,8 @@ export type Action =
       side: Side | null;
       line: number | null;
       body: string;
+      file: string;
+      hunk_header: string;
     }
   | { type: 'update_comment'; id: string; body: string }
   | { type: 'delete_comment'; id: string }
