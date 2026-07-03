@@ -283,6 +283,12 @@ erDiagram
         number version
         string head_sha
         string started_at
+        GitLabSubmitProgress gitlab_submit_progress
+    }
+    GitLabSubmitProgress {
+        string_array posted_comment_ids
+        boolean note_posted
+        boolean approved
     }
     ReviewSummary {
         string head_sha
@@ -312,6 +318,7 @@ erDiagram
     ReviewState ||--o{ DraftComment : "comments"
     ReviewState ||--o{ StoredNote : "notes"
     ReviewState ||--o{ FlaggedEntry : "flagged"
+    ReviewState ||--o| GitLabSubmitProgress : "gitlab_submit_progress"
     ReviewSummary ||--|| PrRef : "pr"
     ReviewSummary ||--o| PrMeta : "meta"
 ```
