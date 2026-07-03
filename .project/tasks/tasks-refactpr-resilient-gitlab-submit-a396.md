@@ -67,7 +67,7 @@ status: in-progress
 
 ## Phase 3: Wire Into `POST /api/submit`
 
-- [ ] T005 [artifacts: api] Depends on T004. In `src/server.ts`'s
+- [x] T005 [artifacts: api] Depends on T004. In `src/server.ts`'s
   `POST /api/submit` GitLab branch: pass `ctx.state.gitlab_submit_progress`
   as `submitGitLabReview`'s `priorProgress` argument. Merge the returned
   `progress` into `nextState.gitlab_submit_progress` and persist via

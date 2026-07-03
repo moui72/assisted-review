@@ -225,6 +225,7 @@ export function startServer(
         });
       }
       let result;
+      let nextState = state;
       if (review.pr.platform === 'gitlab') {
         result = await submitGitLabReview(
           review.pr,
@@ -233,10 +234,24 @@ export function startServer(
           verdict as GitLabVerdict,
           body ?? '',
           state.head_sha,
+          state.gitlab_submit_progress,
         );
         if (result.ok && !result.html_url && review.meta?.url) {
           result = { ...result, html_url: review.meta.url };
         }
+        // Persist progress on every attempt, success or failure — a failed
+        // attempt's partial progress is exactly what the next retry needs.
+        // Only stamp `submitted` (and clear progress) once nothing is left
+        // to retry.
+        nextState = result.ok
+          ? {
+              ...state,
+              submitted: { at: new Date().toISOString(), verdict, url: result.html_url },
+              gitlab_submit_progress: undefined,
+            }
+          : { ...state, gitlab_submit_progress: result.progress };
+        ctx.state = nextState;
+        await saveState(nextState);
       } else {
         const payload = buildReviewPayload(
           review.chunks,
@@ -246,20 +261,23 @@ export function startServer(
           state.head_sha,
         );
         result = await submitReview(review.pr, payload);
-      }
-      const nextState = result.ok
-        ? { ...state, submitted: { at: new Date().toISOString(), verdict, url: result.html_url } }
-        : state;
-      if (result.ok) {
-        ctx.state = nextState;
-        await saveState(nextState);
+        nextState = result.ok
+          ? { ...state, submitted: { at: new Date().toISOString(), verdict, url: result.html_url } }
+          : state;
+        if (result.ok) {
+          ctx.state = nextState;
+          await saveState(nextState);
+        }
       }
       const status = result.ok ? 200 : result.stale ? 409 : 502;
       // payload is echoed by the submit adapter for a possible future
       // manual-submit fallback — server-side only, never serialized to the
-      // client (see api.md's Production Annotations).
-      const responseBody = { ...result, state: nextState };
+      // client (see api.md's Production Annotations). `progress` (GitLab
+      // only) is likewise server-side/persisted-only — the client already
+      // gets it via `state.gitlab_submit_progress`.
+      const responseBody: Record<string, unknown> = { ...result, state: nextState };
       delete responseBody.payload;
+      delete responseBody.progress;
       return sendJson(res, status, responseBody);
     }
 
