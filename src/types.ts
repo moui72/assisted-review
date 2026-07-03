@@ -195,6 +195,15 @@ export type Action =
     }
   | { type: 'update_comment'; id: string; body: string }
   | { type: 'delete_comment'; id: string }
+  | {
+      type: 'reanchor_comment';
+      id: string;
+      chunk_id: string;
+      side: Side | null;
+      line: number | null;
+      file: string;
+      hunk_header: string;
+    }
   | { type: 'toggle_flag'; chunk_id: string; file: string; hunk_header: string }
   | { type: 'set_viewed'; chunk_id: string; viewed: boolean }
   | {

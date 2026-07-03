@@ -127,6 +127,55 @@ describe('applyAction', () => {
     expect(next.comments).toHaveLength(0);
   });
 
+  it('reanchor_comment clears displaced and updates the anchor on the matching comment only', () => {
+    let state = baseState(pr);
+    state = applyAction(state, {
+      type: 'add_comment',
+      chunk_id: 'c1',
+      side: 'RIGHT',
+      line: 1,
+      body: 'first',
+      file: 'a.ts',
+      hunk_header: '@@ -1,3 +1,3 @@',
+    });
+    state = applyAction(state, {
+      type: 'add_comment',
+      chunk_id: 'c2',
+      side: 'RIGHT',
+      line: 2,
+      body: 'second',
+      file: 'b.ts',
+      hunk_header: '@@ -4,3 +4,3 @@',
+    });
+    const targetId = state.comments[0].id;
+    const otherBefore = state.comments[1];
+    // Simulate the target comment having been marked displaced by reconciliation.
+    state = {
+      ...state,
+      comments: state.comments.map((c) =>
+        c.id === targetId ? { ...c, displaced: true } : c,
+      ),
+    };
+    const next = applyAction(state, {
+      type: 'reanchor_comment',
+      id: targetId,
+      chunk_id: 'c9',
+      side: 'LEFT',
+      line: 42,
+      file: 'c.ts',
+      hunk_header: '@@ -9,3 +9,3 @@',
+    });
+    const reanchored = next.comments.find((c) => c.id === targetId)!;
+    expect(reanchored.chunk_id).toBe('c9');
+    expect(reanchored.side).toBe('LEFT');
+    expect(reanchored.line).toBe(42);
+    expect(reanchored.file).toBe('c.ts');
+    expect(reanchored.hunk_header).toBe('@@ -9,3 +9,3 @@');
+    expect(reanchored.displaced).toBe(false);
+    // non-matching comment untouched.
+    expect(next.comments.find((c) => c.id === otherBefore.id)).toEqual(otherBefore);
+  });
+
   it('toggle_flag adds then removes on repeat', () => {
     const state = baseState(pr);
     const flagged = applyAction(state, {

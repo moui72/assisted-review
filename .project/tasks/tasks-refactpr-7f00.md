@@ -65,7 +65,7 @@ status: in-progress
 
 ## Phase 3: Re-anchor Action
 
-- [ ] T006 [artifacts: api, datamodel] Depends on T001-T004 (not on T005 —
+- [x] T006 [artifacts: api, datamodel] Depends on T001-T004 (not on T005 —
   can be done in either order relative to Phase 2, but touches
   `src/state.ts`'s `applyAction` switch alongside T005, so do them
   sequentially rather than concurrently to avoid editing the same function

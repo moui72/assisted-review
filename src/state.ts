@@ -233,6 +233,24 @@ export function applyAction(state: ReviewState, action: Action): ReviewState {
         ...state,
         comments: state.comments.filter((c) => c.id !== action.id),
       };
+    case 'reanchor_comment':
+      return {
+        ...state,
+        comments: state.comments.map((c) =>
+          c.id === action.id
+            ? {
+                ...c,
+                chunk_id: action.chunk_id,
+                side: action.side,
+                line: action.line,
+                file: action.file,
+                hunk_header: action.hunk_header,
+                displaced: false,
+                updated_at: now,
+              }
+            : c,
+        ),
+      };
     case 'toggle_flag':
       return {
         ...state,
