@@ -92,6 +92,18 @@ the client) and a `state: ReviewState` field is added. The frontend's
 a parallel hand-declared interface, per `datamodel.md`'s
 single-canonical-source-of-truth principle.
 
+GitLab-specific resilience: `submitGitLabReview()` withholds the summary-note
+and approve calls entirely if any inline comment discussion fails to post
+(after its own retry — see `infrastructure.md`) — the whole request comes
+back `ok: false` with `comment_errors` rather than partially continuing.
+`state.submitted` is only stamped once the *entire* submission succeeds.
+Whatever already succeeded (which comments posted, whether the note/approve
+landed) is persisted in `state.gitlab_submit_progress` (`datamodel.md`)
+alongside the rest of `ReviewState` on every attempt, success or failure — a
+subsequent `POST /api/submit` for the same review reuses it to skip
+already-completed steps rather than reposting duplicates. Not applicable to
+GitHub: its single-POST review has no partial-failure case to track.
+
 ### `GET /api/reviews`
 
 Returns `ReviewSummary[]` (`datamodel.md`) — every saved review found by

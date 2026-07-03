@@ -1,15 +1,15 @@
 # Defects
 
-_Last verified: 2026-07-02_
+_Last verified: 2026-07-03_
 
 No defects found — artifacts match the codebase as of this run.
 
-`api.md`'s `GET /api/claude` cancellation claim (flagged in the prior pass)
-is now accurate: `src/server.ts:329` calls `currentCancel?.();` before
-starting a new stream, matching the same pattern already used at
-`POST /api/reviews/open` (`:299-300`) and `DELETE /api/review` (`:164-165`).
-Verified via the new regression test in `tests/server.test.ts` ("cancels a
-still-running stream when a second request starts").
+`ui.md`'s prior defect (Displaced Comments' exclusivity mechanism
+undocumented) is resolved: it now explicitly documents that `App.tsx`'s
+`chunkComments`/`isFlagged`/`storedNotes`/`commentedIds`/`TopNav`'s `flagged`
+prop filter out `displaced: true` entries, and why (a displaced entry's
+retained last-known `chunk_id` could otherwise coincidentally match a
+renumbered chunk). Matches `web/src/App.tsx:358,398,401,406,438` exactly.
 
-`constitution.md`, `datamodel.md`, `infrastructure.md`, `ui.md` — no code
-changes since the prior full pass; re-confirmed clean.
+No code changes since the prior full pass otherwise — `constitution.md`,
+`datamodel.md`, `infrastructure.md`, `api.md` re-confirmed clean.

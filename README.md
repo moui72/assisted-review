@@ -255,6 +255,9 @@ erDiagram
         Side side
         number line
         string body
+        string file
+        string hunk_header
+        boolean displaced
         string created_at
         string updated_at
     }
@@ -265,7 +268,16 @@ erDiagram
         string prompt
         string body
         string suggested_action
+        string file
+        string hunk_header
+        boolean displaced
         string created_at
+    }
+    FlaggedEntry {
+        string chunk_id
+        string file
+        string hunk_header
+        boolean displaced
     }
     ReviewState {
         number version
@@ -299,6 +311,7 @@ erDiagram
     ReviewState ||--o| PrMeta : "meta (cached)"
     ReviewState ||--o{ DraftComment : "comments"
     ReviewState ||--o{ StoredNote : "notes"
+    ReviewState ||--o{ FlaggedEntry : "flagged"
     ReviewSummary ||--|| PrRef : "pr"
     ReviewSummary ||--o| PrMeta : "meta"
 ```

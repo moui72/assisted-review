@@ -73,6 +73,13 @@ export function SubmitModal({
   const [commentErrors, setCommentErrors] = useState<
     Array<{ path: string; line: number | null; error: string }>
   >([]);
+  // GitLab-only: set when a submit attempt fails with some comments already
+  // posted (see api.md) — distinct from `error`/`commentErrors` above (those
+  // are for the success-path display). Retrying reuses
+  // state.gitlab_submit_progress server-side to skip what already landed.
+  const [partialFailure, setPartialFailure] = useState<
+    Array<{ path: string; line: number | null; error: string }> | null
+  >(null);
 
   const grouped = useGrouped(chunks, state.comments);
   const commentCount = state.comments.length;
@@ -84,6 +91,7 @@ export function SubmitModal({
     setError(null);
     setStale(null);
     setCommentErrors([]);
+    setPartialFailure(null);
     try {
       const res = await submitReview(verdict, body.trim());
       if (res.ok) {
@@ -93,6 +101,12 @@ export function SubmitModal({
         onSubmitted(res.state);
       } else if (res.stale) {
         setStale(res.stale);
+        setPhase('edit');
+      } else if (res.comment_errors && res.comment_errors.length > 0) {
+        // GitLab partial failure — some comments already posted (tracked
+        // server-side in state.gitlab_submit_progress, so retrying — which
+        // just calls submit() again — skips them without a duplicate post).
+        setPartialFailure(res.comment_errors);
         setPhase('edit');
       } else {
         setError(res.error ?? 'Submission failed');
@@ -245,6 +259,26 @@ export function SubmitModal({
               </div>
             )}
 
+            {partialFailure && (
+              <div className="mt-4 rounded-md border border-orange-400/40 bg-orange-400/[0.08] px-3 py-2 font-sans text-[12.5px] text-orange-200">
+                <div className="font-semibold">
+                  {partialFailure.length} inline comment{partialFailure.length === 1 ? '' : 's'} failed to
+                  post — the rest already went through.
+                </div>
+                <ul className="mt-1 space-y-0.5">
+                  {partialFailure.map((e, i) => (
+                    <li key={i} className="font-mono text-[11px] text-orange-200/80">
+                      {e.path}:{e.line ?? '?'} — {e.error}
+                    </li>
+                  ))}
+                </ul>
+                <p className="mt-1.5 text-orange-200/80">
+                  Retrying will only repost the ones above — comments that
+                  already landed won't be duplicated.
+                </p>
+              </div>
+            )}
+
             {error && (
               <ErrorBanner className="mt-4 text-[12.5px] py-2">{error}</ErrorBanner>
             )}
@@ -269,7 +303,7 @@ export function SubmitModal({
                 disabled={sending}
                 className="rounded-md bg-accent px-4 py-1.5 text-[12.5px] font-semibold text-bg transition hover:brightness-110 disabled:opacity-50"
               >
-                {sending ? 'Submitting…' : `Submit as ${metaFor(verdict).label}`}
+                {sending ? 'Submitting…' : partialFailure ? 'Retry submission' : `Submit as ${metaFor(verdict).label}`}
               </button>
             </div>
           </div>
