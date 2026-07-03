@@ -43,7 +43,7 @@ status: in-progress
 
 ## Phase 2: Resilient `submitGitLabReview`
 
-- [ ] T004 [artifacts: infrastructure] Depends on T001, T003. In
+- [x] T004 [artifacts: infrastructure] Depends on T001, T003. In
   `src/submit.ts`, give `submitGitLabReview` a new `priorProgress?:
   { posted_comment_ids: string[]; note_posted: boolean; approved: boolean }`
   parameter. Skip posting a discussion for any comment whose id is already

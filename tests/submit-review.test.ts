@@ -247,6 +247,11 @@ describe('submitGitLabReview', () => {
     );
     expect(result.ok).toBe(true);
     expect(vi.mocked(spawn)).toHaveBeenCalledTimes(4);
+    expect(result.progress).toEqual({
+      posted_comment_ids: ['d-c1'],
+      note_posted: true,
+      approved: false,
+    });
   });
 
   it('stale SHA — commits check finds SHA missing', async () => {
@@ -281,18 +286,27 @@ describe('submitGitLabReview', () => {
     expect(vi.mocked(spawn)).toHaveBeenCalledTimes(2);
     const calls = vi.mocked(spawn).mock.calls;
     expect((calls[1][1] as string[]).join(' ')).toContain('approve');
+    expect(result.progress).toEqual({
+      posted_comment_ids: [],
+      note_posted: true,
+      approved: true,
+    });
   });
 
-  it('comment error collected — other comments succeed', async () => {
+  it('comment error collected — note withheld when a comment still fails after retry', async () => {
+    vi.useFakeTimers();
     setupSpawnMock(
       { stdout: JSON.stringify([{ id: 'headsha' }]), stderr: '', code: 0 }, // commits
       { stdout: versionsResponse, stderr: '', code: 0 },                    // versions
-      { stdout: '', stderr: 'invalid position', code: 1 },                  // discussion 1 fails
+      { stdout: '', stderr: 'invalid position', code: 1 },                  // discussion 1 attempt 1
+      { stdout: '', stderr: 'invalid position', code: 1 },                  // discussion 1 retry 1
+      { stdout: '', stderr: 'invalid position', code: 1 },                  // discussion 1 retry 2
+      { stdout: '', stderr: 'invalid position', code: 1 },                  // discussion 1 retry 3 (exhausted)
       { stdout: '{}', stderr: '', code: 0 },                               // discussion 2 ok
-      { stdout: '{}', stderr: '', code: 0 },                               // note
+      // note is withheld entirely — no further spawn calls expected
     );
 
-    const result = await submitGitLabReview(
+    const promise = submitGitLabReview(
       glRef,
       [chunk('c1', 'src/a.ts'), chunk('c2', 'src/b.ts')],
       [draft('c1'), draft('c2')],
@@ -300,9 +314,64 @@ describe('submitGitLabReview', () => {
       'body',
       'headsha',
     );
-    expect(result.ok).toBe(true);
+    await vi.advanceTimersByTimeAsync(50);
+    await vi.advanceTimersByTimeAsync(100);
+    await vi.advanceTimersByTimeAsync(150);
+    const result = await promise;
+
+    expect(result.ok).toBe(false);
     expect(result.comment_errors).toHaveLength(1);
     expect(result.comment_errors![0].path).toBe('src/a.ts');
+    expect(result.progress.posted_comment_ids).toEqual(['d-c2']);
+    expect(vi.mocked(spawn)).toHaveBeenCalledTimes(7);
+    vi.useRealTimers();
+  });
+
+  it('a second call passing the first attempt\'s progress skips the already-posted comment', async () => {
+    vi.useFakeTimers();
+    setupSpawnMock(
+      { stdout: JSON.stringify([{ id: 'headsha' }]), stderr: '', code: 0 }, // commits
+      { stdout: versionsResponse, stderr: '', code: 0 },                    // versions
+      { stdout: '', stderr: 'invalid position', code: 1 },                  // discussion 1 attempt 1
+      { stdout: '', stderr: 'invalid position', code: 1 },                  // discussion 1 retry 1
+      { stdout: '', stderr: 'invalid position', code: 1 },                  // discussion 1 retry 2
+      { stdout: '', stderr: 'invalid position', code: 1 },                  // discussion 1 retry 3
+      { stdout: '{}', stderr: '', code: 0 },                               // discussion 2 ok
+    );
+    const first = submitGitLabReview(
+      glRef,
+      [chunk('c1', 'src/a.ts'), chunk('c2', 'src/b.ts')],
+      [draft('c1'), draft('c2')],
+      'comment',
+      'body',
+      'headsha',
+    );
+    await vi.advanceTimersByTimeAsync(50);
+    await vi.advanceTimersByTimeAsync(100);
+    await vi.advanceTimersByTimeAsync(150);
+    const firstResult = await first;
+    vi.mocked(spawn).mockReset();
+
+    setupSpawnMock(
+      { stdout: JSON.stringify([{ id: 'headsha' }]), stderr: '', code: 0 }, // commits
+      { stdout: versionsResponse, stderr: '', code: 0 },                    // versions
+      { stdout: '{}', stderr: '', code: 0 },                               // discussion 1 succeeds this time
+      { stdout: '{}', stderr: '', code: 0 },                               // note
+    );
+    const second = await submitGitLabReview(
+      glRef,
+      [chunk('c1', 'src/a.ts'), chunk('c2', 'src/b.ts')],
+      [draft('c1'), draft('c2')],
+      'comment',
+      'body',
+      'headsha',
+      firstResult.progress,
+    );
+    expect(second.ok).toBe(true);
+    // Only 4 spawn calls this time: commits, versions, discussion 1 (c2 skipped), note.
+    expect(vi.mocked(spawn)).toHaveBeenCalledTimes(4);
+    expect(second.progress.posted_comment_ids.sort()).toEqual(['d-c1', 'd-c2']);
+    vi.useRealTimers();
   });
 
   it('versions failure — returns ok:false immediately', async () => {
@@ -323,25 +392,48 @@ describe('submitGitLabReview', () => {
     expect(result.error).toContain('api error');
   });
 
-  it('note POST failure — returns ok:false', async () => {
+  it('note POST failure — retries all 3 times then returns ok:false', async () => {
+    vi.useFakeTimers();
     setupSpawnMock(
-      { stdout: '', stderr: 'unauthorized', code: 1 }, // POST /notes fails
+      { stdout: '', stderr: 'unauthorized', code: 1 }, // POST /notes attempt 1
+      { stdout: '', stderr: 'unauthorized', code: 1 }, // retry 1
+      { stdout: '', stderr: 'unauthorized', code: 1 }, // retry 2
+      { stdout: '', stderr: 'unauthorized', code: 1 }, // retry 3 (exhausted)
     );
 
-    const result = await submitGitLabReview(glRef, [], [], 'comment', 'summary', 'headsha');
+    const promise = submitGitLabReview(glRef, [], [], 'comment', 'summary', 'headsha');
+    await vi.advanceTimersByTimeAsync(50);
+    await vi.advanceTimersByTimeAsync(100);
+    await vi.advanceTimersByTimeAsync(150);
+    const result = await promise;
     expect(result.ok).toBe(false);
     expect(result.error).toContain('unauthorized');
+    expect(vi.mocked(spawn)).toHaveBeenCalledTimes(4);
+    expect(result.progress.note_posted).toBe(false);
+    vi.useRealTimers();
   });
 
-  it('approve POST failure — returns ok:false', async () => {
+  it('approve POST failure — retries all 3 times then returns ok:false', async () => {
+    vi.useFakeTimers();
     setupSpawnMock(
       { stdout: '{}', stderr: '', code: 0 },          // POST /notes ok
-      { stdout: '', stderr: 'not allowed', code: 1 }, // POST /approve fails
+      { stdout: '', stderr: 'not allowed', code: 1 }, // POST /approve attempt 1
+      { stdout: '', stderr: 'not allowed', code: 1 }, // retry 1
+      { stdout: '', stderr: 'not allowed', code: 1 }, // retry 2
+      { stdout: '', stderr: 'not allowed', code: 1 }, // retry 3 (exhausted)
     );
 
-    const result = await submitGitLabReview(glRef, [], [], 'approve', 'LGTM', 'headsha');
+    const promise = submitGitLabReview(glRef, [], [], 'approve', 'LGTM', 'headsha');
+    await vi.advanceTimersByTimeAsync(50);
+    await vi.advanceTimersByTimeAsync(100);
+    await vi.advanceTimersByTimeAsync(150);
+    const result = await promise;
     expect(result.ok).toBe(false);
     expect(result.error).toContain('not allowed');
+    expect(vi.mocked(spawn)).toHaveBeenCalledTimes(5);
+    expect(result.progress.note_posted).toBe(true);
+    expect(result.progress.approved).toBe(false);
+    vi.useRealTimers();
   });
 
   it('glabShaOnMr failure — does not block submission', async () => {

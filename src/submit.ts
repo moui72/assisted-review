@@ -6,8 +6,8 @@
 //   glab-or-REST transport (see gitlab-rest.ts), then posts the whole-MR note
 //   and optionally approves.
 
-import type { Chunk, DraftComment, GitLabVerdict, PrRef, ReviewPayload, ReviewComment, Side, SubmitResult } from './types.js';
-import { glabApiJson, glabApiPaginatedJson, glProjectId, spawnCli } from './gitlab-rest.js';
+import type { Chunk, DraftComment, GitLabSubmitProgress, GitLabVerdict, PrRef, ReviewPayload, ReviewComment, Side, SubmitResult } from './types.js';
+import { glabApiJson, glabApiPaginatedJson, glProjectId, spawnCli, withRetry } from './gitlab-rest.js';
 
 export { VERDICTS, GITLAB_VERDICTS } from './types.js';
 export type { Verdict, GitLabVerdict, ReviewComment, ReviewPayload, SubmitResult } from './types.js';
@@ -161,6 +161,13 @@ async function glabShaOnMr(ref: PrRef, sha: string): Promise<boolean | null> {
   }
 }
 
+/**
+ * `priorProgress` (from `ReviewState.gitlab_submit_progress`) lets a retry
+ * after partial failure skip whatever already succeeded instead of
+ * reposting duplicates. The returned `progress` is server-side-only — like
+ * `SubmitResult.payload`, the `/api/submit` route strips it before the
+ * response reaches the client, persisting it into `ReviewState` instead.
+ */
 export async function submitGitLabReview(
   ref: PrRef,
   chunks: Chunk[],
@@ -168,14 +175,26 @@ export async function submitGitLabReview(
   verdict: GitLabVerdict,
   body: string,
   headSha: string,
-): Promise<SubmitResult> {
+  priorProgress?: GitLabSubmitProgress,
+): Promise<SubmitResult & { progress: GitLabSubmitProgress }> {
   const byId = new Map(chunks.map((c) => [c.id, c]));
   const inlineComments = comments
     .map((c) => ({ draft: c, chunk: byId.get(c.chunk_id) }))
     .filter((x): x is { draft: DraftComment; chunk: Chunk } => x.chunk !== undefined);
 
+  const alreadyPosted = new Set(priorProgress?.posted_comment_ids ?? []);
+  const noProgress: GitLabSubmitProgress = {
+    posted_comment_ids: [...alreadyPosted],
+    note_posted: priorProgress?.note_posted ?? false,
+    approved: priorProgress?.approved ?? false,
+  };
+
   if (verdict === 'comment' && !body.trim() && inlineComments.length === 0) {
-    return { ok: false, error: 'nothing to submit: provide a body or at least one comment' };
+    return {
+      ok: false,
+      error: 'nothing to submit: provide a body or at least one comment',
+      progress: noProgress,
+    };
   }
 
   // Stale SHA check when there are inline comments.
@@ -189,24 +208,29 @@ export async function submitGitLabReview(
           new_head: await glabCurrentHeadSha(ref),
           inline_count: inlineComments.length,
         },
+        progress: noProgress,
       };
     }
   }
 
+  // Only comments not already posted on a prior attempt need posting now.
+  const pending = inlineComments.filter((x) => !alreadyPosted.has(x.draft.id));
+
   // Fetch diff version SHAs needed for position objects.
   let version: GitLabVersion | undefined;
-  if (inlineComments.length > 0) {
+  if (pending.length > 0) {
     try {
       version = await fetchGitLabVersions(ref);
     } catch (err) {
-      return { ok: false, error: (err as Error).message };
+      return { ok: false, error: (err as Error).message, progress: noProgress };
     }
   }
 
   const commentErrors: SubmitResult['comment_errors'] = [];
+  const postedIds = new Set(alreadyPosted);
 
-  // Post each inline comment as a separate discussion.
-  for (const { draft, chunk } of inlineComments) {
+  // Post each not-yet-posted inline comment as a separate discussion.
+  for (const { draft, chunk } of pending) {
     const { side, line } = commentAnchor(draft, chunk);
     const position = {
       base_sha: version!.base_commit_sha,
@@ -219,49 +243,60 @@ export async function submitGitLabReview(
       ...(side === 'RIGHT' ? { new_line: line } : {}),
     };
     try {
-      await glabApiJson(
-        `projects/${glProjectId(ref)}/merge_requests/${ref.number}/discussions`,
-        { method: 'POST', body: { body: draft.body, position } },
+      await withRetry(() =>
+        glabApiJson(
+          `projects/${glProjectId(ref)}/merge_requests/${ref.number}/discussions`,
+          { method: 'POST', body: { body: draft.body, position } },
+        ),
       );
+      postedIds.add(draft.id);
     } catch (err) {
       commentErrors.push({ path: chunk.file, line, error: (err as Error).message });
     }
   }
 
-  // Post the whole-MR summary note.
-  if (body.trim()) {
-    try {
-      await glabApiJson(
-        `projects/${glProjectId(ref)}/merge_requests/${ref.number}/notes`,
-        { method: 'POST', body: { body } },
-      );
-    } catch (err) {
-      return {
-        ok: false,
-        error: (err as Error).message,
-        comment_errors: commentErrors.length > 0 ? commentErrors : undefined,
-      };
-    }
-  }
-
-  // Approve if requested.
-  if (verdict === 'approve') {
-    try {
-      await glabApiJson(
-        `projects/${glProjectId(ref)}/merge_requests/${ref.number}/approve`,
-        { method: 'POST' },
-      );
-    } catch (err) {
-      return {
-        ok: false,
-        error: (err as Error).message,
-        comment_errors: commentErrors.length > 0 ? commentErrors : undefined,
-      };
-    }
-  }
-
-  return {
-    ok: true,
-    comment_errors: commentErrors.length > 0 ? commentErrors : undefined,
+  const progress: GitLabSubmitProgress = {
+    posted_comment_ids: [...postedIds],
+    note_posted: priorProgress?.note_posted ?? false,
+    approved: priorProgress?.approved ?? false,
   };
+
+  // Any comment still failing after retry withholds the note/approve
+  // entirely this attempt — a subsequent call will retry only the comments
+  // that are still missing from `progress.posted_comment_ids`.
+  if (commentErrors.length > 0) {
+    return { ok: false, comment_errors: commentErrors, progress };
+  }
+
+  // Post the whole-MR summary note (skip if a prior attempt already did).
+  if (body.trim() && !progress.note_posted) {
+    try {
+      await withRetry(() =>
+        glabApiJson(
+          `projects/${glProjectId(ref)}/merge_requests/${ref.number}/notes`,
+          { method: 'POST', body: { body } },
+        ),
+      );
+      progress.note_posted = true;
+    } catch (err) {
+      return { ok: false, error: (err as Error).message, progress };
+    }
+  }
+
+  // Approve if requested (skip if a prior attempt already did).
+  if (verdict === 'approve' && !progress.approved) {
+    try {
+      await withRetry(() =>
+        glabApiJson(
+          `projects/${glProjectId(ref)}/merge_requests/${ref.number}/approve`,
+          { method: 'POST' },
+        ),
+      );
+      progress.approved = true;
+    } catch (err) {
+      return { ok: false, error: (err as Error).message, progress };
+    }
+  }
+
+  return { ok: true, progress };
 }
