@@ -83,8 +83,30 @@ drift out of sync with each other.
   equivalent — each inline comment is posted as its own "discussion"
   (`POST .../discussions` with a `position` object referencing the MR's
   latest diff version's base/start/head SHAs), then one summary note, then
-  an optional approve call. Partial failure is possible and surfaced via
-  `comment_errors` in the response rather than an all-or-nothing rollback.
+  an optional approve call. Each of those three call kinds gets up to 3
+  retries with linear 50ms/100ms/150ms backoff (300ms max added latency)
+  before being counted as failed — but only for errors classified as
+  retryable (see Error Classification below); a non-retryable error fails
+  immediately. If any comment discussion still fails, the note and approve
+  calls are withheld entirely — the whole request returns `ok: false` with
+  `comment_errors` rather than partially continuing. Progress
+  (`posted_comment_ids`/`note_posted`/`approved`) is persisted in
+  `ReviewState.gitlab_submit_progress` (`datamodel.md`), so a later
+  `POST /api/submit` retry skips whatever already succeeded instead of
+  reposting duplicates; it's cleared once a submission fully succeeds,
+  the same moment `submitted` is stamped.
+- **Error classification**: `glabApiJson`'s two transports have asymmetric
+  error information — the REST fallback (`restFetch`) gets a real HTTP
+  status from `fetch()`'s `Response`; the `glab` CLI path only has an exit
+  code and stderr text, with no status reliably parseable across glab
+  versions. Both throw a `GitLabApiError extends Error { status?: number }`
+  (`src/gitlab-rest.ts`) — REST always sets `status` from `res.status`; the
+  CLI path leaves it `undefined`. `withRetry` treats `400`/`401`/`403`/
+  `404`/`422` as non-retryable (a retry can't fix a bad request, missing
+  auth, or a validation failure) and everything else — `429`, `5xx`, a
+  network-level failure, or `status: undefined` — as retryable, since
+  retrying only costs latency and none of those can be confidently ruled
+  out as transient.
 - **Staleness check**: same shape as GitHub — verifies `headSha` is still
   present in `.../merge_requests/{n}/commits` before posting.
 - **Shape mapping** (`mapGlabMrView` — shared by both the CLI and REST
@@ -317,13 +339,14 @@ to populate the Jira vars.
   `glab` CLI otherwise hides (diff version SHAs, `x-next-page` following) —
   more surface area for GitLab-specific bugs than the GitHub path, which has
   no REST fallback at all (GitHub always requires `gh`).
-- **No adapter-level retry policy** — no retry exists for any of the four
-  integrations today; a transient GitHub/GitLab/Jira/Claude failure surfaces
-  immediately as an error or unavailable state rather than being retried.
-  Unlike the "unavailable"-shape degradation above (a deliberate design
-  choice), the *absence of retry* is not intentional — a single dropped
-  network call currently has the same user-visible effect as a genuinely
-  unreachable service. Future work should add basic retry/backoff (e.g., 1-2
-  retries with a short backoff) at the transport layer, before falling back
-  to the degrade shape — this only changes *when* an integration degrades,
-  not the degrade contract itself.
+- **No adapter-level retry policy (partially addressed)** — no retry exists
+  for fetch/Jira/Claude today; a transient failure there surfaces immediately
+  as an error or unavailable state rather than being retried. The *absence of
+  retry* is not intentional there — a single dropped network call currently
+  has the same user-visible effect as a genuinely unreachable service.
+  GitLab's submit path (`submitGitLabReview`, `src/submit.ts`) is the one
+  exception: each individual discussion/note/approve POST gets up to 3
+  retries with linear 50ms/100ms/150ms backoff (300ms max added latency)
+  before being counted as failed — see the GitLab source's Submit entry
+  below. Future work should extend the same pattern to the other three
+  integrations' transport layer.

@@ -1,7 +1,7 @@
 ---
 plan: plan-refactpr-resilient-gitlab-submit-2026-07-03.md
 generated: 2026-07-03
-status: in-progress
+status: completed
 ---
 
 # Tasks
@@ -86,7 +86,7 @@ status: in-progress
 
 ## Phase 4: UI — Partial-Failure Retry State
 
-- [ ] T006 [artifacts: ui] Depends on T005 (needs the real response shape,
+- [x] T006 [artifacts: ui] Depends on T005 (needs the real response shape,
   though its test can mock `submitReview()` independently of the backend
   work). In `web/src/components/SubmitModal.tsx`'s `submit()` handler: read
   `res.comment_errors` in the failure branch too (today only the

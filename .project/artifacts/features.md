@@ -210,6 +210,6 @@ On reopening a review whose diff has changed shape, detect drafted comments/note
 Why: `chunk_id`s remain unstable sequential ids (no id-scheme change) — flagged by `/ardd-critique` (`critique.md`) as a silent comment-drop/misattribution risk on reopen; this is the accepted remediation (de-anchor + warn + manual re-anchor) rather than content-derived stable ids.
 
 ## Resilient GitLab Submit
-_Slug: `resilient-gitlab-submit` · Status: backlogged · Logged 2026-07-02_
+_Slug: `resilient-gitlab-submit` · Status: implemented · Logged 2026-07-02 · Plan: plan-refactpr-resilient-gitlab-submit-2026-07-03.md · Tasks: tasks-refactpr-resilient-gitlab-submit-a396.md_
 Make GitLab review submission resilient to partial failure: withhold the summary-note/approve call until every inline comment discussion has posted successfully, retry each request on transient failure, and — if a submission still ends up partial — persist which comments succeeded and which failed in `ReviewState` so the reviewer can retry later without reposting duplicates; the review is only marked `submitted` once the whole submission actually succeeds.
 Why: GitLab has no atomic "review" object like GitHub's single-POST review — each inline comment, the summary note, and the approve call are separate, independently-failing requests — flagged by `/ardd-critique` (`critique.md`) since today's behavior stamps `submitted` (blocking retry) even when some comments failed to post.
