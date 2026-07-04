@@ -27,6 +27,13 @@ import {
 import { parseRef } from './parse-ref.js';
 import { loadReview } from './review.js';
 import {
+  GitLabAuthError,
+  gitLabTokenSource,
+  setGitLabToken,
+  clearGitLabToken,
+  loadGitLabToken,
+} from './gitlab-token.js';
+import {
   OVERVIEW_ID,
   type Action,
   type AiNoteKind,
@@ -121,6 +128,8 @@ export function startServer(
     preloadOverview = true,
   }: StartOptions = {},
 ): Promise<{ url: string }> {
+  void loadGitLabToken();
+
   // Track the active Claude SSE stream cancel fn — called before switching reviews
   // to prevent a finishing stream from writing notes into the wrong review's state.
   let currentCancel: (() => void) | null = null;
@@ -282,6 +291,9 @@ export function startServer(
         await saveState(state);
         return sendJson(res, 200, { review: ctx.review, state: ctx.state });
       } catch (err) {
+        if (err instanceof GitLabAuthError) {
+          return sendJson(res, 401, { error: (err as Error).message, auth_required: 'gitlab' });
+        }
         return sendJson(res, 502, { error: (err as Error).message });
       }
     }
@@ -362,6 +374,30 @@ export function startServer(
         cancel();
       });
       return;
+    }
+
+    if (url.pathname === '/api/auth/gitlab') {
+      if (req.method === 'GET') {
+        const source = gitLabTokenSource();
+        return sendJson(res, 200, { authenticated: source !== null, source });
+      }
+      if (req.method === 'POST') {
+        let payload: { token?: unknown };
+        try {
+          payload = JSON.parse(await readBody(req)) as { token?: unknown };
+        } catch {
+          return sendJson(res, 400, { error: 'request body must be valid JSON' });
+        }
+        if (typeof payload.token !== 'string' || !payload.token.trim()) {
+          return sendJson(res, 400, { error: 'token is required' });
+        }
+        await setGitLabToken(payload.token.trim());
+        return sendJson(res, 200, { ok: true });
+      }
+      if (req.method === 'DELETE') {
+        await clearGitLabToken();
+        return sendJson(res, 200, { ok: true });
+      }
     }
 
     if (!serveUi)

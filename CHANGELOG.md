@@ -1,3 +1,10 @@
+# [1.5.0](https://github.com/moui72/assisted-review/compare/v1.4.0...v1.5.0) (2026-07-02)
+
+
+### Features
+
+* browser-based GitLab PAT entry with server-side token persistence ([#50](https://github.com/moui72/assisted-review/issues/50)) ([2063a05](https://github.com/moui72/assisted-review/commit/2063a05d84bb455a4de6e9bf08de627185ee8dce))
+
 # [1.4.0](https://github.com/moui72/assisted-review/compare/v1.3.0...v1.4.0) (2026-06-27)
 
 
