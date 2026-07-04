@@ -1,3 +1,10 @@
+## [1.5.1](https://github.com/moui72/assisted-review/compare/v1.5.0...v1.5.1) (2026-07-04)
+
+
+### Bug Fixes
+
+* **ui:** show empty-state message instead of dead Begin Review button ([#52](https://github.com/moui72/assisted-review/issues/52)) ([680b435](https://github.com/moui72/assisted-review/commit/680b4350f90d2cb453a47fb12652c5f9895ad2a6))
+
 # [1.5.0](https://github.com/moui72/assisted-review/compare/v1.4.0...v1.5.0) (2026-07-02)
 
 
