@@ -1,3 +1,10 @@
+# [1.6.0](https://github.com/moui72/assisted-review/compare/v1.5.1...v1.6.0) (2026-07-04)
+
+
+### Features
+
+* **ui:** add detectMac() OS-detection helper ([#53](https://github.com/moui72/assisted-review/issues/53)) ([0310866](https://github.com/moui72/assisted-review/commit/031086609257ae585a131078eea8da3cccaaee6a))
+
 ## [1.5.1](https://github.com/moui72/assisted-review/compare/v1.5.0...v1.5.1) (2026-07-04)
 
 
