@@ -235,15 +235,23 @@ export function OverviewView({
 
       <footer className="shrink-0 border-t border-edge bg-surface">
         <div className="shell flex items-center justify-between py-3">
-          <span className="font-sans text-[12px] text-faint">
-            Review {chunkCount} chunks one at a time.
-          </span>
-          <button
-            onClick={onBegin}
-            className="rounded-md bg-accent px-4 py-1.5 text-[12.5px] font-semibold text-bg transition hover:brightness-110"
-          >
-            Begin review →
-          </button>
+          {chunkCount === 0 ? (
+            <span className="font-sans text-[12px] text-faint">
+              No reviewable changes in this {pr.platform === 'gitlab' ? 'MR' : 'PR'}.
+            </span>
+          ) : (
+            <>
+              <span className="font-sans text-[12px] text-faint">
+                Review {chunkCount} chunks one at a time.
+              </span>
+              <button
+                onClick={onBegin}
+                className="rounded-md bg-accent px-4 py-1.5 text-[12.5px] font-semibold text-bg transition hover:brightness-110"
+              >
+                Begin review →
+              </button>
+            </>
+          )}
         </div>
       </footer>
     </div>
