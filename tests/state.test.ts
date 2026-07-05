@@ -5,11 +5,12 @@ import {
   listReviews,
   loadState,
   migrate,
+  reconcileAnchors,
   saveState,
   statePath,
 } from '../src/state';
-import type { Action, PrRef, ReviewState } from '../src/types';
-import { STATE_VERSION } from '../src/types';
+import type { Action, Chunk, PrRef, ReviewState } from '../src/types';
+import { OVERVIEW_ID, STATE_VERSION } from '../src/types';
 
 const baseState = (pr: PrRef): ReviewState => ({
   version: STATE_VERSION,
@@ -33,6 +34,8 @@ describe('applyAction', () => {
       side: 'RIGHT',
       line: 12,
       body: 'looks good',
+      file: 'a.ts',
+      hunk_header: '@@ -1,3 +1,3 @@',
     };
     const next = applyAction(state, action);
     expect(next.comments).toHaveLength(1);
@@ -43,6 +46,9 @@ describe('applyAction', () => {
     expect(c.side).toBe('RIGHT');
     expect(c.line).toBe(12);
     expect(c.body).toBe('looks good');
+    expect(c.file).toBe('a.ts');
+    expect(c.hunk_header).toBe('@@ -1,3 +1,3 @@');
+    expect(c.displaced).toBe(false);
     expect(c.created_at).toEqual(expect.any(String));
     expect(c.updated_at).toEqual(expect.any(String));
   });
@@ -55,6 +61,8 @@ describe('applyAction', () => {
       side: 'LEFT',
       line: null,
       body: 'x',
+      file: 'a.ts',
+      hunk_header: '@@ -1,3 +1,3 @@',
     };
     const next = applyAction(state, action);
     expect(state.comments).toHaveLength(0);
@@ -70,6 +78,8 @@ describe('applyAction', () => {
       side: 'RIGHT',
       line: 1,
       body: 'first',
+      file: 'a.ts',
+      hunk_header: '@@ -1,3 +1,3 @@',
     });
     state = applyAction(state, {
       type: 'add_comment',
@@ -77,6 +87,8 @@ describe('applyAction', () => {
       side: 'RIGHT',
       line: 2,
       body: 'second',
+      file: 'b.ts',
+      hunk_header: '@@ -4,3 +4,3 @@',
     });
     const targetId = state.comments[0].id;
     const otherBefore = state.comments[1];
@@ -107,19 +119,79 @@ describe('applyAction', () => {
       side: 'RIGHT',
       line: 1,
       body: 'a',
+      file: 'a.ts',
+      hunk_header: '@@ -1,3 +1,3 @@',
     });
     const id = state.comments[0].id;
     const next = applyAction(state, { type: 'delete_comment', id });
     expect(next.comments).toHaveLength(0);
   });
 
+  it('reanchor_comment clears displaced and updates the anchor on the matching comment only', () => {
+    let state = baseState(pr);
+    state = applyAction(state, {
+      type: 'add_comment',
+      chunk_id: 'c1',
+      side: 'RIGHT',
+      line: 1,
+      body: 'first',
+      file: 'a.ts',
+      hunk_header: '@@ -1,3 +1,3 @@',
+    });
+    state = applyAction(state, {
+      type: 'add_comment',
+      chunk_id: 'c2',
+      side: 'RIGHT',
+      line: 2,
+      body: 'second',
+      file: 'b.ts',
+      hunk_header: '@@ -4,3 +4,3 @@',
+    });
+    const targetId = state.comments[0].id;
+    const otherBefore = state.comments[1];
+    // Simulate the target comment having been marked displaced by reconciliation.
+    state = {
+      ...state,
+      comments: state.comments.map((c) =>
+        c.id === targetId ? { ...c, displaced: true } : c,
+      ),
+    };
+    const next = applyAction(state, {
+      type: 'reanchor_comment',
+      id: targetId,
+      chunk_id: 'c9',
+      side: 'LEFT',
+      line: 42,
+      file: 'c.ts',
+      hunk_header: '@@ -9,3 +9,3 @@',
+    });
+    const reanchored = next.comments.find((c) => c.id === targetId)!;
+    expect(reanchored.chunk_id).toBe('c9');
+    expect(reanchored.side).toBe('LEFT');
+    expect(reanchored.line).toBe(42);
+    expect(reanchored.file).toBe('c.ts');
+    expect(reanchored.hunk_header).toBe('@@ -9,3 +9,3 @@');
+    expect(reanchored.displaced).toBe(false);
+    // non-matching comment untouched.
+    expect(next.comments.find((c) => c.id === otherBefore.id)).toEqual(otherBefore);
+  });
+
   it('toggle_flag adds then removes on repeat', () => {
     const state = baseState(pr);
-    const flagged = applyAction(state, { type: 'toggle_flag', chunk_id: 'c1' });
-    expect(flagged.flagged).toEqual(['c1']);
+    const flagged = applyAction(state, {
+      type: 'toggle_flag',
+      chunk_id: 'c1',
+      file: 'a.ts',
+      hunk_header: '@@ -1,3 +1,3 @@',
+    });
+    expect(flagged.flagged).toEqual([
+      { chunk_id: 'c1', file: 'a.ts', hunk_header: '@@ -1,3 +1,3 @@', displaced: false },
+    ]);
     const unflagged = applyAction(flagged, {
       type: 'toggle_flag',
       chunk_id: 'c1',
+      file: 'a.ts',
+      hunk_header: '@@ -1,3 +1,3 @@',
     });
     expect(unflagged.flagged).toEqual([]);
   });
@@ -163,6 +235,8 @@ describe('applyAction', () => {
       kind: 'initial',
       body: 'looks risky',
       suggested_action: 'ask the author',
+      file: 'a.ts',
+      hunk_header: '@@ -1,3 +1,3 @@',
     });
     expect(next.notes).toHaveLength(1);
     const n = next.notes[0];
@@ -172,7 +246,24 @@ describe('applyAction', () => {
     expect(n.kind).toBe('initial');
     expect(n.body).toBe('looks risky');
     expect(n.suggested_action).toBe('ask the author');
+    expect(n.file).toBe('a.ts');
+    expect(n.hunk_header).toBe('@@ -1,3 +1,3 @@');
+    expect(n.displaced).toBe(false);
     expect(n.created_at).toEqual(expect.any(String));
+  });
+
+  it('add_note for the overview page (no file/hunk_header) leaves anchor fields undefined', () => {
+    const next = applyAction(baseState(pr), {
+      type: 'add_note',
+      chunk_id: OVERVIEW_ID,
+      kind: 'initial',
+      body: 'PR summary',
+    });
+    const n = next.notes[0];
+    expect(n.chunk_id).toBe(OVERVIEW_ID);
+    expect(n.file).toBeUndefined();
+    expect(n.hunk_header).toBeUndefined();
+    expect(n.displaced).toBeUndefined();
   });
 
   it('add_note without optional fields leaves them undefined', () => {
@@ -283,6 +374,132 @@ describe('migrate', () => {
     const result = migrate(state);
     expect(result.pr.platform).toBe('gitlab');
   });
+
+  it('v1 -> v2 backfills anchor-snapshot fields as displaced on legacy comments/notes/flagged', () => {
+    const raw = {
+      version: 1,
+      pr,
+      head_sha: 'sha',
+      started_at: '2020-01-01T00:00:00.000Z',
+      comments: [
+        { id: 'cm1', chunk_id: 'c1', side: 'RIGHT', line: 1, body: 'x', created_at: 't', updated_at: 't' },
+      ],
+      flagged: ['c2'],
+      viewed: ['c3'],
+      notes: [
+        { id: 'n1', chunk_id: 'c1', kind: 'initial', body: 'note body', created_at: 't' },
+        { id: 'n2', chunk_id: OVERVIEW_ID, kind: 'initial', body: 'overview note', created_at: 't' },
+      ],
+    };
+    const result = migrate(raw);
+    expect(result.version).toBe(STATE_VERSION);
+
+    expect(result.comments[0].file).toBe('');
+    expect(result.comments[0].hunk_header).toBe('');
+    expect(result.comments[0].displaced).toBe(true);
+
+    expect(result.flagged).toEqual([
+      { chunk_id: 'c2', file: '', hunk_header: '', displaced: true },
+    ]);
+
+    expect(result.notes[0].file).toBe('');
+    expect(result.notes[0].hunk_header).toBe('');
+    expect(result.notes[0].displaced).toBe(true);
+    // Overview notes are never subject to reconciliation — left untouched.
+    expect(result.notes[1].file).toBeUndefined();
+    expect(result.notes[1].displaced).toBeUndefined();
+  });
+
+  it('v1 -> v2 leaves already-migrated comments/notes untouched', () => {
+    const raw = {
+      version: 1,
+      pr,
+      head_sha: 'sha',
+      started_at: '2020-01-01T00:00:00.000Z',
+      comments: [
+        {
+          id: 'cm1', chunk_id: 'c1', side: 'RIGHT', line: 1, body: 'x',
+          file: 'a.ts', hunk_header: '@@ -1,3 +1,3 @@', displaced: false,
+          created_at: 't', updated_at: 't',
+        },
+      ],
+      flagged: [],
+      viewed: [],
+      notes: [],
+    };
+    const result = migrate(raw);
+    expect(result.comments[0].file).toBe('a.ts');
+    expect(result.comments[0].displaced).toBe(false);
+  });
+});
+
+describe('reconcileAnchors', () => {
+  const pr: PrRef = { owner: 'o', repo: 'r', number: 1, platform: 'github' as const };
+
+  const makeChunk = (id: string, file: string, hunk_header: string): Chunk => ({
+    id,
+    file,
+    hunk_header,
+    old_range: [1, 1],
+    new_range: [1, 1],
+    context: '',
+    diff: '',
+    members: [],
+  });
+
+  it('resyncs chunk_id and clears displaced for an entry whose anchor still matches', () => {
+    const state = baseState(pr);
+    state.comments = [
+      {
+        id: 'cm1', chunk_id: 'c1', side: 'RIGHT', line: 1, body: 'x',
+        file: 'a.ts', hunk_header: '@@ -1,3 +1,3 @@', displaced: true,
+        created_at: 't', updated_at: 't',
+      },
+    ];
+    // Same file+hunk_header, but renumbered to c5 in the fresh parse.
+    const chunks = [makeChunk('c5', 'a.ts', '@@ -1,3 +1,3 @@')];
+    const result = reconcileAnchors(state, chunks);
+    expect(result.comments[0].chunk_id).toBe('c5');
+    expect(result.comments[0].displaced).toBe(false);
+  });
+
+  it('marks an entry displaced and retains its last-known snapshot when its hunk changed', () => {
+    const state = baseState(pr);
+    state.comments = [
+      {
+        id: 'cm1', chunk_id: 'c1', side: 'RIGHT', line: 1, body: 'x',
+        file: 'a.ts', hunk_header: '@@ -1,3 +1,3 @@', displaced: false,
+        created_at: 't', updated_at: 't',
+      },
+    ];
+    // a.ts's hunk_header changed — no exact match in the fresh parse.
+    const chunks = [makeChunk('c1', 'a.ts', '@@ -1,5 +1,7 @@')];
+    const result = reconcileAnchors(state, chunks);
+    expect(result.comments[0].displaced).toBe(true);
+    expect(result.comments[0].chunk_id).toBe('c1'); // last-known, retained
+    expect(result.comments[0].file).toBe('a.ts');
+    expect(result.comments[0].hunk_header).toBe('@@ -1,3 +1,3 @@');
+  });
+
+  it('never reconciles overview notes (no file/hunk_header to match)', () => {
+    const state = baseState(pr);
+    state.notes = [
+      { id: 'n1', chunk_id: OVERVIEW_ID, kind: 'initial', body: 'summary', created_at: 't' },
+    ];
+    const result = reconcileAnchors(state, []);
+    expect(result.notes[0].chunk_id).toBe(OVERVIEW_ID);
+    expect(result.notes[0].displaced).toBeUndefined();
+  });
+
+  it('reconciles flagged entries the same way as comments', () => {
+    const state = baseState(pr);
+    state.flagged = [
+      { chunk_id: 'c1', file: 'a.ts', hunk_header: '@@ -1,3 +1,3 @@', displaced: false },
+    ];
+    const result = reconcileAnchors(state, []); // hunk no longer exists at all
+    expect(result.flagged[0].displaced).toBe(true);
+    expect(result.flagged[0].chunk_id).toBe('c1');
+  });
 });
 
 describe('statePath', () => {
@@ -339,8 +556,15 @@ describe('loadState / saveState persistence', () => {
       side: 'RIGHT',
       line: 5,
       body: 'hi',
+      file: 'a.ts',
+      hunk_header: '@@ -1,3 +1,3 @@',
     });
-    state = applyAction(state, { type: 'toggle_flag', chunk_id: 'c2' });
+    state = applyAction(state, {
+      type: 'toggle_flag',
+      chunk_id: 'c2',
+      file: 'b.ts',
+      hunk_header: '@@ -4,3 +4,3 @@',
+    });
     state = applyAction(state, {
       type: 'set_viewed',
       chunk_id: 'c3',
@@ -352,7 +576,9 @@ describe('loadState / saveState persistence', () => {
     expect(loaded.comments).toHaveLength(1);
     expect(loaded.comments[0].body).toBe('hi');
     expect(loaded.comments[0].chunk_id).toBe('c1');
-    expect(loaded.flagged).toEqual(['c2']);
+    expect(loaded.flagged).toEqual([
+      { chunk_id: 'c2', file: 'b.ts', hunk_header: '@@ -4,3 +4,3 @@', displaced: false },
+    ]);
     expect(loaded.viewed).toEqual(['c3']);
     await cleanup(pr);
   });
@@ -399,8 +625,15 @@ describe('listReviews', () => {
       side: 'RIGHT',
       line: 1,
       body: 'hi',
+      file: 'a.ts',
+      hunk_header: '@@ -1,3 +1,3 @@',
     });
-    state = applyAction(state, { type: 'toggle_flag', chunk_id: 'c2' });
+    state = applyAction(state, {
+      type: 'toggle_flag',
+      chunk_id: 'c2',
+      file: 'b.ts',
+      hunk_header: '@@ -4,3 +4,3 @@',
+    });
     state = applyAction(state, {
       type: 'set_viewed',
       chunk_id: 'c3',

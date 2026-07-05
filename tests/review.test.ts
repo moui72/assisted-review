@@ -116,7 +116,9 @@ describe('loadReview', () => {
         context: '',
         diff: '@@ -1,1 +1,1 @@\n-old\n+new',
         members: [],
-        ai_notes: [{ kind: 'initial', body: 'mock note' }],
+        ai_notes: [
+          { id: 'mock-c1-0', chunk_id: 'c1', kind: 'initial', body: 'mock note', created_at: '' },
+        ],
       },
     ];
     vi.mocked(attachMockNotes).mockReturnValue(withNotes);

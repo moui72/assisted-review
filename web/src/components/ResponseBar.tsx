@@ -27,6 +27,8 @@ export function ResponseBar({
   onNext,
   onPrev,
   isMac,
+  reanchoring,
+  onCancelReanchor,
 }: {
   draft: string;
   onDraft: (text: string) => void;
@@ -45,9 +47,40 @@ export function ResponseBar({
   onNext: () => void;
   onPrev: () => void;
   isMac: boolean;
+  /** Set while re-anchoring a displaced comment (from the Overview page) —
+   *  suppresses the normal comment-drafting UI in favor of a placement
+   *  prompt: the next line clicked in the diff dispatches reanchor_comment
+   *  instead of opening a new-comment draft. */
+  reanchoring?: { id: string; body: string } | null;
+  onCancelReanchor?: () => void;
 }) {
   const mod = isMac ? '⌘' : 'Ctrl+';
   const hasDraft = draft.trim().length > 0;
+
+  if (reanchoring) {
+    return (
+      <footer className="shrink-0 border-t border-edge bg-surface">
+        <div className="shell py-3">
+          <div className="mb-1.5 flex items-center gap-2 text-[11px]">
+            <span className="rounded bg-accent/15 px-1.5 py-0.5 font-mono text-accent">
+              re-anchoring comment
+            </span>
+            <button
+              onClick={onCancelReanchor}
+              className="text-faint transition hover:text-fg"
+            >
+              cancel
+            </button>
+          </div>
+          <p className="truncate font-sans text-[13px] text-fg/90">{reanchoring.body}</p>
+          <p className="mt-1.5 font-sans text-[11.5px] text-faint">
+            Click a line in the diff to place this comment.
+          </p>
+        </div>
+      </footer>
+    );
+  }
+
   return (
     <footer className="shrink-0 border-t border-edge bg-surface">
       <div className="shell py-3">

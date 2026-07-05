@@ -1,7 +1,9 @@
-// Parse a unified diff into grouped hunks. Pure TS — same output shape as the
-// original parse-diff.py: an array of groups, each with
+// Parse a unified diff into grouped hunks, via the `parse-diff` npm package
+// (see infrastructure.md's Integration Components — this replaced a
+// hand-rolled port of an earlier Python parser). Output shape:
 // { id, file, hunk_header, old_range, new_range, context, diff, members }.
 
+import parseDiffLib from 'parse-diff';
 import type { Chunk, HunkMember, LineRange, RawHunk } from './types.js';
 
 const HUNK_HEADER_RE = /^@@ -(\d+)(?:,(\d+))? \+(\d+)(?:,(\d+))? @@(.*)$/;
@@ -10,183 +12,57 @@ function warn(msg: string): void {
   console.error(`parse-diff: warning: ${msg}`);
 }
 
-// Extract (old, new) paths from a `diff --git a/<old> b/<new>` line.
-// Returns [null, null] for ambiguous cases (paths containing " b/"); the
-// caller falls back to the --- / +++ markers.
-function parseGitDiffPaths(line: string): [string | null, string | null] {
-  const rest = line.slice('diff --git '.length);
-  if (rest.startsWith('a/')) {
-    const idx = rest.indexOf(' b/');
-    if (idx !== -1) {
-      const old = rest.slice(2, idx);
-      const neu = rest.slice(idx + 3).replace(/\n$/, '');
-      return [old, neu];
-    }
-  }
-  return [null, null];
-}
-
-// Extract path from a `--- a/<path>` or `+++ b/<path>` marker line.
-function extractPathFromMarker(line: string, prefix: string): string | null {
-  let s = line.slice(prefix.length).replace(/\n$/, '');
-  if (s === '/dev/null') return null;
-  if (s.startsWith('a/') || s.startsWith('b/')) s = s.slice(2);
-  const tabIdx = s.indexOf('\t');
-  if (tabIdx !== -1) s = s.slice(0, tabIdx);
-  return s;
+function stripCR(line: string): string {
+  return line.replace(/\r$/, '');
 }
 
 export function parseDiff(text: string): RawHunk[] {
-  // Match Python's str.splitlines() closely enough for diffs: split on \n and
-  // drop a single trailing \r so CRLF diffs don't leave \r in the body.
-  const lines = text.split('\n').map((l) => l.replace(/\r$/, ''));
-  const chunks: RawHunk[] = [];
-  let chunkCounter = 0;
+  const files = parseDiffLib(text);
+  const hunks: RawHunk[] = [];
+  let counter = 0;
 
-  let curOldPath: string | null = null;
-  let curNewPath: string | null = null;
-  let isBinary = false;
-
-  let inHunk = false;
-  let hunkHeaderLine = '';
-  let hunkBody: string[] = [];
-  let hunkOldStart = 0;
-  let hunkOldCount = 0;
-  let hunkNewStart = 0;
-  let hunkNewCount = 0;
-  let hunkContext = '';
-
-  function finalizeHunk(): void {
-    if (!inHunk) return;
-    let filePath: string;
-    if (curNewPath !== null) filePath = curNewPath;
-    else if (curOldPath !== null) filePath = curOldPath;
-    else {
-      warn('hunk encountered with no known file path; skipping');
-      inHunk = false;
-      hunkBody = [];
-      return;
-    }
-
-    chunkCounter += 1;
-    const oldRange: LineRange =
-      hunkOldCount === 0
-        ? [hunkOldStart, hunkOldStart]
-        : [hunkOldStart, hunkOldStart + hunkOldCount - 1];
-    const newRange: LineRange =
-      hunkNewCount === 0
-        ? [hunkNewStart, hunkNewStart]
-        : [hunkNewStart, hunkNewStart + hunkNewCount - 1];
-
-    const diffText = [hunkHeaderLine, ...hunkBody].join('\n');
-    chunks.push({
-      id: `c${chunkCounter}`,
-      file: filePath,
-      hunk_header: hunkHeaderLine,
-      old_range: oldRange,
-      new_range: newRange,
-      context: hunkContext.trim(),
-      diff: diffText,
-    });
-    inHunk = false;
-    hunkBody = [];
-  }
-
-  const SKIP_PREFIXES = [
-    'index ',
-    'similarity ',
-    'dissimilarity ',
-    'rename ',
-    'copy ',
-    'new file mode',
-    'deleted file mode',
-    'old mode',
-    'new mode',
-    'GIT binary patch',
-  ];
-
-  let i = 0;
-  const n = lines.length;
-  while (i < n) {
-    const line = lines[i];
-
-    if (line.startsWith('diff --git ')) {
-      finalizeHunk();
-      [curOldPath, curNewPath] = parseGitDiffPaths(line);
-      isBinary = false;
-      i += 1;
-      continue;
-    }
-
-    if (line.startsWith('Binary files ') && line.endsWith('differ')) {
-      finalizeHunk();
-      isBinary = true;
-      i += 1;
-      continue;
-    }
-
-    if (isBinary) {
-      i += 1;
-      continue;
-    }
-
-    if (line.startsWith('--- ')) {
-      finalizeHunk();
-      const p = extractPathFromMarker(line, '--- ');
-      if (p !== null) curOldPath = p;
-      i += 1;
-      continue;
-    }
-
-    if (line.startsWith('+++ ')) {
-      finalizeHunk();
-      const p = extractPathFromMarker(line, '+++ ');
-      if (p !== null) curNewPath = p;
-      i += 1;
-      continue;
-    }
-
-    if (SKIP_PREFIXES.some((p) => line.startsWith(p))) {
-      i += 1;
-      continue;
-    }
-
-    const m = line.match(HUNK_HEADER_RE);
-    if (m) {
-      finalizeHunk();
-      hunkOldStart = Number(m[1]);
-      hunkOldCount = m[2] !== undefined ? Number(m[2]) : 1;
-      hunkNewStart = Number(m[3]);
-      hunkNewCount = m[4] !== undefined ? Number(m[4]) : 1;
-      hunkContext = m[5] || '';
-      hunkHeaderLine = line;
-      hunkBody = [];
-      inHunk = true;
-      i += 1;
-      continue;
-    }
-
-    if (inHunk) {
-      if (/^[+\- \\]/.test(line)) {
-        hunkBody.push(line);
-        i += 1;
-        continue;
+  for (const file of files) {
+    const filePath =
+      file.to && file.to !== '/dev/null'
+        ? file.to
+        : file.from && file.from !== '/dev/null'
+          ? file.from
+          : null;
+    if (filePath === null) {
+      if (file.chunks.length > 0) {
+        warn('hunk encountered with no known file path; skipping');
       }
-      // Unexpected line inside a hunk — end it and reprocess this line.
-      finalizeHunk();
       continue;
     }
 
-    if (line.trim() === '') {
-      i += 1;
-      continue;
+    for (const chunk of file.chunks) {
+      counter += 1;
+      const headerLine = stripCR(chunk.content);
+      const m = headerLine.match(HUNK_HEADER_RE);
+      const context = m ? m[5].trim() : '';
+      const oldRange: LineRange =
+        chunk.oldLines === 0
+          ? [chunk.oldStart, chunk.oldStart]
+          : [chunk.oldStart, chunk.oldStart + chunk.oldLines - 1];
+      const newRange: LineRange =
+        chunk.newLines === 0
+          ? [chunk.newStart, chunk.newStart]
+          : [chunk.newStart, chunk.newStart + chunk.newLines - 1];
+      const bodyLines = chunk.changes.map((c) => stripCR(c.content));
+
+      hunks.push({
+        id: `c${counter}`,
+        file: filePath,
+        hunk_header: headerLine,
+        old_range: oldRange,
+        new_range: newRange,
+        context,
+        diff: [headerLine, ...bodyLines].join('\n'),
+      });
     }
-    warn(`skipping unrecognized line: ${JSON.stringify(line)}`);
-    i += 1;
   }
 
-  finalizeHunk();
-  return chunks;
+  return hunks;
 }
 
 function singletonGroup(ch: RawHunk): Chunk {

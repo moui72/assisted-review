@@ -47,6 +47,10 @@ export function App() {
   const [dir, setDir] = useState(1);
   const [drafts, setDrafts] = useState<Record<string, string>>({});
   const [anchor, setAnchor] = useState<Anchor | null>(null);
+  // Set when the reviewer clicked "Re-anchor" on a displaced comment from the
+  // Overview page — the next line picked in ChunkView dispatches
+  // reanchor_comment for this comment instead of a normal anchor selection.
+  const [reanchoring, setReanchoring] = useState<{ id: string; body: string } | null>(null);
   const [helpOpen, setHelpOpen] = useState(false);
   const [submitOpen, setSubmitOpen] = useState(false);
   const [reviewsOpen, setReviewsOpen] = useState(false);
@@ -181,7 +185,12 @@ export function App() {
 
   const toggleFlag = useCallback(() => {
     if (!chunk) return;
-    void dispatch({ type: 'toggle_flag', chunk_id: chunk.id });
+    void dispatch({
+      type: 'toggle_flag',
+      chunk_id: chunk.id,
+      file: chunk.file,
+      hunk_header: chunk.hunk_header,
+    });
   }, [chunk, dispatch]);
 
   const markUnread = useCallback(() => {
@@ -199,17 +208,43 @@ export function App() {
       side: anchor?.side ?? null,
       line: anchor?.line ?? null,
       body,
+      file: chunk.file,
+      hunk_header: chunk.hunk_header,
     });
     setDrafts((d) => ({ ...d, [chunk.id]: '' }));
     setAnchor(null);
   }, [anchor, chunk, dispatch, drafts]);
 
   const selectLine = useCallback((a: Anchor) => {
+    if (reanchoring && chunk) {
+      void dispatch({
+        type: 'reanchor_comment',
+        id: reanchoring.id,
+        chunk_id: chunk.id,
+        side: a.side,
+        line: a.line,
+        file: chunk.file,
+        hunk_header: chunk.hunk_header,
+      });
+      setReanchoring(null);
+      return;
+    }
     setAnchor((cur) =>
       cur?.side === a.side && cur?.line === a.line ? null : a,
     );
     textareaRef.current?.focus();
-  }, []);
+  }, [reanchoring, chunk, dispatch]);
+
+  const startReanchor = useCallback(
+    (comment: { id: string; body: string }) => {
+      setAnchor(null);
+      setReanchoring({ id: comment.id, body: comment.body });
+      jump(0);
+    },
+    [jump],
+  );
+
+  const cancelReanchor = useCallback(() => setReanchoring(null), []);
 
   // Ask Claude about the current chunk (empty question → "explain"). One stream
   // at a time; it persists server-side on completion, so navigating away is safe.
@@ -318,7 +353,11 @@ export function App() {
   ]);
 
   const commentedIds = useMemo(
-    () => [...new Set((state?.comments ?? []).map((c) => c.chunk_id))],
+    () => [
+      ...new Set(
+        (state?.comments ?? []).filter((c) => !c.displaced).map((c) => c.chunk_id),
+      ),
+    ],
     [state],
   );
 
@@ -350,14 +389,25 @@ export function App() {
     );
   }
 
+  // Displaced entries keep their last-known chunk_id, which may now
+  // (mis)match a completely different chunk after renumbering — only
+  // non-displaced entries are trustworthy for chunk-scoped lookups.
+  // Displaced comments/notes/flags are shown exclusively in the Overview
+  // page's Displaced section.
   const chunkComments = chunk
-    ? state.comments.filter((c) => c.chunk_id === chunk.id)
+    ? state.comments.filter((c) => c.chunk_id === chunk.id && !c.displaced)
     : [];
-  const isFlagged = chunk ? state.flagged.includes(chunk.id) : false;
+  const isFlagged = chunk
+    ? state.flagged.some((f) => f.chunk_id === chunk.id && !f.displaced)
+    : false;
   const isViewed = chunk ? state.viewed.includes(chunk.id) : false;
 
   const storedNotes = (id: string): StoredNote[] =>
-    state.notes.filter((n) => n.chunk_id === id);
+    state.notes.filter((n) => n.chunk_id === id && !n.displaced);
+
+  const displacedComments = state.comments.filter((c) => c.displaced);
+  const displacedNotes = state.notes.filter((n) => n.displaced);
+  const displacedFlags = state.flagged.filter((f) => f.displaced);
 
   // Overview page → notes for OVERVIEW_ID; chunk page → mock notes + stored notes.
   const displayNotes: StoredNote[] = chunk
@@ -385,7 +435,7 @@ export function App() {
         chunks={review.chunks}
         index={index}
         viewed={state.viewed}
-        flagged={state.flagged}
+        flagged={state.flagged.filter((f) => !f.displaced).map((f) => f.chunk_id)}
         commented={commentedIds}
         commentCount={state.comments.length}
         submitted={!!state.submitted}
@@ -428,6 +478,22 @@ export function App() {
                 ai={aiPanel}
                 onBegin={() => jump(0)}
                 chunkCount={total}
+                displacedComments={displacedComments}
+                displacedNotes={displacedNotes}
+                displacedFlags={displacedFlags}
+                onReanchorComment={startReanchor}
+                onDeleteComment={(id) =>
+                  void dispatch({ type: 'delete_comment', id })
+                }
+                onDeleteNote={(id) => void dispatch({ type: 'delete_note', id })}
+                onUnflag={(f) =>
+                  void dispatch({
+                    type: 'toggle_flag',
+                    chunk_id: f.chunk_id,
+                    file: f.file,
+                    hunk_header: f.hunk_header,
+                  })
+                }
               />
             )}
           </motion.div>
@@ -453,6 +519,8 @@ export function App() {
           onNext={() => go(1)}
           onPrev={() => go(-1)}
           isMac={IS_MAC}
+          reanchoring={reanchoring}
+          onCancelReanchor={cancelReanchor}
         />
       )}
 

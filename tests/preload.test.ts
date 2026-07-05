@@ -15,7 +15,13 @@ function makeChunk(id: string, hasAiNote = false): Chunk {
     context: '',
     diff: '',
     members: [],
-    ...(hasAiNote ? { ai_notes: [{ kind: 'initial', body: 'mock' }] } : {}),
+    ...(hasAiNote
+      ? {
+          ai_notes: [
+            { id: `mock-${id}-0`, chunk_id: id, kind: 'initial', body: 'mock', created_at: '' },
+          ] satisfies StoredNote[],
+        }
+      : {}),
   };
 }
 

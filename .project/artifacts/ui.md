@@ -1,7 +1,7 @@
 ---
 name: ui
 status: stable
-last_updated: 2026-07-01
+last_updated: 2026-07-03
 diagram_status: stale
 ---
 
@@ -45,6 +45,16 @@ markdown), and Jira context (linked issue(s) + epic, or a setup banner via
 Hosts the AI panel scoped to `OVERVIEW_ID` — ask Claude to summarize the
 whole PR or answer a question about it. `onBegin` jumps to chunk 0.
 
+When `state.comments` contains any `displaced: true` entries (see
+`datamodel.md`'s Anchor Reconciliation), a **Displaced Comments** section
+renders here — the only place they're shown, since a displaced comment has
+no current chunk to attach to. Each entry shows the comment body plus its
+last-known `file`/`hunk_header` snapshot, with a "Re-anchor" button that
+jumps into `ChunkView` in anchor-picking mode (see `ResponseBar.tsx` below).
+Displaced notes and flags are surfaced in the same section for visibility,
+but read-only — no re-anchor affordance for them (see `api.md`'s
+`reanchor_comment`); a note can only be deleted and a flag only cleared.
+
 ### Chunk (`ChunkView.tsx`)
 
 The primary review screen — one per `Chunk`. Composes `DiffPane` (the actual
@@ -72,20 +82,35 @@ Shared across views, listed by concern:
   anchor display/clear, flag/mark-viewed/mark-unread/ask-AI/next/prev
   buttons, each annotated with its keyboard shortcut (`Kbd`). Mac vs.
   Ctrl-key labels driven by `isMac` passed down from `App.tsx`'s
-  `IS_MAC` (`navigator.userAgent` sniff).
-- **`AiCommentary.tsx`** — renders the note list (`DisplayNote[]`) for
-  whichever id is active (chunk or `OVERVIEW_ID`), the ask-AI input, the
-  live streaming buffer while a request is in flight, and per-note delete.
+  `detectMac()` helper (prefers `navigator.userAgentData.platform` where
+  available — Chromium browsers — falling back to the `navigator.userAgent`
+  regex elsewhere). When entered in re-anchor mode (from a displaced
+  comment's "Re-anchor" button on the Overview page), it reuses the existing
+  line-click-to-anchor flow (`DiffPane`'s `Anchor { side, line }` selection)
+  instead of the normal "new comment" flow — selecting a line dispatches
+  `reanchor_comment` for that specific comment id rather than `add_comment`,
+  and there's no textarea shown since the comment body already exists.
+- **`AiCommentary.tsx`** — renders the note list (`StoredNote[]`, see
+  `datamodel.md`) for whichever id is active (chunk or `OVERVIEW_ID`), the
+  ask-AI input, the live streaming buffer while a request is in flight
+  (a `NotePreview`), and per-note delete (gated by a `deletableNoteIds` set
+  so a mock note's fake id can't offer a no-op delete button).
   Distinguishes `initial`/`context`/`investigation`/`error` note kinds
   visually.
 - **`SubmitModal.tsx`** — verdict picker (GitHub `VERDICTS` vs. GitLab
   `GITLAB_VERDICTS`, chosen by `review.pr.platform`), summary body, and the
   submit action; surfaces `SubmitResponse` outcomes including the stale-SHA
   warning and per-comment `comment_errors` from a partial GitLab failure.
-- **`ReviewsMenu.tsx`** — lists saved reviews (`ReviewSummary[]` via
-  `fetchReviews()`), lets the user switch to or delete one, or open a new
-  ref. Largest component by line count — combines list, open-by-ref input,
-  and delete confirmation in one panel.
+- **`ReviewsMenu.tsx`** — modal container: fetches `ReviewSummary[]` via
+  `fetchReviews()`, owns open/switch/dismiss/confirm state, and composes
+  three focused subcomponents rather than rendering everything itself:
+  - **`OpenReviewForm.tsx`** — the ref input + "Open" button for launching a
+    review by reference.
+  - **`ReviewsList.tsx`** — the saved-reviews list (per-item switch/dismiss
+    buttons, progress summary via its `Progress`/`prLabel` helpers).
+  - **`DeleteReviewConfirm.tsx`** — the confirmation footer shown when
+    dismissing the currently active review, including the
+    switch-vs-clear-session messaging.
 - **`SettingsPanel.tsx`** — theme toggle (delegates to `useTheme()`) and
   preload behavior (`preload_chunks` count, `preload_overview` on/off),
   persisted to `localStorage` (`ar-preload-chunks`, `ar-preload-overview`)
@@ -106,11 +131,7 @@ Shared across views, listed by concern:
   `fetchState()` both resolve (parallel `Promise.all`).
 - **No active review, load succeeded**: `Splash` (ref entry).
 - **Load error**: full-screen `Error: {message}` (red-on-bg), no retry
-  affordance beyond reloading. **Confirmed gap** (not intentional): this is
-  inconsistent with every other degrade path (Jira, Claude, submit), which
-  are all recoverable-in-place banners. Future work should replace this
-  terminal state with an in-place retry affordance (re-run
-  `fetchReview()`/`fetchState()`) rather than requiring a manual page reload.
+  affordance beyond reloading — see Production Annotations below.
 - **Streaming AI response**: `AiCommentary` shows the in-progress buffer
   (`streaming.text`, growing via `onDelta`) with a busy indicator; the ask
   input is disabled (`busy: streaming?.chunkId === activeId`) while a
@@ -128,6 +149,12 @@ Shared across views, listed by concern:
   stale-SHA warning (offers re-fetch), and partial-failure
   (`comment_errors` list) — all handled inside `SubmitModal`, not lifted to
   `App.tsx`.
+- **Displaced comments** (Overview page only): rendered whenever
+  `state.comments`/`notes`/`flagged` contains any `displaced: true` entry
+  (see `datamodel.md`'s Anchor Reconciliation) — a dedicated section, not a
+  dismissible banner, since these need an actual action (re-anchor, delete,
+  or unflag) rather than just acknowledgment. Comments show a "Re-anchor"
+  button; notes and flags are read-only there (delete/unflag only).
 - **Empty/zero-chunk PR**: A PR/MR with zero chunks (e.g., a diff-less or
   fully-binary-file PR) still renders `OverviewView` — `index` defaults to
   `-1`, so there is always a view to render; `jump()`'s `!total` guard only
@@ -149,3 +176,12 @@ is in `README.md` and mirrored in `HelpOverlay.tsx`; notably `→`/`←` (or
 Win/Linux) skip to the next/previous *unviewed* chunk, and `↵` both marks
 viewed and advances (the only navigation key with a persistence side
 effect).
+
+## Production Annotations
+
+- **Load error has no in-place retry** — the full-screen `Error: {message}`
+  state (see States above) is inconsistent with every other degrade path
+  (Jira, Claude, submit), which are all recoverable-in-place banners. Not
+  intentional. Future work should replace this terminal state with an
+  in-place retry affordance (re-run `fetchReview()`/`fetchState()`) rather
+  than requiring a manual page reload.

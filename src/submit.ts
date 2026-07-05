@@ -6,40 +6,12 @@
 //   glab-or-REST transport (see gitlab-rest.ts), then posts the whole-MR note
 //   and optionally approves.
 
-import type { Chunk, DraftComment, GitLabVerdict, PrRef, Side } from './types.js';
+import type { Chunk, DraftComment, GitLabVerdict, PrRef, ReviewPayload, ReviewComment, Side, SubmitResult } from './types.js';
 import { glabApiJson, glabApiPaginatedJson, glProjectId, spawnCli } from './gitlab-rest.js';
 
 export { VERDICTS, GITLAB_VERDICTS } from './types.js';
-export type { Verdict, GitLabVerdict } from './types.js';
+export type { Verdict, GitLabVerdict, ReviewComment, ReviewPayload, SubmitResult } from './types.js';
 import type { Verdict } from './types.js';
-
-export interface ReviewComment {
-  path: string;
-  body: string;
-  side: Side;
-  line: number;
-}
-
-export interface ReviewPayload {
-  event: Verdict;
-  body: string;
-  commit_id: string;
-  comments: ReviewComment[];
-}
-
-export interface SubmitResult {
-  ok: boolean;
-  /** Review permalink on success. */
-  html_url?: string;
-  /** Set when the head SHA the comments were drafted against is gone. */
-  stale?: { old: string; new_head: string; inline_count: number };
-  /** Errors from individual GitLab discussion POSTs (partial success). */
-  comment_errors?: Array<{ path: string; line: number | null; error: string }>;
-  /** gh/glab stderr (or a synthesized message) on a non-stale failure. */
-  error?: string;
-  /** Echoed on failure so the UI can offer a manual-submit fallback. */
-  payload?: ReviewPayload;
-}
 
 /**
  * Resolve a draft comment's GitHub anchor. A line-anchored comment uses its own

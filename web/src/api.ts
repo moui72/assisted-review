@@ -5,6 +5,7 @@ import type {
   Review,
   ReviewState,
   ReviewSummary,
+  SubmitResult,
   Verdict,
 } from '../../src/types.ts';
 
@@ -37,14 +38,10 @@ export async function postAction(action: Action): Promise<ReviewState> {
   return (await res.json()) as ReviewState;
 }
 
-export interface SubmitResponse {
-  ok: boolean;
-  html_url?: string;
-  stale?: { old: string; new_head: string; inline_count: number };
-  comment_errors?: Array<{ path: string; line: number | null; error: string }>;
-  error?: string;
-  state: ReviewState;
-}
+/** Wire shape of the `/api/submit` response: the shared `SubmitResult`, minus
+ *  the server-side-only `payload` field, plus `state` added by the route
+ *  handler. */
+export type SubmitResponse = Omit<SubmitResult, 'payload'> & { state: ReviewState };
 
 /** Publish the drafted comments as a real GitHub/GitLab review. */
 export async function submitReview(
@@ -183,13 +180,13 @@ export type { Verdict, GitLabVerdict, ReviewSummary } from '../../src/types.ts';
 export type { Review };
 export type {
   Chunk,
-  AiNote,
   AiNoteKind,
   PrRef,
   PrMeta,
   Side,
   DraftComment,
   StoredNote,
+  FlaggedEntry,
   ReviewState,
   Action,
   Overview,

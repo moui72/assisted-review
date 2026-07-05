@@ -1,8 +1,13 @@
 // Placeholder AI commentary for UI development. Deterministic per chunk so the
 // layout is stable across reloads. Swap this for the headless-Claude bridge
 // (slice 3) without touching the UI — it reads `chunk.ai_notes` either way.
+//
+// Notes are shaped as `StoredNote` (the same type real, persisted AI notes
+// use) rather than a bespoke mock-only shape, filled with placeholder
+// id/chunk_id/created_at — mock mode fakes values, it doesn't need its own
+// type.
 
-import type { AiNote, Chunk } from './types.js';
+import type { Chunk, StoredNote } from './types.js';
 
 const LOREM = [
   'Lorem ipsum dolor sit amet, consectetur adipiscing elit.',
@@ -28,19 +33,30 @@ function sentences(seed: number, count: number): string {
   return out.join(' ');
 }
 
-function mockNotesForChunk(chunk: Chunk, index: number): AiNote[] {
+const MOCK_CREATED_AT = new Date(0).toISOString();
+
+function mockNotesForChunk(chunk: Chunk, index: number): StoredNote[] {
   const h = hash(chunk.id);
-  const notes: AiNote[] = [
+  const notes: StoredNote[] = [
     {
+      id: `mock-${chunk.id}-0`,
+      chunk_id: chunk.id,
       kind: 'initial',
       body: sentences(h, 2 + (h % 3)), // 2–4 sentences
       suggested_action: sentences(h + 1, 1),
+      created_at: MOCK_CREATED_AT,
     },
   ];
   // Sprinkle an extra "context" note on some chunks to exercise the stacked
   // multi-note layout.
   if (index % 3 === 1) {
-    notes.push({ kind: 'context', body: sentences(h + 3, 1 + (h % 2)) });
+    notes.push({
+      id: `mock-${chunk.id}-1`,
+      chunk_id: chunk.id,
+      kind: 'context',
+      body: sentences(h + 3, 1 + (h % 2)),
+      created_at: MOCK_CREATED_AT,
+    });
   }
   return notes;
 }

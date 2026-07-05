@@ -1,17 +1,17 @@
 ## Project Layout
 
 ```
-src/        Backend TypeScript (CommonJS, compiled to build/)
+src/        Backend TypeScript (ESM, compiled to build/)
 web/        Frontend — Vite + React 19 + Tailwind v4
 tests/      Vitest suite (covers src/ and web/src/)
 ```
 
-Dev: backend via ts-node; Vite dev server proxies `/api` to `http://127.0.0.1:4319`.
+Dev: backend via tsx; Vite dev server proxies `/api` to `http://127.0.0.1:4319`.
 
 ## TypeScript
 
 - `strict: true` everywhere. No `any`.
-- Backend (`src/`): CommonJS, no file extensions on imports.
+- Backend (`src/`): ESM (`package.json`'s `"type": "module"`, `tsconfig.json`'s `NodeNext` resolution) — relative imports must use explicit `.js` extensions (e.g. `from './types.js'`), even though the source files are `.ts`.
 - Frontend (`web/src/`): all imports must use explicit `.ts`/`.tsx` extensions — required by tsconfig and Vite.
 - Use `node:` prefix for Node built-ins.
 
@@ -24,6 +24,8 @@ Dev: backend via ts-node; Vite dev server proxies `/api` to `http://127.0.0.1:43
 ## Server
 
 Binds to `127.0.0.1` only — never expose off-machine. All CLI output goes to `console.error`; `stdout` is reserved for piped data.
+
+Hosted, multi-user deployment is a possible future direction, not a current requirement — don't build it now. But when writing new server-side code, avoid decisions that would make that transition harder than it needs to be: e.g. don't deepen the single global `AppContext { review, state }` singleton (`src/server.ts`) with more state that assumes exactly one active review process-wide if a per-request/per-session shape would be just as simple today. When the two are equally simple, prefer the one that doesn't need to be ripped out later. This is a tiebreaker for otherwise-equivalent choices, not a mandate to add abstraction for a use case that doesn't exist yet.
 
 ## Frontend
 
@@ -47,6 +49,5 @@ Use module mocks for external CLIs (`gh`, `op`, `claude`) and `node:child_proces
 
 - **chunk** — Adjacent hunks from one file, the primary review unit. Has sequential id (`c1`, `c2`, …), merged diff, and `members` array.
 - **OVERVIEW_ID** — Sentinel `'__overview__'` used as `chunk_id` for the overview page. Defined in `src/types.ts`, re-exported from `web/src/api.ts`.
-- **AiNote** — In-memory AI commentary: `kind`, `body`, optional `prompt`/`suggested_action`. No `id` or timestamps.
-- **StoredNote** — Persisted in `ReviewState.notes`. Adds `id` (UUID), `chunk_id`, `created_at`. Created by `add_note` action.
+- **StoredNote** — the one AI-note shape, real and mock alike: `id`, `chunk_id`, `kind`, `body`, optional `prompt`/`suggested_action`, `created_at`. Real notes are created by the `add_note` action and persisted in `ReviewState.notes`; mock notes (`--mock-ai`) use this same shape with fake `id`/`chunk_id`/`created_at` values rather than a separate in-memory type — don't reintroduce a mock-only note type.
 - **AiNoteKind** — `'initial'` | `'investigation'` | `'context'` | `'error'`.
