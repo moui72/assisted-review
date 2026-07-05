@@ -26,6 +26,7 @@ import {
 } from './submit.js';
 import { parseRef } from './parse-ref.js';
 import { loadReview } from './review.js';
+import { createMutex } from './mutex.js';
 import {
   GitLabAuthError,
   gitLabTokenSource,
@@ -134,6 +135,14 @@ export function startServer(
   // to prevent a finishing stream from writing notes into the wrong review's state.
   let currentCancel: (() => void) | null = null;
 
+  // Serializes every read-modify-write-persist cycle against ctx.state, so
+  // overlapping mutations (two POST /api/action calls, or an in-flight
+  // Claude stream's add_note landing alongside a manual action) can't race —
+  // without this, a mutation could read ctx.state before an earlier one
+  // finished writing it, then overwrite that earlier change once its own
+  // (stale-based) write lands, both in memory and on disk.
+  const withStateLock = createMutex();
+
   const server = createServer((req, res) => {
     void handle(req, res).catch((err: unknown) => {
       sendJson(res, 500, {
@@ -175,13 +184,22 @@ export function startServer(
     }
 
     if (url.pathname === '/api/action' && req.method === 'POST') {
-      const { review, state } = ctx;
-      if (!review || !state) return sendJson(res, 503, { error: 'no active review' });
+      if (!ctx.review || !ctx.state) return sendJson(res, 503, { error: 'no active review' });
       const action = JSON.parse(await readBody(req)) as Action;
-      const nextState = applyAction(state, action);
-      ctx.state = nextState;
-      await saveState(nextState);
-      return sendJson(res, 200, nextState);
+      try {
+        const nextState = await withStateLock(async () => {
+          // Re-check inside the lock: the review may have been cleared while
+          // this request was queued behind an earlier mutation.
+          if (!ctx.state) throw new Error('no active review');
+          const next = applyAction(ctx.state, action);
+          ctx.state = next;
+          await saveState(next);
+          return next;
+        });
+        return sendJson(res, 200, nextState);
+      } catch {
+        return sendJson(res, 503, { error: 'no active review' });
+      }
     }
 
     // Publish drafted comments as a real GitHub PR review.
@@ -237,7 +255,12 @@ export function startServer(
         await saveState(nextState);
       }
       const status = result.ok ? 200 : result.stale ? 409 : 502;
-      return sendJson(res, status, { ...result, state: nextState });
+      // payload is echoed by the submit adapter for a possible future
+      // manual-submit fallback — server-side only, never serialized to the
+      // client (see api.md's Production Annotations).
+      const responseBody = { ...result, state: nextState };
+      delete responseBody.payload;
+      return sendJson(res, status, responseBody);
     }
 
     // List all persisted reviews (for the review picker menu).
@@ -313,6 +336,10 @@ export function startServer(
       if (!isOverview && !chunk)
         return sendJson(res, 404, { error: 'unknown chunk' });
 
+      // Cancel any stream already in flight so it can't write a stale note
+      // into the wrong chunk/review once this one completes.
+      currentCancel?.();
+
       // An empty question means "explain/summarize" (an initial note).
       const kind: AiNoteKind = question.trim() ? 'investigation' : 'initial';
       const prompt = isOverview
@@ -348,18 +375,24 @@ export function startServer(
           const { body, suggestedAction } = wantsAction
             ? splitSuggestedAction(full)
             : { body: full.trim(), suggestedAction: undefined };
-          const nextState = applyAction(ctx.state, {
-            type: 'add_note',
-            chunk_id: isOverview ? OVERVIEW_ID : chunk!.id,
-            kind,
-            prompt: question.trim() || undefined,
-            body,
-            suggested_action: suggestedAction,
-          });
-          ctx.state = nextState;
-          void saveState(nextState)
-            .then(() => {
-              sse('done', { state: nextState });
+          void withStateLock(async () => {
+            // Re-check inside the lock: the review may have been cleared, or
+            // a queued POST /api/action may have run, while this was waiting.
+            if (!ctx.state) return null;
+            const nextState = applyAction(ctx.state, {
+              type: 'add_note',
+              chunk_id: isOverview ? OVERVIEW_ID : chunk!.id,
+              kind,
+              prompt: question.trim() || undefined,
+              body,
+              suggested_action: suggestedAction,
+            });
+            ctx.state = nextState;
+            await saveState(nextState);
+            return nextState;
+          })
+            .then((nextState) => {
+              if (nextState) sse('done', { state: nextState });
               res.end();
             })
             .catch((err: unknown) => {

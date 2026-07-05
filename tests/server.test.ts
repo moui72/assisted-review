@@ -52,6 +52,7 @@ import {
   setGitLabToken,
   clearGitLabToken,
 } from '../src/gitlab-token';
+import { streamClaude } from '../src/claude';
 import type { Review, ReviewState } from '../src/types';
 import { STATE_VERSION, OVERVIEW_ID } from '../src/types';
 
@@ -202,6 +203,34 @@ describe('POST /api/action', () => {
     expect(vi.mocked(applyAction)).toHaveBeenCalled();
     expect(vi.mocked(saveState)).toHaveBeenCalledWith(nextState);
   });
+
+  it('returns 503 for a request that finds the review cleared once its turn in the lock comes', async () => {
+    // A's save is slow, so it holds the state lock for a while.
+    vi.mocked(saveState).mockImplementation(() => new Promise((r) => setTimeout(r, 30)));
+
+    const ctx: AppContext = { review, state };
+    const url = await makeServer(ctx);
+
+    const resAPromise = post(url, '/api/action', { type: 'toggle_flag', chunk_id: 'c1' });
+    await new Promise((r) => setTimeout(r, 5)); // let A enter its locked section
+
+    // B is issued while the review is still valid, so it passes its own
+    // initial guard — then queues behind A's still-running lock.
+    const resBPromise = post(url, '/api/action', { type: 'toggle_flag', chunk_id: 'c2' });
+    await new Promise((r) => setTimeout(r, 5)); // let B's request queue at the lock
+
+    // Simulate a concurrent DELETE /api/review clearing the active review
+    // while B is queued, waiting for A's lock to release.
+    ctx.state = null;
+
+    const resB = await resBPromise;
+    expect(resB.status).toBe(503);
+
+    // A itself still succeeds — it captured its own next state before the
+    // lock, well before ctx.state was cleared.
+    const resA = await resAPromise;
+    expect(resA.status).toBe(200);
+  });
 });
 
 describe('POST /api/submit', () => {
@@ -238,6 +267,18 @@ describe('POST /api/submit', () => {
     const url = await makeServer({ review, state });
     const res = await post(url, '/api/submit', { verdict: 'COMMENT', body: '' });
     expect(res.status).toBe(502);
+  });
+
+  it('never sends payload to the client, even when the adapter echoes it', async () => {
+    vi.mocked(submitReview).mockResolvedValueOnce({
+      ok: false,
+      error: 'gh failed',
+      payload: { event: 'COMMENT', body: '', commit_id: 'abc', comments: [] },
+    });
+    const url = await makeServer({ review, state });
+    const res = await post(url, '/api/submit', { verdict: 'COMMENT', body: '' });
+    const body = await res.json() as Record<string, unknown>;
+    expect('payload' in body).toBe(false);
   });
 
   it('returns 409 when SHA is stale', async () => {
@@ -483,6 +524,32 @@ describe('GET /api/claude', () => {
     const res = await get(url, `/api/claude?chunk_id=${OVERVIEW_ID}`);
     expect(res.status).toBe(200);
     expect(res.headers.get('content-type')).toContain('text/event-stream');
+  });
+
+  it('cancels a still-running stream when a second request starts', async () => {
+    const url = await makeServer({ review, state });
+    const cancel1 = vi.fn();
+    let handlers1: { onDelta: (text: string) => void; onDone: (full: string) => void } | undefined;
+    vi.mocked(streamClaude).mockImplementationOnce((_prompt, handlers) => {
+      handlers1 = handlers as typeof handlers1;
+      // Node only flushes SSE headers once the first byte is written — emit
+      // one delta so the fetch() below actually resolves, without calling
+      // onDone, so the stream is still "in flight" for the second request.
+      handlers1?.onDelta('partial');
+      return cancel1;
+    });
+
+    const res1 = await get(url, '/api/claude?chunk_id=c1');
+    expect(res1.status).toBe(200);
+    expect(cancel1).not.toHaveBeenCalled();
+
+    const res2 = await get(url, '/api/claude?chunk_id=c1');
+    expect(res2.status).toBe(200);
+
+    expect(cancel1).toHaveBeenCalledTimes(1);
+
+    // Let the intentionally-unfinished first stream close cleanly.
+    handlers1?.onDone('unused');
   });
 });
 
