@@ -2,7 +2,7 @@
 name: datamodel
 status: stable
 last_updated: 2026-07-03
-diagram_status: stale
+diagram_status: current
 ---
 
 # Data Model
@@ -213,7 +213,7 @@ Resumed on next open of the same PR/MR.
 
 | Field | Type | Notes |
 |-------|------|-------|
-| version | number | `STATE_VERSION = 1`; drives `migrate()` |
+| version | number | `STATE_VERSION = 2`; drives `migrate()` |
 | pr | PrRef | |
 | meta | PrMeta? | Cached so `listReviews()` can show titles without re-fetching |
 | head_sha | string | Refreshed to the latest fetched SHA on every load (staleness handling is otherwise deferred — see `state.ts` comment) |
@@ -223,6 +223,7 @@ Resumed on next open of the same PR/MR.
 | viewed | string[] | Chunk ids. Deliberately *not* reconciled like the fields above — a stale "viewed" marker pointing at the wrong chunk has no submission-time consequence and no meaningful "re-view" UI, so it's out of scope for Anchor Reconciliation, not an oversight |
 | notes | StoredNote[] | |
 | submitted | `{ at: string; verdict: string; url?: string }`? | Set once the review has been published; blocks a second submit (`410` response) |
+| gitlab_submit_progress | `{ posted_comment_ids: string[]; note_posted: boolean; approved: boolean }`? | GitLab only — tracks exactly which parts of a submission already succeeded, so a retry after partial failure skips them instead of reposting duplicates. Cleared the moment a submission fully succeeds (same time `submitted` is stamped). GitHub's single-POST review is atomic and never uses this field. |
 
 ### ReviewSummary
 

@@ -160,4 +160,29 @@ describe('SubmitModal', () => {
 
     await waitFor(() => expect(screen.getByText('network failure')).toBeInTheDocument());
   });
+
+  it('shows a partial-failure retry banner on a GitLab comment_errors failure, and retrying calls submitReview again', async () => {
+    const user = userEvent.setup();
+    vi.mocked(submitReview).mockResolvedValueOnce({
+      ok: false,
+      comment_errors: [{ path: 'src/foo.ts', line: 5, error: 'invalid position' }],
+      state,
+    });
+    renderModal();
+
+    await user.click(screen.getByRole('button', { name: /submit as comment/i }));
+
+    await waitFor(() =>
+      expect(screen.getByText(/1 inline comment failed to post/i)).toBeInTheDocument(),
+    );
+    expect(screen.getByText(/invalid position/)).toBeInTheDocument();
+    const retryButton = screen.getByRole('button', { name: /retry submission/i });
+    expect(retryButton).toBeInTheDocument();
+
+    vi.mocked(submitReview).mockResolvedValueOnce({ ok: true, html_url: 'https://gitlab.com/x/y', state });
+    await user.click(retryButton);
+
+    expect(vi.mocked(submitReview)).toHaveBeenCalledTimes(2);
+    await waitFor(() => expect(screen.getByText(/review submitted/i)).toBeInTheDocument());
+  });
 });

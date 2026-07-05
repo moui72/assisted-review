@@ -2,7 +2,7 @@
 name: ui
 status: stable
 last_updated: 2026-07-03
-diagram_status: stale
+diagram_status: current
 ---
 
 # UI
@@ -55,6 +55,17 @@ Displaced notes and flags are surfaced in the same section for visibility,
 but read-only — no re-anchor affordance for them (see `api.md`'s
 `reanchor_comment`); a note can only be deleted and a flag only cleared.
 
+This exclusivity isn't just a byproduct of a displaced entry's `chunk_id` no
+longer resolving — Anchor Reconciliation retains the *last-known* `chunk_id`
+rather than clearing it (see `datamodel.md`), so after chunks are renumbered
+that stale id could coincidentally match a real (but unrelated) chunk.
+`App.tsx` enforces the exclusion explicitly: `chunkComments`, `isFlagged`,
+`storedNotes`, `commentedIds`, and the `flagged` array passed to `TopNav`
+all filter out `displaced: true` entries before doing any chunk-id lookup.
+Without this filter, a displaced comment/flag could silently reappear
+anchored to the wrong chunk in `ChunkView` or as the wrong tick in `TopNav`'s
+progress strip, instead of surfacing in Displaced Comments.
+
 ### Chunk (`ChunkView.tsx`)
 
 The primary review screen — one per `Chunk`. Composes `DiffPane` (the actual
@@ -100,7 +111,13 @@ Shared across views, listed by concern:
 - **`SubmitModal.tsx`** — verdict picker (GitHub `VERDICTS` vs. GitLab
   `GITLAB_VERDICTS`, chosen by `review.pr.platform`), summary body, and the
   submit action; surfaces `SubmitResponse` outcomes including the stale-SHA
-  warning and per-comment `comment_errors` from a partial GitLab failure.
+  warning. A GitLab partial failure (`ok: false` with `comment_errors` — see
+  `api.md`) renders a dedicated banner listing which comments failed,
+  distinct from the generic error message, and keeps the submit button
+  available labeled "Retry submission" rather than "Submit as …" — clicking
+  it dispatches another `POST /api/submit`, which skips whatever already
+  posted (`state.gitlab_submit_progress`, `datamodel.md`) instead of
+  reposting duplicates.
 - **`ReviewsMenu.tsx`** — modal container: fetches `ReviewSummary[]` via
   `fetchReviews()`, owns open/switch/dismiss/confirm state, and composes
   three focused subcomponents rather than rendering everything itself:
@@ -146,9 +163,9 @@ Shared across views, listed by concern:
   advancing its attempt-tracking set (`preloadAttemptedRef`) rather than
   surfacing them to the user.
 - **Submit**: modal-local states for in-flight, success (with permalink),
-  stale-SHA warning (offers re-fetch), and partial-failure
-  (`comment_errors` list) — all handled inside `SubmitModal`, not lifted to
-  `App.tsx`.
+  stale-SHA warning (offers re-fetch), and GitLab partial-failure
+  (`comment_errors` list, retry-available — see `SubmitModal.tsx` above) —
+  all handled inside `SubmitModal`, not lifted to `App.tsx`.
 - **Displaced comments** (Overview page only): rendered whenever
   `state.comments`/`notes`/`flagged` contains any `displaced: true` entry
   (see `datamodel.md`'s Anchor Reconciliation) — a dedicated section, not a

@@ -155,6 +155,13 @@ export interface FlaggedEntry {
 
 export const STATE_VERSION = 2;
 
+/** GitLab-only submission progress — see `ReviewState.gitlab_submit_progress`. */
+export interface GitLabSubmitProgress {
+  posted_comment_ids: string[];
+  note_posted: boolean;
+  approved: boolean;
+}
+
 /** Persisted review state (drafts, flags, viewed, AI notes). Resumed on restart. */
 export interface ReviewState {
   version: number;
@@ -169,6 +176,12 @@ export interface ReviewState {
   notes: StoredNote[];
   /** Set once the review has been published to GitHub. */
   submitted?: { at: string; verdict: string; url?: string };
+  /** GitLab only — tracks which parts of a submission already succeeded, so
+   *  a retry after partial failure skips them instead of reposting
+   *  duplicates. Cleared once a submission fully succeeds, the same moment
+   *  `submitted` is stamped. GitHub's single-POST review is atomic and
+   *  never uses this field. */
+  gitlab_submit_progress?: GitLabSubmitProgress;
 }
 
 export interface ReviewSummary {

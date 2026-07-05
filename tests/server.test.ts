@@ -336,6 +336,56 @@ describe('POST /api/submit', () => {
     const res = await post(url, '/api/submit', { verdict: 'APPROVE', body: 'LGTM' });
     expect(res.status).toBe(400);
   });
+
+  it('persists gitlab_submit_progress on partial failure, then a retry succeeds and stamps submitted', async () => {
+    const glReview: Review = { ...review, pr: { ...review.pr, platform: 'gitlab' } };
+    const ctx: AppContext = { review: glReview, state: { ...state } };
+    const url = await makeServer(ctx);
+
+    const partialProgress = {
+      posted_comment_ids: ['c-succeeded'],
+      note_posted: false,
+      approved: false,
+    };
+    vi.mocked(submitGitLabReview).mockResolvedValueOnce({
+      ok: false,
+      comment_errors: [{ path: 'a.ts', line: 1, error: 'boom' }],
+      progress: partialProgress,
+    });
+
+    const first = await post(url, '/api/submit', { verdict: 'comment', body: 'summary' });
+    expect(first.status).toBe(502);
+    const firstBody = (await first.json()) as { state: ReviewState; progress?: unknown };
+    expect(firstBody.state.gitlab_submit_progress).toEqual(partialProgress);
+    expect(firstBody.state.submitted).toBeUndefined();
+    expect(firstBody.progress).toBeUndefined(); // stripped — persisted via state instead
+    expect(vi.mocked(saveState)).toHaveBeenCalledWith(
+      expect.objectContaining({ gitlab_submit_progress: partialProgress }),
+    );
+    expect(ctx.state?.gitlab_submit_progress).toEqual(partialProgress);
+
+    vi.mocked(submitGitLabReview).mockResolvedValueOnce({
+      ok: true,
+      html_url: 'https://gitlab.com/x/y/-/merge_requests/1',
+      progress: { posted_comment_ids: ['c-succeeded', 'c-retried'], note_posted: true, approved: false },
+    });
+
+    const second = await post(url, '/api/submit', { verdict: 'comment', body: 'summary' });
+    expect(second.status).toBe(200);
+    const secondBody = (await second.json()) as { state: ReviewState };
+    expect(secondBody.state.submitted).toBeDefined();
+    expect(secondBody.state.gitlab_submit_progress).toBeUndefined();
+    // The retry call passes the previous attempt's progress back in.
+    expect(vi.mocked(submitGitLabReview)).toHaveBeenLastCalledWith(
+      glReview.pr,
+      glReview.chunks,
+      expect.anything(),
+      'comment',
+      'summary',
+      state.head_sha,
+      partialProgress,
+    );
+  });
 });
 
 describe('GET /api/reviews', () => {

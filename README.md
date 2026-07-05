@@ -255,6 +255,9 @@ erDiagram
         Side side
         number line
         string body
+        string file
+        string hunk_header
+        boolean displaced
         string created_at
         string updated_at
     }
@@ -265,12 +268,27 @@ erDiagram
         string prompt
         string body
         string suggested_action
+        string file
+        string hunk_header
+        boolean displaced
         string created_at
+    }
+    FlaggedEntry {
+        string chunk_id
+        string file
+        string hunk_header
+        boolean displaced
     }
     ReviewState {
         number version
         string head_sha
         string started_at
+        GitLabSubmitProgress gitlab_submit_progress
+    }
+    GitLabSubmitProgress {
+        string_array posted_comment_ids
+        boolean note_posted
+        boolean approved
     }
     ReviewSummary {
         string head_sha
@@ -299,6 +317,8 @@ erDiagram
     ReviewState ||--o| PrMeta : "meta (cached)"
     ReviewState ||--o{ DraftComment : "comments"
     ReviewState ||--o{ StoredNote : "notes"
+    ReviewState ||--o{ FlaggedEntry : "flagged"
+    ReviewState ||--o| GitLabSubmitProgress : "gitlab_submit_progress"
     ReviewSummary ||--|| PrRef : "pr"
     ReviewSummary ||--o| PrMeta : "meta"
 ```
