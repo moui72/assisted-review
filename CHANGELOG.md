@@ -1,3 +1,10 @@
+# [1.7.0](https://github.com/moui72/assisted-review/compare/v1.6.1...v1.7.0) (2026-07-05)
+
+
+### Features
+
+* **gitlab:** resilient submit with retry and partial-failure handling ([#57](https://github.com/moui72/assisted-review/issues/57)) ([303758f](https://github.com/moui72/assisted-review/commit/303758f9da414db20fbba777c4a81fbb0cd3f15e)), closes [#58](https://github.com/moui72/assisted-review/issues/58)
+
 ## [1.6.1](https://github.com/moui72/assisted-review/compare/v1.6.0...v1.6.1) (2026-07-05)
 
 
