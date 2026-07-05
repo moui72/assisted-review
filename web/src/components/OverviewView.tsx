@@ -1,5 +1,14 @@
 import { useState } from 'react';
-import { prKey, type JiraContext, type JiraIssue, type PrMeta, type PrRef } from '../api.ts';
+import {
+  prKey,
+  type DraftComment,
+  type FlaggedEntry,
+  type JiraContext,
+  type JiraIssue,
+  type PrMeta,
+  type PrRef,
+  type StoredNote,
+} from '../api.ts';
 import type { AiPanelProps } from './ChunkView.tsx';
 import { ErrorBanner } from './ErrorBanner.tsx';
 import { Markdown } from './Markdown.tsx';
@@ -182,6 +191,97 @@ function Collapsible({
   );
 }
 
+// Displaced comments/notes/flags have no current chunk to attach to, so this
+// is the only place they're shown — a dedicated section, not a dismissible
+// banner, since each needs an actual action (re-anchor, delete, or unflag)
+// rather than just acknowledgment. Only comments get a re-anchor
+// affordance — notes and flags are read-only here (delete/unflag only).
+function DisplacedSection({
+  comments,
+  notes,
+  flags,
+  onReanchor,
+  onDeleteComment,
+  onDeleteNote,
+  onUnflag,
+}: {
+  comments: DraftComment[];
+  notes: StoredNote[];
+  flags: FlaggedEntry[];
+  onReanchor: (comment: DraftComment) => void;
+  onDeleteComment: (id: string) => void;
+  onDeleteNote: (id: string) => void;
+  onUnflag: (flag: FlaggedEntry) => void;
+}) {
+  if (comments.length === 0 && notes.length === 0 && flags.length === 0) return null;
+  return (
+    <section className="rounded-lg border border-accent/30 bg-accent/[0.06] p-4">
+      <div className="mb-2 flex items-center gap-2 font-sans text-[13px] font-semibold text-accent">
+        <span aria-hidden>⚠</span> Displaced comments
+      </div>
+      <p className="mb-3 font-sans text-[12.5px] text-fg/70">
+        The diff changed since these were anchored — the code they referred to
+        no longer matches. Re-anchor comments to a new line, or clean up notes
+        and flags that no longer apply.
+      </p>
+      <div className="space-y-2.5">
+        {comments.map((c) => (
+          <div key={c.id} className="rounded-md border border-edge bg-surface/60 p-3">
+            <div className="font-mono text-[11px] text-faint">
+              {c.file} · {c.hunk_header}
+            </div>
+            <p className="mt-1 font-sans text-[13px] text-fg/90">{c.body}</p>
+            <div className="mt-2 flex items-center gap-3">
+              <button
+                onClick={() => onReanchor(c)}
+                className="rounded-md bg-accent px-2.5 py-1 text-[11.5px] font-semibold text-bg transition hover:brightness-110"
+              >
+                Re-anchor
+              </button>
+              <button
+                onClick={() => onDeleteComment(c.id)}
+                className="font-sans text-[11.5px] text-faint transition hover:text-[var(--del-fg)]"
+              >
+                delete
+              </button>
+            </div>
+          </div>
+        ))}
+        {notes.map((n) => (
+          <div key={n.id} className="rounded-md border border-edge bg-surface/40 p-3">
+            <div className="font-mono text-[11px] text-faint">
+              {n.file} · {n.hunk_header}
+            </div>
+            <p className="mt-1 line-clamp-2 font-sans text-[13px] text-fg/70">{n.body}</p>
+            <button
+              onClick={() => onDeleteNote(n.id)}
+              className="mt-2 font-sans text-[11.5px] text-faint transition hover:text-[var(--del-fg)]"
+            >
+              delete
+            </button>
+          </div>
+        ))}
+        {flags.map((f) => (
+          <div
+            key={f.chunk_id}
+            className="flex items-center justify-between rounded-md border border-edge bg-surface/40 p-3"
+          >
+            <div className="font-mono text-[11px] text-faint">
+              flagged · {f.file} · {f.hunk_header}
+            </div>
+            <button
+              onClick={() => onUnflag(f)}
+              className="font-sans text-[11.5px] text-faint transition hover:text-[var(--del-fg)]"
+            >
+              unflag
+            </button>
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+}
+
 export function OverviewView({
   pr,
   meta,
@@ -189,6 +289,13 @@ export function OverviewView({
   ai,
   onBegin,
   chunkCount,
+  displacedComments,
+  displacedNotes,
+  displacedFlags,
+  onReanchorComment,
+  onDeleteComment,
+  onDeleteNote,
+  onUnflag,
 }: {
   pr: PrRef;
   meta: PrMeta;
@@ -196,6 +303,13 @@ export function OverviewView({
   ai: AiPanelProps;
   onBegin: () => void;
   chunkCount: number;
+  displacedComments: DraftComment[];
+  displacedNotes: StoredNote[];
+  displacedFlags: FlaggedEntry[];
+  onReanchorComment: (comment: DraftComment) => void;
+  onDeleteComment: (id: string) => void;
+  onDeleteNote: (id: string) => void;
+  onUnflag: (flag: FlaggedEntry) => void;
 }) {
   return (
     <div className="flex h-full min-h-0 flex-col">
@@ -214,6 +328,16 @@ export function OverviewView({
               {chunkCount} chunks
             </div>
           </header>
+
+          <DisplacedSection
+            comments={displacedComments}
+            notes={displacedNotes}
+            flags={displacedFlags}
+            onReanchor={onReanchorComment}
+            onDeleteComment={onDeleteComment}
+            onDeleteNote={onDeleteNote}
+            onUnflag={onUnflag}
+          />
 
           <Summary ai={ai} />
 

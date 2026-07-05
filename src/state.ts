@@ -15,13 +15,15 @@ import {
 import { randomUUID } from 'node:crypto';
 import type {
   Action,
+  Chunk,
   DraftComment,
+  FlaggedEntry,
   PrRef,
   ReviewState,
   ReviewSummary,
   StoredNote,
 } from './types.js';
-import { STATE_VERSION } from './types.js';
+import { OVERVIEW_ID, STATE_VERSION } from './types.js';
 
 export const STATE_DIR =
   process.env.ASSISTED_REVIEW_STATE_DIR || join(homedir(), '.assisted-review');
@@ -77,6 +79,41 @@ const MIGRATIONS: MigrationStep[] = [
       }
     },
   },
+  {
+    // v1 -> v2: DraftComment/StoredNote/flagged gained anchor-snapshot fields
+    // (file, hunk_header, displaced) for Anchor Reconciliation. There's no way
+    // to know what a pre-existing entry used to be anchored to, so legacy
+    // entries get an empty-string snapshot (which can never match a real
+    // chunk) and displaced: true — they surface in the Displaced Comments
+    // section immediately rather than silently reconciling against the wrong
+    // chunk. `flagged` also converts from a bare chunk-id string[] to
+    // FlaggedEntry[] in this same step.
+    sinceVersion: 2,
+    apply: (s) => {
+      const comments = Array.isArray(s.comments)
+        ? (s.comments as Record<string, unknown>[])
+        : [];
+      s.comments = comments.map((c) =>
+        typeof c.file === 'string'
+          ? c
+          : { ...c, file: '', hunk_header: '', displaced: true },
+      );
+
+      const notes = Array.isArray(s.notes) ? (s.notes as Record<string, unknown>[]) : [];
+      s.notes = notes.map((n) =>
+        n.chunk_id === OVERVIEW_ID || typeof n.file === 'string'
+          ? n
+          : { ...n, file: '', hunk_header: '', displaced: true },
+      );
+
+      const flagged = Array.isArray(s.flagged) ? (s.flagged as unknown[]) : [];
+      s.flagged = flagged.map((f) =>
+        typeof f === 'string'
+          ? { chunk_id: f, file: '', hunk_header: '', displaced: true }
+          : f,
+      );
+    },
+  },
 ];
 
 export function migrate(raw: unknown): ReviewState {
@@ -98,16 +135,60 @@ export function migrate(raw: unknown): ReviewState {
   return s as unknown as ReviewState;
 }
 
+// Anchor Reconciliation: for every chunk-anchored entry, resync chunk_id
+// against the freshly-parsed chunk list by exact file + hunk_header match
+// (not fuzzy — a hunk whose content changed at all displaces anything
+// anchored to it). No match retains the last-known snapshot and sets
+// displaced: true rather than clearing it, so the reviewer can still see
+// what a displaced entry used to be about. Overview notes (no file/
+// hunk_header) are never subject to this — they have no chunk to reconcile
+// against in the first place.
+export function reconcileAnchors(state: ReviewState, chunks: Chunk[]): ReviewState {
+  const findChunkId = (file: string, hunkHeader: string): string | undefined =>
+    chunks.find((c) => c.file === file && c.hunk_header === hunkHeader)?.id;
+
+  const comments: DraftComment[] = state.comments.map((c) => {
+    const matchId = findChunkId(c.file, c.hunk_header);
+    return matchId
+      ? { ...c, chunk_id: matchId, displaced: false }
+      : { ...c, displaced: true };
+  });
+
+  const notes: StoredNote[] = state.notes.map((n) => {
+    if (n.chunk_id === OVERVIEW_ID) return n;
+    const matchId = findChunkId(n.file ?? '', n.hunk_header ?? '');
+    return matchId
+      ? { ...n, chunk_id: matchId, displaced: false }
+      : { ...n, displaced: true };
+  });
+
+  const flagged: FlaggedEntry[] = state.flagged.map((f) => {
+    const matchId = findChunkId(f.file, f.hunk_header);
+    return matchId
+      ? { ...f, chunk_id: matchId, displaced: false }
+      : { ...f, displaced: true };
+  });
+
+  return { ...state, comments, notes, flagged };
+}
+
+// `chunks` is the freshly-parsed chunk list from the same loadReview() call,
+// used to run Anchor Reconciliation. Omitted by lower-level callers (tests,
+// anything not going through a real diff fetch) to skip reconciliation
+// entirely rather than treating "no chunks given" as "no chunks exist" (which
+// would incorrectly displace every existing entry).
 export async function loadState(
   pr: PrRef,
   headSha: string,
+  chunks?: Chunk[],
 ): Promise<ReviewState> {
   try {
     const raw = await readFile(statePath(pr), 'utf8');
-    const state = migrate(JSON.parse(raw));
+    let state = migrate(JSON.parse(raw));
     // Keep the persisted state; just refresh head_sha (staleness handling is a
     // later slice — for now we surface the latest sha we fetched).
     state.head_sha = headSha;
+    if (chunks) state = reconcileAnchors(state, chunks);
     return state;
   } catch {
     return emptyState(pr, headSha);
@@ -132,6 +213,9 @@ export function applyAction(state: ReviewState, action: Action): ReviewState {
         side: action.side,
         line: action.line,
         body: action.body,
+        file: action.file,
+        hunk_header: action.hunk_header,
+        displaced: false,
         created_at: now,
         updated_at: now,
       };
@@ -149,12 +233,38 @@ export function applyAction(state: ReviewState, action: Action): ReviewState {
         ...state,
         comments: state.comments.filter((c) => c.id !== action.id),
       };
+    case 'reanchor_comment':
+      return {
+        ...state,
+        comments: state.comments.map((c) =>
+          c.id === action.id
+            ? {
+                ...c,
+                chunk_id: action.chunk_id,
+                side: action.side,
+                line: action.line,
+                file: action.file,
+                hunk_header: action.hunk_header,
+                displaced: false,
+                updated_at: now,
+              }
+            : c,
+        ),
+      };
     case 'toggle_flag':
       return {
         ...state,
-        flagged: state.flagged.includes(action.chunk_id)
-          ? state.flagged.filter((id) => id !== action.chunk_id)
-          : [...state.flagged, action.chunk_id],
+        flagged: state.flagged.some((f) => f.chunk_id === action.chunk_id)
+          ? state.flagged.filter((f) => f.chunk_id !== action.chunk_id)
+          : [
+              ...state.flagged,
+              {
+                chunk_id: action.chunk_id,
+                file: action.file,
+                hunk_header: action.hunk_header,
+                displaced: false,
+              },
+            ],
       };
     case 'set_viewed':
       return {
@@ -171,6 +281,9 @@ export function applyAction(state: ReviewState, action: Action): ReviewState {
         prompt: action.prompt,
         body: action.body,
         suggested_action: action.suggested_action,
+        file: action.file,
+        hunk_header: action.hunk_header,
+        displaced: action.file !== undefined ? false : undefined,
         created_at: now,
       };
       return { ...state, notes: [...state.notes, note] };

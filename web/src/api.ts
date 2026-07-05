@@ -186,6 +186,7 @@ export type {
   Side,
   DraftComment,
   StoredNote,
+  FlaggedEntry,
   ReviewState,
   Action,
   Overview,

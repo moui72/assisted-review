@@ -1,8 +1,8 @@
 ---
 name: infrastructure
 status: stable
-last_updated: 2026-07-02
-diagram_status: current
+last_updated: 2026-07-03
+diagram_status: stale
 ---
 
 # Infrastructure
@@ -241,6 +241,15 @@ raw token.
   refreshes `head_sha` to the just-fetched value, and falls back to a fresh
   empty state on any read/parse error (missing file, corrupt JSON, etc.) —
   never throws on load.
+- **Anchor reconciliation**: immediately after `migrate()`, `loadReview()`
+  runs a reconciliation pass (see `datamodel.md`'s Normalization Rules) over
+  `comments`/`notes`/`flagged` against the diff just re-fetched and
+  re-parsed in the same call. Chunk data itself is never persisted — only
+  `chunk_id` references are — so this is the only point where a
+  now-mismatched anchor can be detected; it can't be checked lazily at
+  render or submit time without re-fetching the diff. Runs on every reopen
+  of a PR/MR, whether or not the diff actually changed (an unchanged diff
+  reconciles as a no-op — every snapshot still matches).
 - **Listing**: `listReviews()` (backing `GET /api/reviews`, the review-picker
   menu) does a full `readdir` + read + parse of every `*.json` file in the
   state dir on each call — no cached index.
