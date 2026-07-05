@@ -1,3 +1,10 @@
+## [1.6.1](https://github.com/moui72/assisted-review/compare/v1.6.0...v1.6.1) (2026-07-05)
+
+
+### Bug Fixes
+
+* **api:** cancel in-flight Claude stream on new /api/claude request (T001-T003) ([#54](https://github.com/moui72/assisted-review/issues/54)) ([d68adf5](https://github.com/moui72/assisted-review/commit/d68adf569ed5e58ee0405de1745b5174fb230d70))
+
 # [1.6.0](https://github.com/moui72/assisted-review/compare/v1.5.1...v1.6.0) (2026-07-04)
 
 
