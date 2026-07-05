@@ -37,12 +37,13 @@ No violations.
 
 ## Feature Backlog
 
-15 backlogged · 0 planned · 0 tasked · 33 implemented — see
-`.project/artifacts/features.md`. `resilient-gitlab-submit` remains the one
-open backlog item from the critique pass.
+14 backlogged · 0 planned · 0 tasked · 34 implemented — see
+`.project/artifacts/features.md`. Both features from the critique pass
+(`displaced-comment-reanchoring`, `resilient-gitlab-submit`) are implemented;
+the remaining 14 backlogged items are the earlier, unrelated feature ideas.
 
 ## Recommended Next Step
 
 No blocking issues, no open questions, zero known defects, all diagrams
-current. Run `/ardd-plan resilient-gitlab-submit` to start designing the
-next backlog item.
+current. Pick any backlogged feature with `/ardd-plan <slug>` when ready, or
+run `/ardd-critique` for a fresh pass over the artifacts.
