@@ -256,6 +256,7 @@ export function App() {
   const askClaude = useCallback(
     (question: string) => {
       if (!activeId || streaming) return;
+      if (preloadTargetId === activeId) return;
       preloadCancelRef.current?.();
       preloadCancelRef.current = null;
       setClaudeError(null);
@@ -279,7 +280,7 @@ export function App() {
         },
       );
     },
-    [activeId, streaming],
+    [activeId, streaming, preloadTargetId],
   );
 
   // Keyboard navigation (ignored while typing in the comment box).

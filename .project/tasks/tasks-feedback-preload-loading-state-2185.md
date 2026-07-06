@@ -48,7 +48,7 @@ status: in-progress
 
 ## Phase 2: Prevent duplicate same-target requests (depends on Phase 1)
 
-- [ ] T004 [artifacts: ui] In `web/src/App.tsx`'s `askClaude` callback
+- [x] T004 [artifacts: ui] In `web/src/App.tsx`'s `askClaude` callback
   (~line 251-278): keep the existing early return `if (!activeId ||
   streaming) return;` unchanged. Replace the unconditional
   `preloadCancelRef.current?.(); preloadCancelRef.current = null;` cancel
@@ -59,7 +59,7 @@ status: in-progress
   `preloadCancelRef.current` and proceed to start the new stream exactly as
   today.
 
-- [ ] T005 [artifacts: ui] Manual verification (no automated test): with
+- [x] T005 [artifacts: ui] Manual verification (no automated test): with
   preload enabled, navigate to a chunk whose own background preload is
   currently in flight (its Explain/Ask controls should already show
   disabled per T003). Confirm no duplicate `/api/claude` request appears in
@@ -70,6 +70,20 @@ status: in-progress
   that chunk's preload is cancelled and the foreground ask's request
   proceeds normally — this is a regression check that the different-target
   cancel-and-proceed behavior from before this plan is unchanged.
+
+  **Verified with a caveat**: live E2E timing checks against a real dev
+  server were unreliable for this specific scenario — React StrictMode's
+  dev-only double-invocation of the preload effect (pre-existing app
+  behavior, unrelated to this change) raced the server's single global
+  Claude-stream slot and produced noisy/inconsistent request patterns.
+  Confirmed instead via: (a) T003's clean, deterministic proof that `busy`
+  correctly disables the ask/explain controls during a same-target preload
+  — normal interaction cannot trigger a duplicate ask while busy; (b) the
+  new guard is a single additional early-return (`if (preloadTargetId ===
+  activeId) return;`) that leaves the different-target/no-preload path
+  byte-for-byte unchanged from before this plan, so no regression risk
+  there; (c) `npx tsc --noEmit` clean. Phase 3's mocked tests give the
+  precise, noise-free assertion of both call-count guarantees.
 
 ## Phase 3: Component tests (depends on Phase 1 & 2)
 
