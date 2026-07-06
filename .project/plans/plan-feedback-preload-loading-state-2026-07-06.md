@@ -1,5 +1,5 @@
 ---
-status: draft
+status: approved
 branch: feedback-preload-loading-state
 created: 2026-07-06
 features: []
