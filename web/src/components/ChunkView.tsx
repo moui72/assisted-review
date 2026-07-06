@@ -23,6 +23,7 @@ export function ChunkView({
   anchor,
   onSelectLine,
   onDeleteComment,
+  onUpdateComment,
   ai,
 }: {
   chunk: Chunk;
@@ -31,6 +32,7 @@ export function ChunkView({
   anchor: Anchor | null;
   onSelectLine: (a: Anchor) => void;
   onDeleteComment: (id: string) => void;
+  onUpdateComment: (id: string, body: string) => void;
   ai: AiPanelProps;
 }) {
   const dir = chunk.file.split('/').slice(0, -1).join('/');
@@ -60,6 +62,7 @@ export function ChunkView({
         anchor={anchor}
         onSelectLine={onSelectLine}
         onDeleteComment={onDeleteComment}
+        onUpdateComment={onUpdateComment}
       />
       <AiCommentary {...ai} />
     </div>

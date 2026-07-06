@@ -8,7 +8,7 @@ status: in-progress
 
 ## Phase 1: Edit affordance and wiring
 
-- [ ] T001 [artifacts: ui] In `web/src/components/DiffPane.tsx`, give `CommentCard`
+- [x] T001 [artifacts: ui] In `web/src/components/DiffPane.tsx`, give `CommentCard`
   card-local editing state (`useState` for `isEditing` and a draft body string,
   seeded from `comment.body` on entering edit mode). Add an **Edit** button next
   to the existing delete button. When editing, replace the body `<div>` with a
@@ -26,12 +26,12 @@ status: in-progress
   passed to both `CommentCard` call sites (inline, `indented`, and whole-chunk).
   On Save, call `onUpdateComment(comment.id, draftBody)` and exit edit mode.
 
-- [ ] T002 [artifacts: ui] In `web/src/components/ChunkView.tsx`, add an
+- [x] T002 [artifacts: ui] In `web/src/components/ChunkView.tsx`, add an
   `onUpdateComment: (id: string, body: string) => void` prop to `ChunkView`'s
   props (alongside `onDeleteComment`) and pass it through to the nested
   `DiffPane` (`web/src/components/ChunkView.tsx:57-63`).
 
-- [ ] T003 [artifacts: ui, datamodel] In `web/src/App.tsx`, implement the
+- [x] T003 [artifacts: ui, datamodel] In `web/src/App.tsx`, implement the
   `onUpdateComment` handler passed to `ChunkView` (near the existing
   `onDeleteComment={(id) => void dispatch({ type: 'delete_comment', id })}`
   at `web/src/App.tsx:468`): `onUpdateComment={(id, body) => void
@@ -41,7 +41,7 @@ status: in-progress
   (`src/state.ts:224`) — no backend change. `dispatch` already adopts the
   server-returned `ReviewState` on success, matching every other mutation.
 
-- [ ] T004 [artifacts: ui] Manual verification (no automated test): run the
+- [x] T004 [artifacts: ui] Manual verification (no automated test): run the
   app, open a chunk, add a comment, click Edit, change the body, Save — confirm
   the updated body renders and persists across a page reload (i.e.
   `updated_at` bump round-trips through `POST /api/action`). Repeat for a
