@@ -61,6 +61,7 @@ export function App() {
     text: string;
   } | null>(null);
   const [claudeError, setClaudeError] = useState<string | null>(null);
+  const [preloadTargetId, setPreloadTargetId] = useState<string | null>(null);
   const [preloadConfig, setPreloadConfig] = useState<PreloadConfig | null>(null);
   const [preloadTick, setPreloadTick] = useState(0);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -113,16 +114,19 @@ export function App() {
     if (!next) return;
 
     preloadAttemptedRef.current.add(next);
+    setPreloadTargetId(next);
     const cancel = streamClaude(
       { chunkId: next, question: '' },
       {
         onDelta: () => {},
         onDone: (nextState) => {
           preloadCancelRef.current = null;
+          setPreloadTargetId(null);
           setState(nextState);
         },
         onError: () => {
           preloadCancelRef.current = null;
+          setPreloadTargetId(null);
           setPreloadTick((t) => t + 1);
         },
       },
@@ -131,6 +135,7 @@ export function App() {
     return () => {
       cancel();
       preloadCancelRef.current = null;
+      setPreloadTargetId(null);
     };
   }, [review, state, index, preloadConfig, streaming, preloadTick]);
 
@@ -251,6 +256,7 @@ export function App() {
   const askClaude = useCallback(
     (question: string) => {
       if (!activeId || streaming) return;
+      if (preloadTargetId === activeId) return;
       preloadCancelRef.current?.();
       preloadCancelRef.current = null;
       setClaudeError(null);
@@ -274,7 +280,7 @@ export function App() {
         },
       );
     },
-    [activeId, streaming],
+    [activeId, streaming, preloadTargetId],
   );
 
   // Keyboard navigation (ignored while typing in the comment box).
@@ -420,7 +426,7 @@ export function App() {
     notes: displayNotes,
     deletableNoteIds,
     streaming: streaming?.chunkId === activeId ? streaming : null,
-    busy: streaming?.chunkId === activeId,
+    busy: streaming?.chunkId === activeId || preloadTargetId === activeId,
     error: claudeError,
     askRef,
     onAsk: askClaude,

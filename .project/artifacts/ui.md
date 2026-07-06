@@ -1,7 +1,7 @@
 ---
 name: ui
 status: stable
-last_updated: 2026-07-05
+last_updated: 2026-07-06
 diagram_status: stale
 ---
 
@@ -166,11 +166,22 @@ Shared across views, listed by concern:
 - **AI error**: `claudeError` rendered via `ErrorBanner` in the AI panel;
   cleared automatically on navigation (`activeId` change) or on starting a
   new ask.
-- **Background preload**: silent — no dedicated UI state. Preloading walks
-  upcoming chunks (per `findNextPreload()` in `web/src/preload.ts`) one at a
-  time, only when nothing else is streaming, and swallows errors by simply
-  advancing its attempt-tracking set (`preloadAttemptedRef`) rather than
-  surfacing them to the user.
+- **Background preload**: silent for targets other than the currently
+  viewed chunk/overview — no dedicated UI state. Preloading walks upcoming
+  chunks (per `findNextPreload()` in `web/src/preload.ts`) one at a time,
+  only when nothing else is streaming, and swallows errors for
+  not-currently-viewed targets by simply advancing its attempt-tracking set
+  (`preloadAttemptedRef`) rather than surfacing them to the user. When the
+  in-flight preload target *is* the currently viewed chunk or the overview
+  (`activeId`), the shared `aiPanel.busy` reflects it — same `busy` prop
+  `AiCommentary`/`OverviewView`'s `Summary` already use for a foreground
+  ask, so the Ask/Explain/Summarize/regenerate controls disable and a
+  loading indicator (the same pulsing-cursor treatment used for a live
+  foreground stream) shows automatically, with no separate loading-state
+  plumbing per view. This prevents a same-target duplicate request — e.g.
+  clicking "Summarize" while its own preload is still in flight — without
+  changing the always-silent, non-blocking treatment for preloads of chunks
+  the user isn't currently looking at.
 - **Submit**: modal-local states for in-flight, success (with permalink),
   stale-SHA warning (offers re-fetch), and GitLab partial-failure
   (`comment_errors` list, retry-available — see `SubmitModal.tsx` above) —
