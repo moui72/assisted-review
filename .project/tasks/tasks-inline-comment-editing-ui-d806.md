@@ -1,7 +1,7 @@
 ---
 plan: plan-inline-comment-editing-ui-2026-07-05.md
 generated: 2026-07-05
-status: in-progress
+status: completed
 ---
 
 # Tasks
@@ -52,7 +52,7 @@ status: in-progress
 
 ## Phase 2: Component tests
 
-- [ ] T005 [artifacts: ui] Create `tests/components/DiffPane.test.tsx`
+- [x] T005 [artifacts: ui] Create `tests/components/DiffPane.test.tsx`
   (`// @vitest-environment jsdom` docblock, matching the convention in
   `tests/components/OverviewView.test.tsx` / `SubmitModal.test.tsx`). Render
   `DiffPane` with a stub `DraftComment` and cover:
