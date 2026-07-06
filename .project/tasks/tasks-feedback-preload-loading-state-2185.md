@@ -8,7 +8,7 @@ status: in-progress
 
 ## Phase 1: Preload target tracking and busy wiring
 
-- [ ] T001 [artifacts: ui] In `web/src/App.tsx`, add a new
+- [x] T001 [artifacts: ui] In `web/src/App.tsx`, add a new
   `preloadTargetId` state (`useState<string | null>(null)`), declared
   alongside the existing `streaming` state. In the background-preloading
   `useEffect` (~line 107-135, the one that calls
@@ -22,7 +22,7 @@ status: in-progress
   (`index` change) or a preload-config change, so `preloadTargetId` never
   stays stuck pointing at an abandoned target.
 
-- [ ] T002 [artifacts: ui] In `web/src/App.tsx`, extend the `aiPanel.busy`
+- [x] T002 [artifacts: ui] In `web/src/App.tsx`, extend the `aiPanel.busy`
   derivation (~line 423, currently `busy: streaming?.chunkId ===
   activeId`) to `busy: streaming?.chunkId === activeId || preloadTargetId
   === activeId`. Leave `aiPanel.streaming` (~line 422) unchanged — it
@@ -35,7 +35,7 @@ status: in-progress
   unconditionally inside the `ai.busy` branch even when `ai.streaming` is
   `null`.
 
-- [ ] T003 [artifacts: ui] Manual verification (no automated test): with a
+- [x] T003 [artifacts: ui] Manual verification (no automated test): with a
   live dev server (`pnpm dev`), open the Settings panel and enable preload
   (`preload_overview: true`, `preload_chunks` ≥ 1) if not already the
   default. Reload landing on the Overview page: confirm the "Summarize this
