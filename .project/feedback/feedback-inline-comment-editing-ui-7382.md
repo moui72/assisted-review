@@ -1,13 +1,13 @@
 ---
-status: open
+status: planned
 created: 2026-07-06
-plan: null
+plan: plan-feedback-preload-loading-state-2026-07-06.md
 ---
 
 # Feedback
 
 ## Bugs
-- [ ] Verify whether the Overview page's AI summary preload is actually
+- [x] Verify whether the Overview page's AI summary preload is actually
   running/completing — user observed it appearing not to work, though
   considers this less likely than the UI simply not indicating the loading
   state (see Reconsidered below). Check `findNextPreload()`/preload
@@ -15,8 +15,19 @@ plan: null
   request actually fires and populates on load without user action.
   [artifacts: ui]
 
+  **Investigated during `/ardd-plan`**: not a bug — the preload does fire
+  automatically (`index` defaults to `-1`/overview on load, so
+  `findNextPreload()` returns `OVERVIEW_ID` immediately) and does persist
+  its result via `setState(nextState)` on completion. The "not working"
+  appearance is fully explained by the Reconsidered item below: the
+  preload's `streamClaude` call never touches the `streaming` state
+  `aiPanel.busy` is derived from, so there's no loading indication, and
+  `askClaude` unconditionally cancels any in-flight preload and starts a
+  fresh duplicate request rather than recognizing one is already
+  satisfying the same target.
+
 ## Reconsidered
-- [ ] `ui.md`'s "Background preload: silent — no dedicated UI state" decision
+- [x] `ui.md`'s "Background preload: silent — no dedicated UI state" decision
   (see `ui.md` "Background preload" bullet, and `web/src/preload.ts`'s
   `findNextPreload()`/`preloadAttemptedRef`) should be reversed for the case
   where an in-flight preload is relevant to the *currently viewed* chunk or
