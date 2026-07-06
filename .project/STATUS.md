@@ -1,6 +1,6 @@
 # assisted-review — Project Status
 
-_Updated: 2026-07-06 (post-/ardd-plan). Keep this current as artifacts are refined and open questions are resolved._
+_Updated: 2026-07-06 (post-/ardd-tasks). Keep this current as artifacts are refined and open questions are resolved._
 
 ## Artifact Status
 
@@ -20,8 +20,10 @@ None remain within any single artifact.
 ## Cross-Artifact Issues
 
 None found this pass. `plan-feedback-preload-loading-state-2026-07-06.md`
-(draft) narrows `ui.md`'s "silent background preload" decision for the
-current-view case only; references `AiCommentary`/`OverviewView`'s existing
+(now `approved`) and its tasks file
+(`tasks-feedback-preload-loading-state-2185.md`, `ready`, 6 tasks across 3
+phases) narrow `ui.md`'s "silent background preload" decision for the
+current-view case only; reference `AiCommentary`/`OverviewView`'s existing
 `busy`/`streaming` props and `web/src/preload.ts`'s `findNextPreload()`,
 all already defined.
 
@@ -60,9 +62,9 @@ In Flight) — not yet reflected in `main`'s `features.md`.
 
 - Branch `inline-comment-editing-ui` — all commits signed and pushed; open
   PR #60 (`feat(ui): inline comment editing`), mergeable, not yet merged.
-- Branch `feedback-preload-loading-state` (current checkout) — draft plan
-  `plan-feedback-preload-loading-state-2026-07-06.md`, no tasks file yet;
-  not pushed to a PR.
+- Branch `feedback-preload-loading-state` (current checkout) — plan
+  approved; tasks `tasks-feedback-preload-loading-state-2185.md`, ready
+  (0/6); not pushed to a PR yet.
 - Worktree `.claude/worktrees/ardd-codify-trial` (branch
   `ardd-codify-trial`) — no tasks file.
 - Worktree `.claude/worktrees/docs-update-readme-changelog` (branch
@@ -70,7 +72,9 @@ In Flight) — not yet reflected in `main`'s `features.md`.
 
 ## Recommended Next Step
 
-Merge PR #60 when ready. Run `/ardd-tasks` to approve the draft
-preload-loading-state plan and generate its task list, then
-`/ardd-implement`. `/ardd-render ui` to refresh the stale UI diagram is
-still outstanding on both branches.
+Merge PR #60 when ready. Run `/ardd-implement` (or work the tasks manually)
+against `tasks-feedback-preload-loading-state-2185.md` — 6 tasks across
+Phase 1 (preload tracking + busy wiring, T001–T003), Phase 2 (duplicate-
+request prevention, T004–T005), and Phase 3 (component tests, T006).
+`/ardd-render ui` to refresh the stale UI diagram is still outstanding on
+both branches.
