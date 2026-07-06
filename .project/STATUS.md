@@ -1,6 +1,6 @@
 # assisted-review — Project Status
 
-_Updated: 2026-07-06 (post-/ardd-feedback). Keep this current as artifacts are refined and open questions are resolved._
+_Updated: 2026-07-06 (post-/ardd-plan). Keep this current as artifacts are refined and open questions are resolved._
 
 ## Artifact Status
 
@@ -10,7 +10,7 @@ _Updated: 2026-07-06 (post-/ardd-feedback). Keep this current as artifacts are r
 | datamodel.md | stable ✅ | — |
 | infrastructure.md | stable ✅ | — |
 | api.md | stable ✅ | — |
-| ui.md | stable ✅ | — |
+| ui.md | stable ✅ (diagram stale) | — |
 | features.md | register (no status field, by design) | — |
 
 ## Open Questions
@@ -19,17 +19,23 @@ None remain within any single artifact.
 
 ## Cross-Artifact Issues
 
-None found this pass.
+None found this pass. `plan-feedback-preload-loading-state-2026-07-06.md`
+(draft) narrows `ui.md`'s "silent background preload" decision for the
+current-view case only; references `AiCommentary`/`OverviewView`'s existing
+`busy`/`streaming` props and `web/src/preload.ts`'s `findNextPreload()`,
+all already defined.
 
 ## Constitution Compliance
 
-No violations.
+No violations. The plan reuses the existing `streaming`/`busy` derivation
+pattern with no new abstractions or dependencies.
 
 ## Diagrams
 
 - datamodel.md — current ✅
 - infrastructure.md — current ✅
-- ui.md — current ✅
+- ui.md — stale ⚠️ (run /ardd-render ui — preload busy-state narrowing added
+  2026-07-06)
 
 ## Code-vs-Artifact Defects
 
@@ -37,12 +43,9 @@ No violations.
 
 ## Feedback
 
-1 open feedback file — see `.project/feedback/feedback-inline-comment-editing-ui-7382.md`
-(1 bug-to-verify: whether the Overview AI-summary preload is actually
-firing; 1 reconsidered: `ui.md`'s "silent background preload, no dedicated
-UI state" decision should show a loading indicator and discourage a
-redundant new-analysis request when the in-flight preload is relevant to
-the current view). Will be picked up by the next `/ardd-plan`.
+0 open feedback files. `feedback-inline-comment-editing-ui-7382.md` is now
+`planned` — both items (bug investigation, reconsidered `ui.md` decision)
+consumed into `plan-feedback-preload-loading-state-2026-07-06.md`.
 
 ## Feature Backlog
 
@@ -57,6 +60,9 @@ In Flight) — not yet reflected in `main`'s `features.md`.
 
 - Branch `inline-comment-editing-ui` — all commits signed and pushed; open
   PR #60 (`feat(ui): inline comment editing`), mergeable, not yet merged.
+- Branch `feedback-preload-loading-state` (current checkout) — draft plan
+  `plan-feedback-preload-loading-state-2026-07-06.md`, no tasks file yet;
+  not pushed to a PR.
 - Worktree `.claude/worktrees/ardd-codify-trial` (branch
   `ardd-codify-trial`) — no tasks file.
 - Worktree `.claude/worktrees/docs-update-readme-changelog` (branch
@@ -64,5 +70,7 @@ In Flight) — not yet reflected in `main`'s `features.md`.
 
 ## Recommended Next Step
 
-Merge PR #60 when ready. Run `/ardd-plan` to pick up the open feedback file
-(preload loading-state UX) into a new plan.
+Merge PR #60 when ready. Run `/ardd-tasks` to approve the draft
+preload-loading-state plan and generate its task list, then
+`/ardd-implement`. `/ardd-render ui` to refresh the stale UI diagram is
+still outstanding on both branches.
