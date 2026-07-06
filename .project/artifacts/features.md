@@ -160,7 +160,7 @@ Support multi-line comment anchors and replying to existing review threads on su
 Issue: moui72/assisted-review#30
 
 ## Inline Comment Editing UI
-_Slug: `inline-comment-editing-ui` · Status: backlogged · Logged 2026-07-02_
+_Slug: `inline-comment-editing-ui` · Status: implemented · Logged 2026-07-02 · Plan: plan-inline-comment-editing-ui-2026-07-05.md · Tasks: tasks-inline-comment-editing-ui-d806.md_
 Surface the existing `update_comment` backend action in the UI so a reviewer can edit a drafted comment in place instead of only add/delete.
 Issue: moui72/assisted-review#29
 

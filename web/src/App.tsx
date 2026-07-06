@@ -468,6 +468,9 @@ export function App() {
                 onDeleteComment={(id) =>
                   void dispatch({ type: 'delete_comment', id })
                 }
+                onUpdateComment={(id, body) =>
+                  void dispatch({ type: 'update_comment', id, body })
+                }
                 ai={aiPanel}
               />
             ) : (

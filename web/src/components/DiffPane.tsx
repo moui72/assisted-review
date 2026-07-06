@@ -1,4 +1,4 @@
-import { Fragment, useMemo } from 'react';
+import { Fragment, useMemo, useState } from 'react';
 import type { Chunk, DraftComment } from '../api.ts';
 import { diffRows, type Anchor, type DiffRow } from '../diff.ts';
 import { highlightLine, langFor } from '../highlight.ts';
@@ -24,26 +24,82 @@ function rowAnchor(r: DiffRow): Anchor | null {
 function CommentCard({
   comment,
   onDelete,
+  onUpdateComment,
   indented = false,
 }: {
   comment: DraftComment;
   onDelete: (id: string) => void;
+  onUpdateComment: (id: string, body: string) => void;
   indented?: boolean;
 }) {
+  const [isEditing, setIsEditing] = useState(false);
+  const [draftBody, setDraftBody] = useState(comment.body);
+
+  const startEditing = () => {
+    setDraftBody(comment.body);
+    setIsEditing(true);
+  };
+  const cancel = () => setIsEditing(false);
+  const save = () => {
+    onUpdateComment(comment.id, draftBody);
+    setIsEditing(false);
+  };
+  const canSave = draftBody.trim().length > 0;
+
   return (
     <div
       className={`my-1 rounded-md border border-edge bg-surface-2 px-3 py-2 font-sans ${indented ? 'ml-[96px]' : ''}`}
     >
       <div className="mb-1 flex items-center justify-between">
         <span className="text-[11px] tracking-wide text-faint">you · draft</span>
-        <button
-          onClick={() => onDelete(comment.id)}
-          className="text-[11px] text-faint transition hover:text-[var(--del-fg)]"
-        >
-          delete
-        </button>
+        {!isEditing && (
+          <div className="flex items-center gap-2">
+            <button
+              onClick={startEditing}
+              className="text-[11px] text-faint transition hover:text-fg"
+            >
+              edit
+            </button>
+            <button
+              onClick={() => onDelete(comment.id)}
+              className="text-[11px] text-faint transition hover:text-[var(--del-fg)]"
+            >
+              delete
+            </button>
+          </div>
+        )}
       </div>
-      <div className="text-[13px] whitespace-pre-wrap text-fg/90">{comment.body}</div>
+      {isEditing ? (
+        <div>
+          <textarea
+            value={draftBody}
+            onChange={(e) => setDraftBody(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Escape') cancel();
+            }}
+            autoFocus
+            className="w-full resize-none rounded-md border border-edge bg-surface px-2 py-1.5 text-[13px] text-fg/90 outline-none focus:border-accent"
+            rows={3}
+          />
+          <div className="mt-1.5 flex items-center justify-end gap-2">
+            <button
+              onClick={cancel}
+              className="rounded-md px-2.5 py-1 text-[11px] text-faint transition hover:text-fg"
+            >
+              cancel
+            </button>
+            <button
+              onClick={save}
+              disabled={!canSave}
+              className="rounded-md bg-accent px-2.5 py-1 text-[11px] font-semibold text-bg transition enabled:hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-35"
+            >
+              save
+            </button>
+          </div>
+        </div>
+      ) : (
+        <div className="text-[13px] whitespace-pre-wrap text-fg/90">{comment.body}</div>
+      )}
     </div>
   );
 }
@@ -56,12 +112,14 @@ export function DiffPane({
   anchor,
   onSelectLine,
   onDeleteComment,
+  onUpdateComment,
 }: {
   chunk: Chunk;
   comments: DraftComment[];
   anchor: Anchor | null;
   onSelectLine: (a: Anchor) => void;
   onDeleteComment: (id: string) => void;
+  onUpdateComment: (id: string, body: string) => void;
 }) {
   const lang = langFor(chunk.file);
   const rows = useMemo(() => diffRows(chunk.diff), [chunk.diff]);
@@ -131,7 +189,12 @@ export function DiffPane({
                   {lineComments.map((c) => (
                     <tr key={c.id}>
                       <td colSpan={4}>
-                        <CommentCard comment={c} onDelete={onDeleteComment} indented />
+                        <CommentCard
+                          comment={c}
+                          onDelete={onDeleteComment}
+                          onUpdateComment={onUpdateComment}
+                          indented
+                        />
                       </td>
                     </tr>
                   ))}
@@ -148,7 +211,12 @@ export function DiffPane({
             </div>
             <div className="space-y-1.5">
               {wholeChunk.map((c) => (
-                <CommentCard key={c.id} comment={c} onDelete={onDeleteComment} />
+                <CommentCard
+                  key={c.id}
+                  comment={c}
+                  onDelete={onDeleteComment}
+                  onUpdateComment={onUpdateComment}
+                />
               ))}
             </div>
           </div>

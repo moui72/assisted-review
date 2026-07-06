@@ -1,8 +1,8 @@
 ---
 name: ui
 status: stable
-last_updated: 2026-07-03
-diagram_status: current
+last_updated: 2026-07-05
+diagram_status: stale
 ---
 
 # UI
@@ -81,6 +81,15 @@ lookup) and syntax highlighting via `highlight.js` (`highlightLine`/`langFor`
 in `web/src/highlight.ts` — languages registered manually there; adding a new
 language is a documented one-line change per `README.md`). Clicking a line
 sets the comment anchor (`Anchor { side, line }`).
+
+Saved comments render inline beneath their anchored line (or in a
+whole-chunk section) as `CommentCard`s. Each card offers **Edit** and
+**Delete**: Edit swaps the card body into an editing state — a textarea
+prefilled with the comment body plus Save/Cancel — and Save dispatches the
+existing `update_comment` action (`api.md`'s `POST /api/action`), re-syncing
+server-authoritative state as with every other mutation. Cancel (button or
+Escape) discards the local draft with no round-trip. Editing state is
+card-local React state, not lifted to `App.tsx`.
 
 ## Components
 
@@ -172,6 +181,16 @@ Shared across views, listed by concern:
   dismissible banner, since these need an actual action (re-anchor, delete,
   or unflag) rather than just acknowledgment. Comments show a "Re-anchor"
   button; notes and flags are read-only there (delete/unflag only).
+  Displaced comment *bodies* are also read-only — no Edit affordance in this
+  section (a deliberate scope decision, not an omission): editing happens
+  after re-anchoring, keeping the displaced section single-purpose.
+- **Comment editing** (`DiffPane`'s `CommentCard`): card-local editing state
+  — textarea prefilled with the body, Save/Cancel. Save is disabled on an
+  empty/whitespace-only body (matching the add-comment rule); Escape cancels.
+  Multiple cards *can* technically enter editing independently (state is
+  per-card), which is acceptable — no global "one edit at a time" lock.
+  While a card's textarea has focus, global keyboard shortcuts are suppressed
+  by the existing focus-in-`TEXTAREA` rule — no new bindings.
 - **Empty/zero-chunk PR**: A PR/MR with zero chunks (e.g., a diff-less or
   fully-binary-file PR) still renders `OverviewView` — `index` defaults to
   `-1`, so there is always a view to render; `jump()`'s `!total` guard only
