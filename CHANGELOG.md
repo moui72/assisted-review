@@ -1,3 +1,10 @@
+# [1.8.0](https://github.com/moui72/assisted-review/compare/v1.7.0...v1.8.0) (2026-07-06)
+
+
+### Features
+
+* **ui:** inline comment editing ([#60](https://github.com/moui72/assisted-review/issues/60)) ([c1ee6f8](https://github.com/moui72/assisted-review/commit/c1ee6f82d73a8b10c6e7ade105cb071c26dd2db6))
+
 # [1.7.0](https://github.com/moui72/assisted-review/compare/v1.6.1...v1.7.0) (2026-07-05)
 
 
