@@ -1,6 +1,6 @@
 # assisted-review — Project Status
 
-_Updated: 2026-07-06 (post-/ardd-tasks). Keep this current as artifacts are refined and open questions are resolved._
+_Updated: 2026-07-06 (post-/ardd-implement). Keep this current as artifacts are refined and open questions are resolved._
 
 ## Artifact Status
 
@@ -19,18 +19,23 @@ None remain within any single artifact.
 
 ## Cross-Artifact Issues
 
-None found this pass. `plan-feedback-preload-loading-state-2026-07-06.md`
-(now `approved`) and its tasks file
-(`tasks-feedback-preload-loading-state-2185.md`, `ready`, 6 tasks across 3
-phases) narrow `ui.md`'s "silent background preload" decision for the
-current-view case only; reference `AiCommentary`/`OverviewView`'s existing
-`busy`/`streaming` props and `web/src/preload.ts`'s `findNextPreload()`,
-all already defined.
+None found this pass. `feedback-preload-loading-state` is fully implemented
+(`tasks-feedback-preload-loading-state-2185.md`, all 6 tasks complete):
+`App.tsx`'s new `preloadTargetId` state and extended `aiPanel.busy`
+derivation match `ui.md`'s narrowed "silent background preload" decision
+exactly, reusing `AiCommentary`/`OverviewView`'s existing `busy`/`streaming`
+props with no component changes needed. Verified via a deterministic
+in-page JS poller (real busy-state transition) plus 3 new mocked component
+tests (`tests/components/App.preload.test.tsx`). Work still lives on the
+unmerged `feedback-preload-loading-state` branch, currently 2 commits
+behind `main` (PR #60 merged + a 1.8.0 release landed since this branch was
+cut) — not yet rebased.
 
 ## Constitution Compliance
 
-No violations. The plan reuses the existing `streaming`/`busy` derivation
-pattern with no new abstractions or dependencies.
+No violations. The implementation reuses the existing `streaming`/`busy`
+derivation pattern with no new abstractions or dependencies — no backend
+change was needed. Full suite green (396 tests).
 
 ## Diagrams
 
@@ -51,20 +56,18 @@ consumed into `plan-feedback-preload-loading-state-2026-07-06.md`.
 
 ## Feature Backlog
 
-14 backlogged · 0 planned · 0 tasked · 34 implemented — see
-`.project/artifacts/features.md`. Both features from the critique pass
-(`displaced-comment-reanchoring`, `resilient-gitlab-submit`) are implemented;
-the remaining 14 backlogged items are the earlier, unrelated feature ideas.
-`inline-comment-editing-ui` is `implemented` on its own unmerged branch (see
-In Flight) — not yet reflected in `main`'s `features.md`.
+14 backlogged · 0 planned · 0 tasked · 35 implemented on `main` — see
+`.project/artifacts/features.md`. `inline-comment-editing-ui` (PR #60)
+merged to `main` 2026-07-06 and flipped to `implemented` there; a 1.8.0
+release followed. This branch's local `features.md` still reads 34
+implemented since it was cut from `main` before that merge — cosmetic only,
+resolves on rebase/merge.
 
 ## In Flight
 
-- Branch `inline-comment-editing-ui` — all commits signed and pushed; open
-  PR #60 (`feat(ui): inline comment editing`), mergeable, not yet merged.
-- Branch `feedback-preload-loading-state` (current checkout) — plan
-  approved; tasks `tasks-feedback-preload-loading-state-2185.md`, ready
-  (0/6); not pushed to a PR yet.
+- Branch `feedback-preload-loading-state` (current checkout) — fully
+  implemented, all 6 tasks complete; 2 commits behind `main` (PR #60 +
+  1.8.0 release landed after this branch was cut); not yet pushed to a PR.
 - Worktree `.claude/worktrees/ardd-codify-trial` (branch
   `ardd-codify-trial`) — no tasks file.
 - Worktree `.claude/worktrees/docs-update-readme-changelog` (branch
@@ -72,9 +75,7 @@ In Flight) — not yet reflected in `main`'s `features.md`.
 
 ## Recommended Next Step
 
-Merge PR #60 when ready. Run `/ardd-implement` (or work the tasks manually)
-against `tasks-feedback-preload-loading-state-2185.md` — 6 tasks across
-Phase 1 (preload tracking + busy wiring, T001–T003), Phase 2 (duplicate-
-request prevention, T004–T005), and Phase 3 (component tests, T006).
-`/ardd-render ui` to refresh the stale UI diagram is still outstanding on
-both branches.
+Rebase `feedback-preload-loading-state` onto the latest `main` (picks up
+PR #60 + the 1.8.0 release, resolving the stale `features.md` count above),
+then push and open a PR. `/ardd-render ui` to refresh the stale UI diagram
+is still outstanding.
