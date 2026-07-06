@@ -1,7 +1,7 @@
 ---
 plan: plan-feedback-preload-loading-state-2026-07-06.md
 generated: 2026-07-06
-status: in-progress
+status: completed
 ---
 
 # Tasks
@@ -87,7 +87,7 @@ status: in-progress
 
 ## Phase 3: Component tests (depends on Phase 1 & 2)
 
-- [ ] T006 [artifacts: ui] Create `tests/components/App.preload.test.tsx`
+- [x] T006 [artifacts: ui] Create `tests/components/App.preload.test.tsx`
   (`// @vitest-environment jsdom` docblock, mirroring the mock/fixture
   structure in `tests/components/App.test.tsx` — same `review`/`meta`/
   `chunk` fixtures and the `vi.mock('../../web/src/api.ts', ...)` pattern —
