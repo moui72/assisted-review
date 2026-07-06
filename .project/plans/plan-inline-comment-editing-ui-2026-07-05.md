@@ -1,5 +1,5 @@
 ---
-status: draft
+status: approved
 branch: inline-comment-editing-ui
 created: 2026-07-05
 features: [inline-comment-editing-ui]
