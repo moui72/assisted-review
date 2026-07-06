@@ -1,3 +1,10 @@
+# [1.9.0](https://github.com/moui72/assisted-review/compare/v1.8.0...v1.9.0) (2026-07-06)
+
+
+### Features
+
+* **ui:** preload loading state ([#61](https://github.com/moui72/assisted-review/issues/61)) ([42aadf3](https://github.com/moui72/assisted-review/commit/42aadf3964b3ebcc951510a434fab668b075af5d)), closes [#60](https://github.com/moui72/assisted-review/issues/60) [#60](https://github.com/moui72/assisted-review/issues/60)
+
 # [1.8.0](https://github.com/moui72/assisted-review/compare/v1.7.0...v1.8.0) (2026-07-06)
 
 
