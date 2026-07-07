@@ -1,3 +1,10 @@
+# [1.10.0](https://github.com/moui72/assisted-review/compare/v1.9.0...v1.10.0) (2026-07-07)
+
+
+### Features
+
+* **cli:** non-intrusive update-check notice on startup ([#62](https://github.com/moui72/assisted-review/issues/62)) ([bf08e56](https://github.com/moui72/assisted-review/commit/bf08e562bce571109ebb4b7b6616933638b0c2dc))
+
 # [1.9.0](https://github.com/moui72/assisted-review/compare/v1.8.0...v1.9.0) (2026-07-06)
 
 
