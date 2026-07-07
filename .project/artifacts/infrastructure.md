@@ -1,8 +1,8 @@
 ---
 name: infrastructure
 status: stable
-last_updated: 2026-07-03
-diagram_status: current
+last_updated: 2026-07-07
+diagram_status: stale
 ---
 
 # Infrastructure
@@ -225,6 +225,27 @@ not the library's).
   actionable "is the `claude` CLI installed and on PATH?" message rather than
   an opaque spawn failure.
 
+### npm Registry (update check) — `src/update-check.ts`
+
+- **Purpose**: on every CLI start, tells the user (via a single `console.error`
+  line) when a newer version of the package is published, without ever
+  delaying or interrupting startup.
+- **Fetch**: `GET https://registry.npmjs.org/<pkg>/latest`, via `fetch()`, with
+  a 1.5s `AbortController` timeout — cheap enough that a slow/unreachable
+  registry can't meaningfully stall anything, since the caller (`src/cli.ts`)
+  never awaits this before doing other startup work (`void
+  reportIfOutdated()`).
+- **Comparison**: `latest`/`current` version strings are parsed via a
+  `^(\d+)\.(\d+)\.(\d+)` regex and compared numerically component-by-component
+  — not a full semver range/prerelease comparator, since registry `latest`
+  and `package.json`'s own version are both always plain `x.y.z`.
+- **Degradation**: any failure (network error, non-2xx, timeout, unparseable
+  version) resolves to "no message" — the same silent-degrade convention as
+  every other optional integration (Normalization Rules, above); startup
+  output is unaffected either way.
+- **Opt-out**: `ASSISTED_REVIEW_NO_UPDATE_CHECK` env var (any truthy value)
+  skips the check entirely, including the cache read.
+
 ### 1Password CLI (`op`) — `src/resolve-token.ts` (optional, for `JIRA_TOKEN`)
 
 Not a fetch integration in its own right — a secret-resolution indirection.
@@ -275,6 +296,11 @@ raw token.
 - **Listing**: `listReviews()` (backing `GET /api/reviews`, the review-picker
   menu) does a full `readdir` + read + parse of every `*.json` file in the
   state dir on each call — no cached index.
+- **Update-check cache**: `update-check.json` in `STATE_DIR` holds
+  `{ checked_at, latest_version }`, refreshed at most once per 24h so normal
+  usage doesn't hit the npm registry on every start. Same atomic
+  tmp-then-`rename()` write as `saveState()`; a missing/corrupt cache file is
+  treated as "never checked" rather than an error.
 
 ## Configuration / Environment
 
@@ -290,7 +316,8 @@ reads `process.env` in `cli.ts`), via `dotenv`, in this precedence order
 
 Known variables: `JIRA_BASE_URL`, `JIRA_USER`, `JIRA_TOKEN`,
 `JIRA_EPIC_FIELD`, `GITLAB_TOKEN`, `GITLAB_HOST`, `ASSISTED_REVIEW_STATE_DIR`,
-`PR_REF` (default ref for `pnpm dev`), `PRELOAD_CHUNKS`, `PRELOAD_OVERVIEW`.
+`PR_REF` (default ref for `pnpm dev`), `PRELOAD_CHUNKS`, `PRELOAD_OVERVIEW`,
+`ASSISTED_REVIEW_NO_UPDATE_CHECK` (disables the npm-registry update check).
 `assisted-review configure` (`src/setup-jira.ts`) runs an interactive wizard
 to populate the Jira vars.
 

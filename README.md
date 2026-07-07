@@ -5,6 +5,10 @@
   </picture>
 </p>
 
+<!-- ardd-badge-start -->
+[![built with ARDD](https://img.shields.io/badge/built%20with-ARDD-blue)](https://github.com/moui72/artifact-driven-dev)
+<!-- ardd-badge-end -->
+
 ## What is assisted-review?
 
 PR review fatigue is real. Large diffs overwhelm reviewers — context gets lost, subtle bugs slip through, and reviewers rush to finish. Standard GitHub review shows everything at once with no focus and no dedicated workspace.
