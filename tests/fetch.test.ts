@@ -3,7 +3,7 @@ import { vi } from 'vitest';
 vi.mock('node:child_process', () => ({ execFile: vi.fn() }));
 
 import { execFile } from 'node:child_process';
-import { fetchDiff, fetchMeta } from '../src/fetch';
+import { fetchDiff, fetchMeta, fetchFileContent } from '../src/fetch';
 import { _setGlabAvailable } from '../src/gitlab-rest';
 import type { PrRef } from '../src/types';
 
@@ -322,5 +322,81 @@ describe('fetchDiff — GitLab REST fallback', () => {
   it('throws when GITLAB_TOKEN is missing', async () => {
     delete process.env.GITLAB_TOKEN;
     await expect(fetchDiff(glRef)).rejects.toThrow('GITLAB_TOKEN');
+  });
+});
+
+describe('fetchFileContent — GitHub', () => {
+  it('decodes base64 content on success', async () => {
+    succeed(JSON.stringify({ content: Buffer.from('hello world').toString('base64') }));
+    const content = await fetchFileContent(ghRef, 'src/a.ts', 'sha1');
+    expect(content).toBe('hello world');
+    expect(vi.mocked(execFile)).toHaveBeenCalledWith(
+      'gh',
+      ['api', 'repos/alice/proj/contents/src/a.ts?ref=sha1'],
+      expect.any(Object),
+      expect.any(Function),
+    );
+  });
+
+  it('returns null when gh api fails (e.g. 404)', async () => {
+    fail(new Error('gh: 404 Not Found'));
+    expect(await fetchFileContent(ghRef, 'missing.ts', 'sha1')).toBeNull();
+  });
+
+  it('returns null when the response has no content field', async () => {
+    succeed(JSON.stringify({}));
+    expect(await fetchFileContent(ghRef, 'a.ts', 'sha1')).toBeNull();
+  });
+});
+
+describe('fetchFileContent — GitLab (glab available)', () => {
+  beforeEach(() => _setGlabAvailable(true));
+
+  it('returns raw file content via glab api', async () => {
+    succeed('file content here');
+    const content = await fetchFileContent(glRef, 'src/a.ts', 'sha1');
+    expect(content).toBe('file content here');
+    expect(vi.mocked(execFile)).toHaveBeenCalledWith(
+      'glab',
+      ['api', 'projects/mygroup%2Fsubteam%2Fproj/repository/files/src%2Fa.ts/raw?ref=sha1'],
+      expect.any(Object),
+      expect.any(Function),
+    );
+  });
+
+  it('returns null when glab api fails', async () => {
+    fail(new Error('glab: 404'));
+    expect(await fetchFileContent(glRef, 'missing.ts', 'sha1')).toBeNull();
+  });
+});
+
+describe('fetchFileContent — GitLab REST fallback', () => {
+  beforeEach(() => {
+    _setGlabAvailable(false);
+    process.env.GITLAB_TOKEN = 'test-token';
+  });
+
+  afterEach(() => {
+    delete process.env.GITLAB_TOKEN;
+    vi.restoreAllMocks();
+  });
+
+  it('returns raw file content via REST', async () => {
+    mockFetch([{ ok: true, body: 'file content here' }]);
+    const content = await fetchFileContent(glRef, 'src/a.ts', 'sha1');
+    expect(content).toBe('file content here');
+    const [[url, init]] = (globalThis.fetch as ReturnType<typeof vi.spyOn>).mock.calls as [[string, RequestInit]];
+    expect(url).toContain('repository/files/src%2Fa.ts/raw?ref=sha1');
+    expect((init.headers as Record<string, string>)['PRIVATE-TOKEN']).toBe('test-token');
+  });
+
+  it('returns null when GITLAB_TOKEN is missing', async () => {
+    delete process.env.GITLAB_TOKEN;
+    expect(await fetchFileContent(glRef, 'a.ts', 'sha1')).toBeNull();
+  });
+
+  it('returns null on non-ok REST response', async () => {
+    mockFetch([{ ok: false, status: 404, statusText: 'Not Found', body: 'not found' }]);
+    expect(await fetchFileContent(glRef, 'missing.ts', 'sha1')).toBeNull();
   });
 });

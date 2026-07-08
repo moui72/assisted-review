@@ -1,4 +1,6 @@
 import { vi } from 'vitest';
+import { rm } from 'node:fs/promises';
+import { join } from 'node:path';
 
 vi.mock('../src/state', async (importOriginal) => {
   const actual = await importOriginal<typeof import('../src/state')>();
@@ -25,6 +27,15 @@ vi.mock('../src/claude', () => ({
 vi.mock('../src/review', () => ({
   loadReview: vi.fn(),
 }));
+
+vi.mock('../src/fetch', () => ({
+  fetchFileContent: vi.fn().mockResolvedValue(null),
+}));
+
+vi.mock('../src/investigation', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../src/investigation')>();
+  return { ...actual, refreshCloneIfStale: vi.fn().mockResolvedValue(undefined) };
+});
 
 vi.mock('../src/submit', async (importOriginal) => {
   const actual = await importOriginal<typeof import('../src/submit')>();
@@ -53,6 +64,8 @@ import {
   clearGitLabToken,
 } from '../src/gitlab-token';
 import { streamClaude } from '../src/claude';
+import { fetchFileContent } from '../src/fetch';
+import { saveInvestigationConfigs, configKey } from '../src/investigation';
 import type { Review, ReviewState } from '../src/types';
 import { STATE_VERSION, OVERVIEW_ID } from '../src/types';
 
@@ -167,6 +180,26 @@ describe('DELETE /api/review', () => {
     const url = await makeServer({ review, state });
     await del(url, '/api/review');
     expect(vi.mocked(deleteReview)).toHaveBeenCalledWith(pr);
+  });
+
+  it('cleans up a temp-clone for the closed review', async () => {
+    const { STATE_DIR } = await import('../src/state');
+    const { mkdir, stat } = await import('node:fs/promises');
+    const dest = join(STATE_DIR, 'repos', 'tmp-close-test');
+    await mkdir(dest, { recursive: true });
+    await saveInvestigationConfigs({
+      [configKey(pr)]: {
+        platform: pr.platform,
+        owner: pr.owner,
+        repo: pr.repo,
+        mode: 'temp-clone',
+        clone_path: dest,
+        chosen_at: new Date().toISOString(),
+      },
+    });
+    const url = await makeServer({ review, state });
+    await del(url, '/api/review');
+    await expect(stat(dest)).rejects.toThrow();
   });
 });
 
@@ -484,6 +517,27 @@ describe('POST /api/reviews/open', () => {
     const body = await res.json() as { error: string; auth_required: string };
     expect(body.auth_required).toBe('gitlab');
   });
+
+  it('cleans up the outgoing review repo temp-clone when switching', async () => {
+    const { STATE_DIR } = await import('../src/state');
+    const { mkdir, stat } = await import('node:fs/promises');
+    const dest = join(STATE_DIR, 'repos', 'tmp-switch-test');
+    await mkdir(dest, { recursive: true });
+    await saveInvestigationConfigs({
+      [configKey(pr)]: {
+        platform: pr.platform,
+        owner: pr.owner,
+        repo: pr.repo,
+        mode: 'temp-clone',
+        clone_path: dest,
+        chosen_at: new Date().toISOString(),
+      },
+    });
+    vi.mocked(loadReview).mockResolvedValueOnce({ review, state });
+    const url = await makeServer({ review, state });
+    await post(url, '/api/reviews/open', { ref: 'alice/proj#42' });
+    await expect(stat(dest)).rejects.toThrow();
+  });
 });
 
 describe('GET /api/auth/gitlab', () => {
@@ -552,11 +606,189 @@ describe('DELETE /api/auth/gitlab', () => {
   });
 });
 
+describe('GET/POST /api/investigation-config', () => {
+  beforeEach(async () => {
+    const { STATE_DIR } = await import('../src/state');
+    await rm(join(STATE_DIR, 'investigation-config.json'), { force: true });
+  });
+
+  it('GET returns 503 when no review is loaded', async () => {
+    const url = await makeServer({ review: null, state: null });
+    const res = await get(url, '/api/investigation-config');
+    expect(res.status).toBe(503);
+  });
+
+  it('POST returns 503 when no review is loaded', async () => {
+    const url = await makeServer({ review: null, state: null });
+    const res = await post(url, '/api/investigation-config', { mode: 'none' });
+    expect(res.status).toBe(503);
+  });
+
+  it('GET returns the default none shape for an unconfigured repo', async () => {
+    const url = await makeServer({ review, state });
+    const res = await get(url, '/api/investigation-config');
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as { mode: string; owner: string; repo: string };
+    expect(body).toMatchObject({ mode: 'none', owner: 'alice', repo: 'proj' });
+  });
+
+  it('POST rejects an invalid mode', async () => {
+    const url = await makeServer({ review, state });
+    const res = await post(url, '/api/investigation-config', { mode: 'bogus' });
+    expect(res.status).toBe(400);
+  });
+
+  it('POST rejects local-path with a missing local_path', async () => {
+    const url = await makeServer({ review, state });
+    const res = await post(url, '/api/investigation-config', { mode: 'local-path' });
+    expect(res.status).toBe(400);
+  });
+
+  it('POST rejects local-path pointing at a non-existent directory', async () => {
+    const url = await makeServer({ review, state });
+    const res = await post(url, '/api/investigation-config', {
+      mode: 'local-path',
+      local_path: '/definitely/not/a/real/path/xyz',
+    });
+    expect(res.status).toBe(400);
+  });
+
+  it('POST persists local-path with a real directory, retrievable via GET', async () => {
+    const url = await makeServer({ review, state });
+    const res = await post(url, '/api/investigation-config', {
+      mode: 'local-path',
+      local_path: import.meta.dirname,
+    });
+    expect(res.status).toBe(200);
+    const saved = (await res.json()) as { mode: string; local_path: string };
+    expect(saved.mode).toBe('local-path');
+    expect(saved.local_path).toBe(import.meta.dirname);
+
+    const getRes = await get(url, '/api/investigation-config');
+    const fetched = (await getRes.json()) as { mode: string; local_path: string };
+    expect(fetched.mode).toBe('local-path');
+    expect(fetched.local_path).toBe(import.meta.dirname);
+  });
+
+  it('POST persists mode: none', async () => {
+    const url = await makeServer({ review, state });
+    const res = await post(url, '/api/investigation-config', { mode: 'none' });
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as { mode: string };
+    expect(body.mode).toBe('none');
+  });
+});
+
 describe('GET /api/claude', () => {
+  beforeEach(async () => {
+    const { STATE_DIR } = await import('../src/state');
+    await rm(join(STATE_DIR, 'investigation-config.json'), { force: true });
+    vi.mocked(fetchFileContent).mockReset().mockResolvedValue(null);
+  });
+
   it('returns 503 when no review is loaded', async () => {
     const url = await makeServer({ review: null, state: null });
     const res = await get(url, `/api/claude?chunk_id=c1`);
     expect(res.status).toBe(503);
+  });
+
+  it('mode none (default): passes no opts to streamClaude', async () => {
+    const url = await makeServer({ review, state });
+    await get(url, '/api/claude?chunk_id=c1');
+    const lastCall = vi.mocked(streamClaude).mock.calls.at(-1)!;
+    expect(lastCall[2]).toBeUndefined();
+    expect(vi.mocked(fetchFileContent)).not.toHaveBeenCalled();
+  });
+
+  it('mode local-path: passes cwd/allowRepoRead to streamClaude', async () => {
+    await saveInvestigationConfigs({
+      [configKey(pr)]: {
+        platform: pr.platform,
+        owner: pr.owner,
+        repo: pr.repo,
+        mode: 'local-path',
+        local_path: '/some/repo',
+        chosen_at: new Date().toISOString(),
+      },
+    });
+    const url = await makeServer({ review, state });
+    await get(url, '/api/claude?chunk_id=c1');
+    const lastCall = vi.mocked(streamClaude).mock.calls.at(-1)!;
+    expect(lastCall[2]).toEqual({ cwd: '/some/repo', allowRepoRead: true });
+  });
+
+  it('mode api: fetches content for the chunk file and passes it to buildPrompt', async () => {
+    await saveInvestigationConfigs({
+      [configKey(pr)]: {
+        platform: pr.platform,
+        owner: pr.owner,
+        repo: pr.repo,
+        mode: 'api',
+        chosen_at: new Date().toISOString(),
+      },
+    });
+    vi.mocked(fetchFileContent).mockResolvedValue('full file text');
+    const url = await makeServer({ review, state });
+    await get(url, '/api/claude?chunk_id=c1');
+    expect(vi.mocked(fetchFileContent)).toHaveBeenCalledWith(pr, chunk.file, meta.head_sha);
+    const { buildPrompt } = await import('../src/claude');
+    const lastCall = vi.mocked(buildPrompt).mock.calls.at(-1)!;
+    expect(lastCall[3]).toEqual(new Map([[chunk.file, 'full file text']]));
+  });
+
+  it('mode api: skips files fetchFileContent returns null for', async () => {
+    await saveInvestigationConfigs({
+      [configKey(pr)]: {
+        platform: pr.platform,
+        owner: pr.owner,
+        repo: pr.repo,
+        mode: 'api',
+        chosen_at: new Date().toISOString(),
+      },
+    });
+    vi.mocked(fetchFileContent).mockResolvedValue(null);
+    const url = await makeServer({ review, state });
+    await get(url, '/api/claude?chunk_id=c1');
+    const { buildPrompt } = await import('../src/claude');
+    const lastCall = vi.mocked(buildPrompt).mock.calls.at(-1)!;
+    expect(lastCall[3]).toEqual(new Map());
+  });
+
+  it('mode temp-clone: passes cwd/allowRepoRead pointing at the clone_path', async () => {
+    await saveInvestigationConfigs({
+      [configKey(pr)]: {
+        platform: pr.platform,
+        owner: pr.owner,
+        repo: pr.repo,
+        mode: 'temp-clone',
+        clone_path: '/x/repos/tmp-abc',
+        chosen_at: new Date().toISOString(),
+      },
+    });
+    const url = await makeServer({ review, state });
+    await get(url, '/api/claude?chunk_id=c1');
+    const lastCall = vi.mocked(streamClaude).mock.calls.at(-1)!;
+    expect(lastCall[2]).toEqual({ cwd: '/x/repos/tmp-abc', allowRepoRead: true });
+  });
+
+  it('mode always-clone: refreshes the clone before passing cwd/allowRepoRead', async () => {
+    await saveInvestigationConfigs({
+      [configKey(pr)]: {
+        platform: pr.platform,
+        owner: pr.owner,
+        repo: pr.repo,
+        mode: 'always-clone',
+        clone_path: '/x/repos/github-alice-proj',
+        chosen_at: new Date().toISOString(),
+      },
+    });
+    const { refreshCloneIfStale } = await import('../src/investigation');
+    vi.mocked(refreshCloneIfStale).mockClear();
+    const url = await makeServer({ review, state });
+    await get(url, '/api/claude?chunk_id=c1');
+    expect(vi.mocked(refreshCloneIfStale)).toHaveBeenCalled();
+    const lastCall = vi.mocked(streamClaude).mock.calls.at(-1)!;
+    expect(lastCall[2]).toEqual({ cwd: '/x/repos/github-alice-proj', allowRepoRead: true });
   });
 
   it('returns 404 for an unknown chunk_id', async () => {

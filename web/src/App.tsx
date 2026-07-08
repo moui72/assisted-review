@@ -5,11 +5,13 @@ import {
   fetchReview,
   fetchState,
   fetchConfig,
+  fetchInvestigationConfig,
   postAction,
   streamClaude,
   OVERVIEW_ID,
   type Action,
   type AiNoteKind,
+  type InvestigationConfig,
   type PreloadConfig,
   type Review,
   type ReviewState,
@@ -18,6 +20,8 @@ import {
 import { findNextPreload } from './preload.ts';
 import { ReviewsMenu } from './components/ReviewsMenu.tsx';
 import { SettingsPanel } from './components/SettingsPanel.tsx';
+import { InvestigationModal } from './components/InvestigationModal.tsx';
+import { ErrorBanner } from './components/ErrorBanner.tsx';
 import { Splash } from './components/Splash.tsx';
 import type { Anchor } from './diff.ts';
 import { TopNav } from './components/TopNav.tsx';
@@ -64,6 +68,9 @@ export function App() {
   const [preloadTargetId, setPreloadTargetId] = useState<string | null>(null);
   const [preloadConfig, setPreloadConfig] = useState<PreloadConfig | null>(null);
   const [preloadTick, setPreloadTick] = useState(0);
+  const [investigationConfig, setInvestigationConfig] = useState<InvestigationConfig | null>(null);
+  const [investigationModalOpen, setInvestigationModalOpen] = useState(false);
+  const [investigationBannerDismissed, setInvestigationBannerDismissed] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const askRef = useRef<HTMLInputElement>(null);
   const claudeCloseRef = useRef<(() => void) | null>(null);
@@ -104,6 +111,14 @@ export function App() {
     setAnchor(null);
     setClaudeError(null);
   }, [activeId]);
+
+  // Fetch this repo's investigation-access config whenever the active
+  // review's repo changes, so the banner/Settings row reflect it.
+  useEffect(() => {
+    if (!review) { setInvestigationConfig(null); return; }
+    setInvestigationBannerDismissed(false);
+    fetchInvestigationConfig().then(setInvestigationConfig).catch(() => {});
+  }, [review?.pr.platform, review?.pr.owner, review?.pr.repo]);
 
   // Background preloading: silently request Claude notes for upcoming chunks one at a time.
   // Driven by navigation (index), state changes (completed preloads), and preloadTick (errors).
@@ -452,6 +467,26 @@ export function App() {
         onSubmit={() => setSubmitOpen(true)}
       />
 
+      {investigationConfig && investigationConfig.chosen_at === '' && !investigationBannerDismissed && (
+        <div className="shell pt-3">
+          <ErrorBanner className="flex items-center justify-between gap-3">
+            <button
+              onClick={() => setInvestigationModalOpen(true)}
+              className="text-left underline decoration-dotted underline-offset-2 hover:no-underline"
+            >
+              Enable deeper investigation — let Claude see more than the diff.
+            </button>
+            <button
+              onClick={() => setInvestigationBannerDismissed(true)}
+              aria-label="Dismiss"
+              className="text-[14px] leading-none opacity-70 hover:opacity-100"
+            >
+              ×
+            </button>
+          </ErrorBanner>
+        </div>
+      )}
+
       <main className="relative min-h-0 flex-1 overflow-hidden">
         <AnimatePresence initial={false} custom={dir}>
           <motion.div
@@ -543,6 +578,17 @@ export function App() {
         onClose={() => setSettingsOpen(false)}
         preloadConfig={preloadConfig}
         onPreloadChange={handlePreloadChange}
+        investigationMode={investigationConfig?.mode}
+        onOpenInvestigation={() => setInvestigationModalOpen(true)}
+      />
+      <InvestigationModal
+        open={investigationModalOpen}
+        currentMode={investigationConfig?.mode}
+        onClose={() => setInvestigationModalOpen(false)}
+        onSuccess={(config) => {
+          setInvestigationConfig(config);
+          setInvestigationModalOpen(false);
+        }}
       />
       <ReviewsMenu
         open={reviewsOpen}

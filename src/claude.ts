@@ -29,13 +29,30 @@ export interface ClaudeHandlers {
   onError: (message: string) => void;
 }
 
-/** Build the prompt for a chunk. Empty question → an "explain this hunk" note. */
-export function buildPrompt(chunk: Chunk, kind: AiNoteKind, question: string): string {
+function fileContentsBlock(fileContents?: Map<string, string>): string {
+  if (!fileContents || fileContents.size === 0) return '';
+  const blocks = [...fileContents.entries()].map(
+    ([path, content]) => `Full file contents: ${path}\n\`\`\`\n${clip(content, MAX_DIFF_CHARS)}\n\`\`\``,
+  );
+  return `\n\n${blocks.join('\n\n')}`;
+}
+
+/** Build the prompt for a chunk. Empty question → an "explain this hunk" note.
+ *  `fileContents` (investigation mode 'api') appends full file text for
+ *  diff-touched files, in addition to the diff hunk itself. */
+export function buildPrompt(
+  chunk: Chunk,
+  kind: AiNoteKind,
+  question: string,
+  fileContents?: Map<string, string>,
+): string {
   const intro =
     'You are assisting a code reviewer reviewing a GitHub pull request. ' +
     'Be concise and direct — lead with the most important point, no hedging, no preamble. ' +
     'Answer only from the diff shown; do not use tools.';
-  const ctx = `File: ${chunk.file}\n\nDiff hunk:\n\`\`\`diff\n${chunk.diff}\n\`\`\``;
+  const ctx =
+    `File: ${chunk.file}\n\nDiff hunk:\n\`\`\`diff\n${chunk.diff}\n\`\`\`` +
+    fileContentsBlock(fileContents);
   if (kind === 'investigation' && question.trim()) {
     return `${intro}\n\nThe reviewer asks about this hunk: "${question.trim()}"\n\n${ctx}\n\nAnswer in 2-5 sentences or a few short bullets.`;
   }
@@ -53,12 +70,15 @@ function clip(s: string, max: number): string {
   return s.length > max ? s.slice(0, max) + '\n… (truncated)' : s;
 }
 
-/** Build the whole-PR overview prompt. Empty question → summarize; else answer it. */
+/** Build the whole-PR overview prompt. Empty question → summarize; else answer it.
+ *  `fileContents` (investigation mode 'api') appends full file text for
+ *  diff-touched files, in addition to the combined diff. */
 export function buildOverviewPrompt(
   meta: PrMeta,
   chunks: Chunk[],
   jira: JiraContext,
   question: string,
+  fileContents?: Map<string, string>,
 ): string {
   const files = [...new Set(chunks.map((c) => c.file))];
   const combinedDiff = clip(chunks.map((c) => c.diff).join('\n'), MAX_DIFF_CHARS);
@@ -83,6 +103,7 @@ export function buildOverviewPrompt(
   }
   parts.push(`Files changed (${files.length}): ${files.join(', ')}`);
   parts.push(`Combined diff (may be truncated):\n\`\`\`diff\n${combinedDiff}\n\`\`\``);
+  if (fileContents && fileContents.size > 0) parts.push(fileContentsBlock(fileContents).trim());
   return parts.join('\n\n');
 }
 
@@ -100,8 +121,23 @@ export function splitSuggestedAction(text: string): { body: string; suggestedAct
   return { body: clean(text.slice(0, m.index)), suggestedAction: action };
 }
 
+export interface StreamClaudeOptions {
+  /** Working directory for the subprocess. Defaults to a temp dir (no repo access). */
+  cwd?: string;
+  /** When true, drops Read/Grep/Glob from --disallowed-tools (still read-only — no
+   *  Bash/Edit/Write/WebFetch/WebSearch/Task/NotebookEdit, ever). Default false. */
+  allowRepoRead?: boolean;
+}
+
 /** Spawn claude and stream its answer. Returns a cancel function. */
-export function streamClaude(prompt: string, handlers: ClaudeHandlers): () => void {
+export function streamClaude(
+  prompt: string,
+  handlers: ClaudeHandlers,
+  opts: StreamClaudeOptions = {},
+): () => void {
+  const disallowedTools = opts.allowRepoRead
+    ? NO_TOOLS.filter((t) => !['Read', 'Grep', 'Glob'].includes(t))
+    : NO_TOOLS;
   const child = spawn(
     'claude',
     [
@@ -111,9 +147,9 @@ export function streamClaude(prompt: string, handlers: ClaudeHandlers): () => vo
       '--include-partial-messages',
       '--verbose',
       '--disallowed-tools',
-      ...NO_TOOLS,
+      ...disallowedTools,
     ],
-    { cwd: tmpdir(), stdio: ['pipe', 'pipe', 'pipe'] },
+    { cwd: opts.cwd ?? tmpdir(), stdio: ['pipe', 'pipe', 'pipe'] },
   );
 
   let buf = '';

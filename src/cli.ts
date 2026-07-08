@@ -21,6 +21,7 @@ import { saveState } from './state.js';
 import { loadReview } from './review.js';
 import { setupJira } from './setup-jira.js';
 import { checkForUpdate } from './update-check.js';
+import { sweepOrphanedTempClones, pruneStaleClones } from './investigation.js';
 import type { Review, ReviewState } from './types.js';
 
 async function reportIfOutdated(): Promise<void> {
@@ -71,6 +72,8 @@ function parseArgs(argv: string[]): {
 
 async function main(): Promise<void> {
   void reportIfOutdated(); // fire-and-forget; never blocks startup
+  void sweepOrphanedTempClones(); // fire-and-forget; never blocks startup
+  void pruneStaleClones(); // fire-and-forget; never blocks startup
 
   if (process.argv[2] === 'configure') {
     await setupJira();

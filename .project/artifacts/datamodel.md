@@ -1,8 +1,8 @@
 ---
 name: datamodel
 status: stable
-last_updated: 2026-07-03
-diagram_status: current
+last_updated: 2026-07-08
+diagram_status: stale
 ---
 
 # Data Model
@@ -241,6 +241,27 @@ all saved reviews.
 | flagged_count | number | |
 | viewed_count | number | |
 | submitted | same shape as `ReviewState.submitted` | |
+
+### InvestigationConfig
+
+Per-repo (not per-PR) choice of how much filesystem/repo access the headless
+Claude investigation gets — see `infrastructure.md`'s "Repo Investigation
+Access" section. Persisted once chosen so the same repo isn't re-prompted on
+every review; keyed by `platform:owner/repo` in a single
+`investigation-config.json` (`infrastructure.md`), not one file per entry
+like `ReviewState`, since this is a small, infrequently-written map rather
+than per-review data.
+
+| Field | Type | Notes |
+|-------|------|-------|
+| platform | 'github' \| 'gitlab' | Part of the lookup key, alongside `owner`/`repo` |
+| owner | string | |
+| repo | string | |
+| mode | `'none' \| 'local-path' \| 'api' \| 'temp-clone' \| 'always-clone'` | `'none'` (today's diff-only behavior) until the reviewer explicitly chooses otherwise via the modal |
+| local_path | string? | Only set (and only meaningful) when `mode` is `'local-path'` — reviewer-supplied directory, validated to exist on save |
+| clone_path | string? | Only set for `'temp-clone'`/`'always-clone'` — computed deterministically (`STATE_DIR/repos/<platform>-<owner>-<repo>`) once cloned, not reviewer-supplied |
+| chosen_at | string | ISO, set when the mode is first chosen |
+| last_used | string? | ISO, updated each time an investigation call actually uses this config — the input to `always-clone` pruning (idle TTL) |
 
 ### SubmitResult
 

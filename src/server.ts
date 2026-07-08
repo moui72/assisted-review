@@ -6,9 +6,19 @@ import {
   type IncomingMessage,
   type ServerResponse,
 } from 'node:http';
-import { readFile } from 'node:fs/promises';
+import { readFile, stat } from 'node:fs/promises';
 import { join, normalize, extname } from 'node:path';
 import { applyAction, deleteReview, listReviews, saveState } from './state.js';
+import {
+  getInvestigationConfig,
+  loadInvestigationConfigs,
+  saveInvestigationConfigs,
+  configKey,
+  ensureClone,
+  refreshCloneIfStale,
+  cleanupTempClone,
+} from './investigation.js';
+import { fetchFileContent } from './fetch.js';
 import {
   buildOverviewPrompt,
   buildPrompt,
@@ -38,11 +48,20 @@ import {
   OVERVIEW_ID,
   type Action,
   type AiNoteKind,
+  type InvestigationConfig,
   type Platform,
   type PrRef,
   type Review,
   type ReviewState,
 } from './types.js';
+
+const INVESTIGATION_MODES: readonly InvestigationConfig['mode'][] = [
+  'none',
+  'local-path',
+  'api',
+  'temp-clone',
+  'always-clone',
+];
 
 // dist/ is a sibling of this file's dir (src/ under tsx, build/ after tsc).
 const DIST_DIR = join(import.meta.dirname, '..', 'dist');
@@ -172,7 +191,10 @@ export function startServer(
       if (req.method === 'DELETE') {
         currentCancel?.();
         currentCancel = null;
-        if (ctx.review) await deleteReview(ctx.review.pr).catch(() => {});
+        if (ctx.review) {
+          await deleteReview(ctx.review.pr).catch(() => {});
+          await cleanupTempClone(ctx.review.pr);
+        }
         ctx.review = null;
         ctx.state = null;
         return sendJson(res, 200, { ok: true });
@@ -325,6 +347,9 @@ export function startServer(
       // Cancel any in-flight SSE stream so it can't write stale notes into the new ctx.
       currentCancel?.();
       currentCancel = null;
+      // Switching away from a repo with a temp-clone config cleans it up —
+      // temp clones are scoped to "the rest of this review session."
+      if (ctx.review) await cleanupTempClone(ctx.review.pr);
       try {
         const { review, state } = await loadReview(pr, { mockAi });
         ctx.review = review;
@@ -336,6 +361,65 @@ export function startServer(
           return sendJson(res, 401, { error: (err as Error).message, auth_required: 'gitlab' });
         }
         return sendJson(res, 502, { error: (err as Error).message });
+      }
+    }
+
+    if (url.pathname === '/api/investigation-config') {
+      if (!ctx.review) return sendJson(res, 503, { error: 'no active review' });
+      if (req.method === 'GET') {
+        return sendJson(res, 200, await getInvestigationConfig(ctx.review.pr));
+      }
+      if (req.method === 'POST') {
+        const { mode, local_path } = JSON.parse(await readBody(req)) as {
+          mode?: string;
+          local_path?: string;
+        };
+        if (!mode || !INVESTIGATION_MODES.includes(mode as InvestigationConfig['mode'])) {
+          return sendJson(res, 400, {
+            error: `mode must be one of ${INVESTIGATION_MODES.join(', ')}`,
+          });
+        }
+        if (mode === 'local-path') {
+          if (!local_path) {
+            return sendJson(res, 400, { error: 'local_path is required for mode local-path' });
+          }
+          try {
+            const st = await stat(local_path);
+            if (!st.isDirectory()) throw new Error('not a directory');
+          } catch {
+            return sendJson(res, 400, { error: `local_path is not an existing directory: ${local_path}` });
+          }
+        }
+        const pr = ctx.review.pr;
+        let clonePath: string | undefined;
+        if (mode === 'temp-clone' || mode === 'always-clone') {
+          try {
+            clonePath = await ensureClone({
+              platform: pr.platform,
+              owner: pr.owner,
+              repo: pr.repo,
+              mode,
+              chosen_at: '',
+            });
+          } catch (err) {
+            return sendJson(res, 502, {
+              error: `clone failed: ${err instanceof Error ? err.message : String(err)}`,
+            });
+          }
+        }
+        const config: InvestigationConfig = {
+          platform: pr.platform,
+          owner: pr.owner,
+          repo: pr.repo,
+          mode: mode as InvestigationConfig['mode'],
+          ...(mode === 'local-path' ? { local_path } : {}),
+          ...(clonePath ? { clone_path: clonePath } : {}),
+          chosen_at: new Date().toISOString(),
+        };
+        const configs = await loadInvestigationConfigs();
+        configs[configKey(pr)] = config;
+        await saveInvestigationConfigs(configs);
+        return sendJson(res, 200, config);
       }
     }
 
@@ -358,6 +442,30 @@ export function startServer(
       // into the wrong chunk/review once this one completes.
       currentCancel?.();
 
+      // Resolve investigation access for this repo (Repo Investigation
+      // Access, infrastructure.md).
+      const investigationConfig = await getInvestigationConfig(review.pr);
+      if (investigationConfig.mode === 'always-clone') {
+        await refreshCloneIfStale(investigationConfig, review.meta.head_sha);
+      }
+      const streamOpts =
+        investigationConfig.mode === 'local-path'
+          ? { cwd: investigationConfig.local_path, allowRepoRead: true }
+          : investigationConfig.mode === 'temp-clone' || investigationConfig.mode === 'always-clone'
+            ? { cwd: investigationConfig.clone_path, allowRepoRead: true }
+            : undefined;
+      let fileContents: Map<string, string> | undefined;
+      if (investigationConfig.mode === 'api') {
+        const files = isOverview
+          ? [...new Set(review.chunks.map((c) => c.file))]
+          : [chunk!.file];
+        fileContents = new Map();
+        for (const file of files) {
+          const content = await fetchFileContent(review.pr, file, review.meta.head_sha);
+          if (content !== null) fileContents.set(file, content);
+        }
+      }
+
       // An empty question means "explain/summarize" (an initial note).
       const kind: AiNoteKind = question.trim() ? 'investigation' : 'initial';
       const prompt = isOverview
@@ -366,8 +474,9 @@ export function startServer(
             review.chunks,
             review.overview.jira,
             question,
+            fileContents,
           )
-        : buildPrompt(chunk!, kind, question);
+        : buildPrompt(chunk!, kind, question, fileContents);
       // Suggested-action line only applies to per-chunk "explain" notes.
       const wantsAction = !isOverview && kind === 'initial';
 
@@ -420,7 +529,7 @@ export function startServer(
               res.end();
             });
         },
-      });
+      }, streamOpts);
       currentCancel = cancel;
       req.on('close', () => {
         if (currentCancel === cancel) currentCancel = null;

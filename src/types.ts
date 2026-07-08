@@ -245,6 +245,25 @@ export interface ReviewPayload {
   comments: ReviewComment[];
 }
 
+/** Per-repo (not per-PR) choice of how much filesystem/repo access the
+ *  headless Claude investigation gets — see `infrastructure.md`'s "Repo
+ *  Investigation Access" section. Persisted keyed by `platform:owner/repo`
+ *  in a single `investigation-config.json` map, not one file per entry. */
+export interface InvestigationConfig {
+  platform: Platform;
+  owner: string;
+  repo: string;
+  mode: 'none' | 'local-path' | 'api' | 'temp-clone' | 'always-clone';
+  /** Only set (and only meaningful) when `mode` is `'local-path'`. */
+  local_path?: string;
+  /** Only set for `'temp-clone'`/`'always-clone'` — computed, not reviewer-supplied. */
+  clone_path?: string;
+  /** ISO, set when the mode is first chosen. */
+  chosen_at: string;
+  /** ISO, updated each time an investigation call actually uses this config. */
+  last_used?: string;
+}
+
 /** Response from a submit adapter (`submitReview`/`submitGitLabReview`). The
  *  `/api/submit` route handler adds a `state` field on top of this before it
  *  reaches the client — see `web/src/api.ts`'s `SubmitResponse`, which shares

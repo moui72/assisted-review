@@ -54,6 +54,26 @@ describe('buildPrompt', () => {
     expect(p).toContain('why rename b?');
     expect(p).not.toMatch(/Suggested action:/);
   });
+
+  it('appends a full file contents block when fileContents is non-empty', () => {
+    const p = buildPrompt(chunk, 'initial', '', new Map([['src/foo.ts', 'full file text']]));
+    expect(p).toContain('Full file contents: src/foo.ts');
+    expect(p).toContain('full file text');
+  });
+
+  it('omits the file contents block when fileContents is empty or omitted', () => {
+    const withEmpty = buildPrompt(chunk, 'initial', '', new Map());
+    const withoutArg = buildPrompt(chunk, 'initial', '');
+    expect(withEmpty).not.toContain('Full file contents');
+    expect(withoutArg).not.toContain('Full file contents');
+  });
+
+  it('clips an overlong file content block', () => {
+    const huge = 'x'.repeat(20000);
+    const p = buildPrompt(chunk, 'initial', '', new Map([['src/foo.ts', huge]]));
+    expect(p).toContain('(truncated)');
+    expect(p.length).toBeLessThan(huge.length);
+  });
 });
 
 describe('splitSuggestedAction — body cleaning', () => {
@@ -100,6 +120,25 @@ describe('buildOverviewPrompt', () => {
     const p = buildOverviewPrompt(meta, [chunk], noJira, 'what does this do?');
     expect(p).toContain('what does this do?');
     expect(p).not.toContain('orient the reviewer');
+  });
+
+  it('appends a full file contents block when fileContents is non-empty', () => {
+    const p = buildOverviewPrompt(
+      meta,
+      [chunk],
+      noJira,
+      '',
+      new Map([['src/foo.ts', 'full file text']]),
+    );
+    expect(p).toContain('Full file contents: src/foo.ts');
+    expect(p).toContain('full file text');
+  });
+
+  it('omits the file contents block when fileContents is empty or omitted', () => {
+    const withEmpty = buildOverviewPrompt(meta, [chunk], noJira, '', new Map());
+    const withoutArg = buildOverviewPrompt(meta, [chunk], noJira, '');
+    expect(withEmpty).not.toContain('Full file contents');
+    expect(withoutArg).not.toContain('Full file contents');
   });
 
   it('includes PR body when non-empty', () => {

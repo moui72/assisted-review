@@ -186,3 +186,69 @@ export async function fetchDiff(ref: PrRef): Promise<string> {
 export async function fetchMeta(ref: PrRef): Promise<PrMeta> {
   return ref.platform === 'gitlab' ? fetchGitLabMeta(ref) : fetchGitHubMeta(ref);
 }
+
+// ---- Repo Investigation Access: 'api' mode file-content fetch ------------
+
+async function fetchGitHubFileContent(
+  pr: PrRef,
+  path: string,
+  sha: string,
+): Promise<string | null> {
+  try {
+    const { stdout } = await execFileAsync(
+      'gh',
+      ['api', `repos/${pr.owner}/${pr.repo}/contents/${path}?ref=${sha}`],
+      { maxBuffer: 8 * 1024 * 1024 },
+    );
+    const data = JSON.parse(stdout) as { content?: string };
+    if (!data.content) return null;
+    return Buffer.from(data.content, 'base64').toString('utf8');
+  } catch {
+    return null;
+  }
+}
+
+async function fetchGitLabFileContent(
+  pr: PrRef,
+  path: string,
+  sha: string,
+): Promise<string | null> {
+  const encodedPath = encodeURIComponent(path);
+  if (await glabAvailable()) {
+    try {
+      const { stdout } = await execFileAsync(
+        'glab',
+        ['api', `projects/${glProjectId(pr)}/repository/files/${encodedPath}/raw?ref=${sha}`],
+        { maxBuffer: 8 * 1024 * 1024 },
+      );
+      return stdout;
+    } catch {
+      return null;
+    }
+  }
+  const token = getGitLabToken();
+  if (!token) return null;
+  try {
+    const url = `${gitlabBaseUrl()}/api/v4/projects/${glProjectId(pr)}/repository/files/${encodedPath}/raw?ref=${sha}`;
+    const res = await fetch(url, { headers: { 'PRIVATE-TOKEN': token } });
+    if (!res.ok) return null;
+    return await res.text();
+  } catch {
+    return null;
+  }
+}
+
+/** Full content of a file at a given ref — used by 'api' investigation mode
+ *  to give Claude full file text for diff-touched files without any
+ *  filesystem/tool access. Returns null on any failure (missing file, auth
+ *  failure, network error) — callers skip it rather than treating it as a
+ *  hard error, matching every other optional-integration degrade path. */
+export async function fetchFileContent(
+  pr: PrRef,
+  path: string,
+  sha: string,
+): Promise<string | null> {
+  return pr.platform === 'gitlab'
+    ? fetchGitLabFileContent(pr, path, sha)
+    : fetchGitHubFileContent(pr, path, sha);
+}

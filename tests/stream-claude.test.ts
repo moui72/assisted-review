@@ -32,6 +32,33 @@ function jsonLine(obj: unknown): Buffer {
 describe('streamClaude', () => {
   afterEach(() => vi.mocked(spawn).mockReset());
 
+  it('defaults to tmpdir cwd and disallows Read/Grep/Glob', async () => {
+    const child = makeChild();
+    vi.mocked(spawn).mockReturnValue(asSpawnResult(child));
+    streamClaude('p', { onDelta: () => {}, onDone: () => {}, onError: () => {} });
+    const [, args, opts] = vi.mocked(spawn).mock.calls[0];
+    expect((args as string[]).join(' ')).toMatch(/--disallowed-tools.*\bRead\b.*\bGrep\b.*\bGlob\b/);
+    expect((opts as { cwd?: string }).cwd).not.toBeUndefined();
+  });
+
+  it('allowRepoRead: true drops Read/Grep/Glob from --disallowed-tools and uses the given cwd', async () => {
+    const child = makeChild();
+    vi.mocked(spawn).mockReturnValue(asSpawnResult(child));
+    streamClaude(
+      'p',
+      { onDelta: () => {}, onDone: () => {}, onError: () => {} },
+      { cwd: '/some/repo', allowRepoRead: true },
+    );
+    const [, args, opts] = vi.mocked(spawn).mock.calls[0];
+    const argList = args as string[];
+    expect(argList).not.toContain('Read');
+    expect(argList).not.toContain('Grep');
+    expect(argList).not.toContain('Glob');
+    expect(argList).toContain('Bash');
+    expect(argList).toContain('Edit');
+    expect((opts as { cwd?: string }).cwd).toBe('/some/repo');
+  });
+
   it('calls onDelta for each text_delta and onDone when result arrives', async () => {
     const child = makeChild();
     vi.mocked(spawn).mockReturnValue(asSpawnResult(child));

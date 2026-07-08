@@ -1,7 +1,7 @@
 ---
 name: ui
 status: stable
-last_updated: 2026-07-06
+last_updated: 2026-07-08
 diagram_status: stale
 ---
 
@@ -137,10 +137,23 @@ Shared across views, listed by concern:
   - **`DeleteReviewConfirm.tsx`** — the confirmation footer shown when
     dismissing the currently active review, including the
     switch-vs-clear-session messaging.
-- **`SettingsPanel.tsx`** — theme toggle (delegates to `useTheme()`) and
-  preload behavior (`preload_chunks` count, `preload_overview` on/off),
+- **`SettingsPanel.tsx`** — theme toggle (delegates to `useTheme()`),
+  preload behavior (`preload_chunks` count, `preload_overview` on/off,
   persisted to `localStorage` (`ar-preload-chunks`, `ar-preload-overview`)
-  layered over the server default from `GET /api/config`.
+  layered over the server default from `GET /api/config`), and an
+  "Investigation access" row showing the active repo's current
+  `InvestigationConfig.mode` (`datamodel.md`) with a button that reopens
+  `InvestigationModal` to change it.
+- **`InvestigationModal.tsx`** — presents the five investigation-access
+  choices (`none`/`local-path`/`api`/`temp-clone`/`always-clone`, see
+  `infrastructure.md`'s Repo Investigation Access) with a short
+  tradeoff description each — notably, `api` mode's copy states its scope
+  limit explicitly ("full contents of changed files only, not the whole
+  repo") so the reviewer isn't surprised later. `local-path` reveals a text
+  input for the directory. Save calls `POST /api/investigation-config`
+  (`api.md`); a clone-mode save can take a few seconds (real `git clone`)
+  so the button shows a "Cloning…" busy state, matching
+  `GitLabAuthModal.tsx`'s existing `saving` pattern.
 - **`HelpOverlay.tsx`** — static keyboard-shortcut reference (`Row`/`Binding`
   list), toggled by `?`.
 - **`ErrorBanner.tsx`** — generic inline error/warning banner, reused for
@@ -202,6 +215,16 @@ Shared across views, listed by concern:
   per-card), which is acceptable — no global "one edit at a time" lock.
   While a card's textarea has focus, global keyboard shortcuts are suppressed
   by the existing focus-in-`TEXTAREA` rule — no new bindings.
+- **Investigation access prompt**: the first time a review opens for a repo
+  with no `InvestigationConfig` yet (`mode` unset — `GET
+  /api/investigation-config` returns the default `'none'` shape), a
+  dismissible `ErrorBanner`-style banner appears in the AI panel inviting
+  the reviewer to "Enable deeper investigation," opening
+  `InvestigationModal` on click. Purely opt-in and non-blocking — dismissing
+  it (or never clicking it) leaves the repo at `'none'` and Claude behaves
+  exactly as before; the banner doesn't reappear for that repo once a mode
+  is explicitly chosen (including re-choosing `'none'` from the modal,
+  which also counts as "chosen" and suppresses the banner).
 - **Empty/zero-chunk PR**: A PR/MR with zero chunks (e.g., a diff-less or
   fully-binary-file PR) still renders `OverviewView` — `index` defaults to
   `-1`, so there is always a view to render; `jump()`'s `!total` guard only

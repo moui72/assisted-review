@@ -1,7 +1,7 @@
 ---
 name: api
 status: stable
-last_updated: 2026-07-03
+last_updated: 2026-07-08
 ---
 
 # API
@@ -130,6 +130,29 @@ state), then fetches + loads the review via `loadReview()`
 fetch failure (bad ref resolves, but `gh`/`glab` fails — e.g. not found, not
 authenticated).
 
+### `GET /api/investigation-config`
+
+Returns the `InvestigationConfig` (`datamodel.md`) for the active review's
+repo — `{ mode: 'none', platform, owner, repo }` (unpersisted default shape)
+if none has been chosen yet. `503` if no active review.
+
+### `POST /api/investigation-config`
+
+Body: `{ mode: InvestigationConfig['mode'], local_path?: string }`. Requires
+an active review (`503`). Validates `mode` against the five allowed values
+(`400` otherwise); for `local-path`, validates `local_path` is an existing
+directory (`400` with a clear message if not — no clone/network fallback,
+the reviewer must supply a real path). For `temp-clone`/`always-clone`,
+kicks off the clone (`gh repo clone`/`glab repo clone` into
+`STATE_DIR/repos/...`, see `infrastructure.md`) synchronously before
+responding — the request is slower for these two modes (a real network
+clone), but the client only calls this once per repo (`chosen_at`) or when
+the reviewer changes their mind, not on every review open. `502` if the
+clone itself fails (`git`/`gh`/`glab` error), and the mode is not persisted
+in that case — same "don't record success that didn't happen" convention as
+`POST /api/submit`. On success, persists `InvestigationConfig` and returns
+it.
+
 ### `GET /api/claude` (Server-Sent Events)
 
 Query params: `chunk_id` (required — a real chunk id or `OVERVIEW_ID`), `q`
@@ -149,6 +172,15 @@ Only one Claude stream may be in flight globally at a time — a new
 (`req.on('close')`) all cancel whatever stream is currently running
 (`currentCancel` in `server.ts`). See `infrastructure.md` for what's actually
 inside the stream.
+
+Before spawning, this route consults the active repo's `InvestigationConfig`
+(above): `mode: 'none'` (or unset) behaves exactly as today (diff-only,
+`tmpdir()` cwd, all tools disallowed); `local-path`/`temp-clone`/
+`always-clone` pass a resolved repo path and relax `Read`/`Grep`/`Glob` into
+`streamClaude`'s allowed set (`infrastructure.md`); `api` instead augments
+the prompt with full file contents for files touched by the diff, with no
+tool/cwd change. See `infrastructure.md`'s "Repo Investigation Access"
+section for the full mode-by-mode behavior.
 
 The stream's terminal `add_note` mutation also runs inside `withStateLock` —
 the same lock `POST /api/action` uses — so a note landing here can't race a
