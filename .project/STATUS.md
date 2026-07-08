@@ -1,6 +1,6 @@
 # assisted-review — Project Status
 
-_Updated: 2026-07-08 (PR #63 opened; repo-aware-investigation-mode marked superseded/implemented). Keep this current as artifacts are refined and open questions are resolved._
+_Updated: 2026-07-08 (merged #67/#68 into claude-investigation-tool-access ahead of #63's merge). Keep this current as artifacts are refined and open questions are resolved._
 
 ## Artifact Status
 
@@ -22,7 +22,7 @@ non-blocking — documented as tunable-if-needed in `infrastructure.md`.
 
 ## Cross-Artifact Issues
 
-None found this pass. `claude-investigation-tool-access` is fully
+None found this pass. `claude-investigation-tool-access` (#63) is fully
 implemented: all 26 tasks complete
 (`tasks-claude-investigation-tool-access-60c7.md`), full test suite green
 (478 tests), both typechecks and lint clean. Manual verification against a
@@ -35,7 +35,10 @@ file outside the diff (confirming the documented scope limit);
 was reconfirmed unchanged (still correctly reports having no tools).
 `datamodel.md`'s `InvestigationConfig`, `api.md`'s two new endpoints,
 `infrastructure.md`'s Repo Investigation Access section, and `ui.md`'s
-modal/banner/Settings entry all match the shipped implementation.
+modal/banner/Settings entry all match the shipped implementation. This
+branch has also picked up #67 (shieldcn badge row redesign) and #68 (ARDD
+updated to `9189817`) via merge from `main`, resolving the resulting
+`STATUS.md` conflict by hand.
 
 ## Constitution Compliance
 
@@ -48,19 +51,17 @@ opt-in, off by default, reusing existing auth and atomic-write patterns.
 
 - datamodel.md — stale ⚠️ (run /ardd-render datamodel — InvestigationConfig
   added 2026-07-08)
-- infrastructure.md — stale ⚠️ (run /ardd-render infrastructure — Repo
-  Investigation Access section added 2026-07-08, on top of the still-stale
-  npm registry update-check integration from 2026-07-07)
-- ui.md — stale ⚠️ (run /ardd-render ui — InvestigationModal/banner/Settings
-  entry added 2026-07-08, on top of the still-stale preload busy-state
-  narrowing from 2026-07-06)
+- infrastructure.md — stale ⚠️ (run /ardd-render infrastructure — npm
+  registry update-check and Repo Investigation Access sections added since
+  last render)
+- ui.md — stale ⚠️ (run /ardd-render ui — preload busy-state narrowing plus
+  InvestigationModal/banner/Settings entry added since last render)
 
 ## Code-vs-Artifact Defects
 
-0 known defects — see `DEFECTS.md`, last checked 2026-07-03. This branch's
-work is now fully implemented and verified — worth a fresh `/ardd-verify`
-pass at some point given the size of this change, though not urgent (manual
-verification already exercised the real code paths).
+0 known defects — see `DEFECTS.md`, last checked 2026-07-03. Worth a fresh
+`/ardd-verify` pass given the volume of recent changes (update-check,
+claude-investigation-tool-access) — not urgent, but due.
 
 ## Feedback
 
@@ -77,14 +78,16 @@ noted in the register entry rather than built independently).
 
 ## In Flight
 
-- Branch `claude-investigation-tool-access` (current checkout) — fully
-  implemented and tested; pushed as PR #63.
+- PR #63 `claude-investigation-tool-access` (current checkout) — fully
+  implemented and tested, now includes #67/#68 via merge; ready to merge
+  once CI is green on the merge commit.
 - Worktree `.claude/worktrees/ardd-codify-trial` (branch
   `ardd-codify-trial`) — no tasks file.
 - Worktree `.claude/worktrees/docs-update-readme-changelog` (branch
-  `docs/update-readme-changelog`) — no tasks file.
+  `docs/update-readme-changelog`) — stale, unrelated to current work.
 
 ## Recommended Next Step
 
-Review and merge PR #63. Three diagrams (`datamodel`, `infrastructure`,
-`ui`) are outstanding (non-blocking).
+Push the resolved merge commit, confirm CI is green, then merge PR #63.
+Three diagrams (`datamodel`, `infrastructure`, `ui`) are outstanding
+(non-blocking); consider `/ardd-verify` given the volume of recent changes.
