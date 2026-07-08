@@ -1,6 +1,6 @@
 # assisted-review — Project Status
 
-_Updated: 2026-07-08 (claude-investigation-tool-access implementation complete). Keep this current as artifacts are refined and open questions are resolved._
+_Updated: 2026-07-08 (PR #63 opened; repo-aware-investigation-mode marked superseded/implemented). Keep this current as artifacts are refined and open questions are resolved._
 
 ## Artifact Status
 
@@ -69,17 +69,16 @@ and `feedback-inline-comment-editing-ui-7382.md` are both `planned`.
 
 ## Feature Backlog
 
-13 backlogged · 0 planned · 0 tasked · 5 implemented — see
-`.project/features/`. `repo-aware-investigation-mode` (backlogged) is now
-functionally superseded by the broader `claude-investigation-tool-access`
-work — still worth an explicit reconciliation (decline or close out) since
-it wasn't itself touched by this plan (which came from feedback, not the
-feature register).
+12 backlogged · 0 planned · 0 tasked · 6 implemented — see
+`.project/features/`. `repo-aware-investigation-mode` is now `implemented`
+(marked superseded by `claude-investigation-tool-access` — its
+`local-path` mode delivers the `--repo`-equivalent capability and more;
+noted in the register entry rather than built independently).
 
 ## In Flight
 
 - Branch `claude-investigation-tool-access` (current checkout) — fully
-  implemented and tested; not yet pushed to a PR.
+  implemented and tested; pushed as PR #63.
 - Worktree `.claude/worktrees/ardd-codify-trial` (branch
   `ardd-codify-trial`) — no tasks file.
 - Worktree `.claude/worktrees/docs-update-readme-changelog` (branch
@@ -87,7 +86,5 @@ feature register).
 
 ## Recommended Next Step
 
-Push `claude-investigation-tool-access` and open a PR. Consider
-reconciling the now-redundant `repo-aware-investigation-mode` backlog
-entry first. Three diagrams (`datamodel`, `infrastructure`, `ui`) are
-outstanding (non-blocking).
+Review and merge PR #63. Three diagrams (`datamodel`, `infrastructure`,
+`ui`) are outstanding (non-blocking).
