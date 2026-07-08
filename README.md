@@ -8,11 +8,10 @@
 <p align="center">
   <a href="https://www.npmjs.com/package/assisted-review"><img alt="npm version" src="https://img.shields.io/npm/v/assisted-review.svg" /></a>
   <a href="https://codecov.io/gh/moui72/assisted-review"><img alt="coverage" src="https://codecov.io/gh/moui72/assisted-review/branch/main/graph/badge.svg" /></a>
+  <!-- ardd-badge-start -->
+  <a href="https://github.com/moui72/artifact-driven-dev"><img alt="built with ARDD" src="https://img.shields.io/badge/built%20with-ARDD-blue" /></a>
+  <!-- ardd-badge-end -->
 </p>
-
-<!-- ardd-badge-start -->
-[![built with ARDD](https://img.shields.io/badge/built%20with-ARDD-blue)](https://github.com/moui72/artifact-driven-dev)
-<!-- ardd-badge-end -->
 
 ## What is assisted-review?
 
