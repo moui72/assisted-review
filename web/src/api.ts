@@ -192,4 +192,5 @@ export type {
   Overview,
   JiraContext,
   JiraIssue,
+  InvestigationConfig,
 } from '../../src/types.ts';

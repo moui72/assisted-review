@@ -8,7 +8,7 @@ status: in-progress
 
 ## Phase 1: Data model, storage, and config API
 
-- [ ] T001 [artifacts: datamodel] Add `InvestigationConfig` to `src/types.ts`
+- [x] T001 [artifacts: datamodel] Add `InvestigationConfig` to `src/types.ts`
   matching `datamodel.md`'s table: `platform: 'github' | 'gitlab'`, `owner:
   string`, `repo: string`, `mode: 'none' | 'local-path' | 'api' |
   'temp-clone' | 'always-clone'`, `local_path?: string`, `clone_path?:
