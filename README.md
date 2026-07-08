@@ -6,10 +6,14 @@
 </p>
 
 <p align="center">
-  <a href="https://www.npmjs.com/package/assisted-review"><img alt="npm version" src="https://img.shields.io/npm/v/assisted-review.svg" /></a>
-  <a href="https://codecov.io/gh/moui72/assisted-review"><img alt="coverage" src="https://codecov.io/gh/moui72/assisted-review/branch/main/graph/badge.svg" /></a>
+  <a href="https://www.npmjs.com/package/assisted-review">
+    <picture>
+      <source media="(prefers-color-scheme: dark)" srcset="https://shieldcn.dev/npm/assisted-review.svg?mode=dark" />
+      <img alt="npm version" src="https://shieldcn.dev/npm/assisted-review.svg?mode=light" />
+    </picture>
+  </a>
   <!-- ardd-badge-start -->
-  <a href="https://github.com/moui72/artifact-driven-dev"><img alt="built with ARDD" src="https://img.shields.io/badge/built%20with-ARDD-blue" /></a>
+  <a href="https://github.com/moui72/artifact-driven-dev"><img alt="built with ARDD" src="https://shieldcn.dev/badge/built%20with-ARDD-blue.svg" /></a>
   <!-- ardd-badge-end -->
 </p>
 
