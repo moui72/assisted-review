@@ -1,3 +1,10 @@
+# [1.11.0](https://github.com/moui72/assisted-review/compare/v1.10.0...v1.11.0) (2026-07-08)
+
+
+### Features
+
+* Claude investigation tool access (local checkout / full-file API / clone modes) ([#63](https://github.com/moui72/assisted-review/issues/63)) ([3b1fb75](https://github.com/moui72/assisted-review/commit/3b1fb754e348988179fb4bc007a960e7bcf32cce)), closes [moui72/assisted-review#62](https://github.com/moui72/assisted-review/issues/62)
+
 # [1.10.0](https://github.com/moui72/assisted-review/compare/v1.9.0...v1.10.0) (2026-07-07)
 
 
