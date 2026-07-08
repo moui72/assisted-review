@@ -1,7 +1,7 @@
 ---
 name: infrastructure
 status: stable
-last_updated: 2026-07-07
+last_updated: 2026-07-08
 diagram_status: stale
 ---
 
@@ -187,11 +187,74 @@ not the library's).
 ### Claude (headless `claude` CLI) — `src/claude.ts`
 
 - **Invocation**: `claude -p --output-format stream-json
-  --include-partial-messages --verbose --disallowed-tools Bash Edit Write
-  Read Grep Glob WebFetch WebSearch Task NotebookEdit`, spawned with `cwd:
-  tmpdir()` so it can't see this project's own files, and all built-in tools
-  disabled so it answers only from the prompt text (the diff / combined
-  diff), not by reading the filesystem or the web.
+  --include-partial-messages --verbose --disallowed-tools <tools>`, where
+  `<tools>` is always `Bash Edit Write WebFetch WebSearch Task NotebookEdit`
+  (no write/shell/web access, ever) plus — when the active repo's
+  `InvestigationConfig.mode` (below) is `'none'`/unset — also `Read Grep
+  Glob`, spawned with `cwd: tmpdir()`. When the mode grants repo access
+  (`local-path`/`temp-clone`/`always-clone`), `Read`/`Grep`/`Glob` are
+  dropped from the disallowed list and `cwd` becomes the resolved repo path
+  instead of `tmpdir()`, so Claude can read/search real files — still
+  strictly read-only (no `Edit`/`Write`/`Bash`).
+
+### Repo Investigation Access — `src/investigation.ts`, `InvestigationConfig`
+
+Governs how much of the actual repo (beyond the clipped diff text) Claude
+can see when investigating a PR/MR, per `datamodel.md`'s
+`InvestigationConfig`. Default is `'none'` — today's original diff-only
+behavior — until the reviewer explicitly opts in via the UI modal
+(`ui.md`), once per repo (persisted, not re-prompted on every review).
+
+- **`'none'`**: unchanged from the original design — `tmpdir()` cwd, all
+  built-in tools disabled, Claude answers only from the diff text passed in
+  the prompt.
+- **`'local-path'`**: reviewer supplies a directory (validated to exist on
+  save, `api.md`). No clone. `cwd` is that path; `Read`/`Grep`/`Glob`
+  enabled. Simplest mode — the reviewer already has the repo checked out
+  and just points at it.
+- **`'api'`**: no filesystem access at all. Instead, for every unique file
+  touched by the diff, fetches its full content at the review's `head_sha`
+  via the platform API — GitHub: `gh api
+  repos/{owner}/{repo}/contents/{path}?ref={sha}` (base64-decoded); GitLab:
+  `glab api projects/:id/repository/files/{url-encoded path}/raw?ref={sha}`
+  (or the REST-fallback equivalent when `glab` is unavailable, same
+  `glabApiJson`/`restFetch` pattern as everywhere else in this section) —
+  and appends each as a "Full file contents" block to the prompt
+  (`buildPrompt`/`buildOverviewPrompt`, `src/claude.ts`), clipped the same
+  way the diff itself is (`MAX_DIFF_CHARS`-style cap per file, to bound
+  total prompt size). **Explicit scope limit**: this only ever covers files
+  already touched by the diff — it cannot satisfy "explore the rest of the
+  repo" the way the filesystem-access modes can, since there's no tool
+  Claude can use to look beyond what was pre-fetched. The choice modal
+  (`ui.md`) states this limit up front so the reviewer picks it knowingly.
+- **`'temp-clone'`**: clones the repo (`gh repo clone <owner>/<repo>
+  <dest>` / `glab repo clone <owner/repo> <dest>` — reuses whatever
+  `gh`/`glab` auth is already configured, no new credential handling) into
+  `STATE_DIR/repos/tmp-<random>`, sets that as `cwd`, enables
+  `Read`/`Grep`/`Glob`. Cloned once, used for the rest of that review
+  session (no re-fetch needed — it's discarded after), deleted when the
+  review closes (`DELETE /api/review`, or switching to a different review
+  via `POST /api/reviews/open`). Crash/kill-9 safety net: on CLI startup, any
+  `STATE_DIR/repos/tmp-*` directory older than 24h is swept as an orphan
+  (best-effort, errors ignored) — the same "silent degrade, never block
+  startup" convention as the update-check cache.
+- **`'always-clone'`**: same clone mechanics as `temp-clone`, but into a
+  stable path (`STATE_DIR/repos/<platform>-<owner>-<repo>`, not a random
+  temp name) and never deleted on review close. Before each investigation
+  call, if `InvestigationConfig.last_used`'s recorded sha differs from the
+  review's current `head_sha`, runs `git fetch` + `git checkout <head_sha>`
+  (detached) in that clone directory first — otherwise reuses it as-is, so
+  a review session with many chunk investigations against the same PR only
+  pays the fetch/checkout cost once. **Pruning**: on CLI startup, any
+  `always-clone` entry whose `last_used` is older than 30 days has its
+  clone directory deleted and its `InvestigationConfig` reset to `mode:
+  'none'` (reviewer would need to re-opt-in) — a fixed default TTL, not
+  currently configurable via env var (flagged as a tunable in Open
+  Questions if that turns out to matter in practice).
+- **Storage**: `InvestigationConfig` entries live in a single
+  `investigation-config.json` map in `STATE_DIR` (keyed by
+  `platform:owner/repo`), same atomic tmp-then-`rename()` write as every
+  other file in this section.
 - **Streaming protocol**: reads newline-delimited JSON events from stdout.
   `stream_event` / `content_block_delta` / `text_delta` events feed
   `onDelta`; a terminal `result` event (with `is_error`) resolves via
@@ -301,6 +364,10 @@ raw token.
   usage doesn't hit the npm registry on every start. Same atomic
   tmp-then-`rename()` write as `saveState()`; a missing/corrupt cache file is
   treated as "never checked" rather than an error.
+- **Investigation config + clones**: `investigation-config.json` in
+  `STATE_DIR` holds the `InvestigationConfig` map (`datamodel.md`); repo
+  clones for `temp-clone`/`always-clone` modes live under
+  `STATE_DIR/repos/` (see Repo Investigation Access, above).
 
 ## Configuration / Environment
 
@@ -377,3 +444,16 @@ to populate the Jira vars.
   before being counted as failed — see the GitLab source's Submit entry
   below. Future work should extend the same pattern to the other three
   integrations' transport layer.
+- **`always-clone` has no total disk-usage cap** — pruning is purely
+  30-day-idle-TTL based (Repo Investigation Access, above); a reviewer who
+  opts a large number of repos into `always-clone` and touches all of them
+  regularly could accumulate significant disk usage with no ceiling. Same
+  category as `listReviews()`'s O(all files) scan above — fine at
+  one-person scale, would need a size/count cap if that stopped being true.
+- **Clone-mode reviewers implicitly need `git` on PATH** — `gh repo clone`/
+  `glab repo clone` both shell out to `git` themselves; unlike `gh`/`glab`
+  there's no explicit absence check/actionable error for `git` specifically
+  before attempting a clone modes, so a missing `git` install surfaces as
+  whatever raw error `gh repo clone` produces rather than this codebase's
+  usual "is X installed?" hint pattern (`src/claude.ts`'s `ENOENT` handling,
+  `src/fetch.ts`'s auth hints).
