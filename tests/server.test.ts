@@ -32,6 +32,11 @@ vi.mock('../src/fetch', () => ({
   fetchFileContent: vi.fn().mockResolvedValue(null),
 }));
 
+vi.mock('../src/investigation', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../src/investigation')>();
+  return { ...actual, refreshCloneIfStale: vi.fn().mockResolvedValue(undefined) };
+});
+
 vi.mock('../src/submit', async (importOriginal) => {
   const actual = await importOriginal<typeof import('../src/submit')>();
   return { ...actual, submitReview: vi.fn(), submitGitLabReview: vi.fn() };
@@ -175,6 +180,26 @@ describe('DELETE /api/review', () => {
     const url = await makeServer({ review, state });
     await del(url, '/api/review');
     expect(vi.mocked(deleteReview)).toHaveBeenCalledWith(pr);
+  });
+
+  it('cleans up a temp-clone for the closed review', async () => {
+    const { STATE_DIR } = await import('../src/state');
+    const { mkdir, stat } = await import('node:fs/promises');
+    const dest = join(STATE_DIR, 'repos', 'tmp-close-test');
+    await mkdir(dest, { recursive: true });
+    await saveInvestigationConfigs({
+      [configKey(pr)]: {
+        platform: pr.platform,
+        owner: pr.owner,
+        repo: pr.repo,
+        mode: 'temp-clone',
+        clone_path: dest,
+        chosen_at: new Date().toISOString(),
+      },
+    });
+    const url = await makeServer({ review, state });
+    await del(url, '/api/review');
+    await expect(stat(dest)).rejects.toThrow();
   });
 });
 
@@ -492,6 +517,27 @@ describe('POST /api/reviews/open', () => {
     const body = await res.json() as { error: string; auth_required: string };
     expect(body.auth_required).toBe('gitlab');
   });
+
+  it('cleans up the outgoing review repo temp-clone when switching', async () => {
+    const { STATE_DIR } = await import('../src/state');
+    const { mkdir, stat } = await import('node:fs/promises');
+    const dest = join(STATE_DIR, 'repos', 'tmp-switch-test');
+    await mkdir(dest, { recursive: true });
+    await saveInvestigationConfigs({
+      [configKey(pr)]: {
+        platform: pr.platform,
+        owner: pr.owner,
+        repo: pr.repo,
+        mode: 'temp-clone',
+        clone_path: dest,
+        chosen_at: new Date().toISOString(),
+      },
+    });
+    vi.mocked(loadReview).mockResolvedValueOnce({ review, state });
+    const url = await makeServer({ review, state });
+    await post(url, '/api/reviews/open', { ref: 'alice/proj#42' });
+    await expect(stat(dest)).rejects.toThrow();
+  });
 });
 
 describe('GET /api/auth/gitlab', () => {
@@ -706,6 +752,43 @@ describe('GET /api/claude', () => {
     const { buildPrompt } = await import('../src/claude');
     const lastCall = vi.mocked(buildPrompt).mock.calls.at(-1)!;
     expect(lastCall[3]).toEqual(new Map());
+  });
+
+  it('mode temp-clone: passes cwd/allowRepoRead pointing at the clone_path', async () => {
+    await saveInvestigationConfigs({
+      [configKey(pr)]: {
+        platform: pr.platform,
+        owner: pr.owner,
+        repo: pr.repo,
+        mode: 'temp-clone',
+        clone_path: '/x/repos/tmp-abc',
+        chosen_at: new Date().toISOString(),
+      },
+    });
+    const url = await makeServer({ review, state });
+    await get(url, '/api/claude?chunk_id=c1');
+    const lastCall = vi.mocked(streamClaude).mock.calls.at(-1)!;
+    expect(lastCall[2]).toEqual({ cwd: '/x/repos/tmp-abc', allowRepoRead: true });
+  });
+
+  it('mode always-clone: refreshes the clone before passing cwd/allowRepoRead', async () => {
+    await saveInvestigationConfigs({
+      [configKey(pr)]: {
+        platform: pr.platform,
+        owner: pr.owner,
+        repo: pr.repo,
+        mode: 'always-clone',
+        clone_path: '/x/repos/github-alice-proj',
+        chosen_at: new Date().toISOString(),
+      },
+    });
+    const { refreshCloneIfStale } = await import('../src/investigation');
+    vi.mocked(refreshCloneIfStale).mockClear();
+    const url = await makeServer({ review, state });
+    await get(url, '/api/claude?chunk_id=c1');
+    expect(vi.mocked(refreshCloneIfStale)).toHaveBeenCalled();
+    const lastCall = vi.mocked(streamClaude).mock.calls.at(-1)!;
+    expect(lastCall[2]).toEqual({ cwd: '/x/repos/github-alice-proj', allowRepoRead: true });
   });
 
   it('returns 404 for an unknown chunk_id', async () => {

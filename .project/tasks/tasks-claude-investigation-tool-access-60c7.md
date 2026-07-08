@@ -121,7 +121,7 @@ status: in-progress
 
 ## Phase 3: Clone machinery — `temp-clone`/`always-clone`
 
-- [ ] T013 [artifacts: infrastructure] In `src/investigation.ts`, add
+- [x] T013 [artifacts: infrastructure] In `src/investigation.ts`, add
   `ensureClone(config: InvestigationConfig): Promise<string>` (returns the
   clone path). For `mode === 'temp-clone'`: destination
   `STATE_DIR/repos/tmp-{randomUUID()}`. For `mode === 'always-clone'`:
@@ -133,7 +133,7 @@ status: in-progress
   `gh`/`glab` auth, no new credential handling. Throws (caller's job to turn
   into `502`) if the clone command fails. Depends on T002 (same file).
 
-- [ ] T014 [artifacts: infrastructure] In `src/investigation.ts`, add
+- [x] T014 [artifacts: infrastructure] In `src/investigation.ts`, add
   `refreshCloneIfStale(config: InvestigationConfig, headSha: string):
   Promise<void>` — no-op unless `config.mode === 'always-clone'` and
   `config.last_used`'s recorded sha (store it as part of the config write,
@@ -143,7 +143,7 @@ status: in-progress
   config.clone_path})` then `execFileAsync('git', ['checkout', headSha],
   {cwd: config.clone_path})`. Depends on T013 (same file, sequential).
 
-- [ ] T015 [artifacts: api, infrastructure] Wire `POST
+- [x] T015 [artifacts: api, infrastructure] Wire `POST
   /api/investigation-config` (`src/server.ts`, T004's stub) to call
   `ensureClone` for `'temp-clone'`/`'always-clone'` before persisting.
   `502 { error: <clone error message> }` if it throws, and do **not**
@@ -151,13 +151,13 @@ status: in-progress
   happen" convention as `POST /api/submit`). On success, store the returned
   path in `clone_path` before saving. Depends on T004, T013.
 
-- [ ] T016 [artifacts: api, infrastructure] Wire `GET /api/claude`'s mode
+- [x] T016 [artifacts: api, infrastructure] Wire `GET /api/claude`'s mode
   branch (T009's `'temp-clone'`/`'always-clone'` TODO) to pass `opts: {
   cwd: config.clone_path, allowRepoRead: true }`, calling
   `refreshCloneIfStale` first when `mode === 'always-clone'`. Depends on
   T009, T014.
 
-- [ ] T017 [artifacts: infrastructure] Cleanup: in `src/server.ts`,
+- [x] T017 [artifacts: infrastructure] Cleanup: in `src/server.ts`,
   `DELETE /api/review` and `POST /api/reviews/open` (when the review being
   replaced had `mode: 'temp-clone'`) delete that repo's temp clone
   directory (best-effort — wrap in try/catch, swallow errors, same pattern
@@ -166,7 +166,7 @@ status: in-progress
   (mtime-based) and remove them — orphan cleanup for a crashed/kill-9'd
   process that never got to clean up its own temp clone. Depends on T013.
 
-- [ ] T018 [artifacts: infrastructure] Pruning: in `src/investigation.ts`,
+- [x] T018 [artifacts: infrastructure] Pruning: in `src/investigation.ts`,
   add `pruneStaleClones(): Promise<void>` — for every `'always-clone'`
   entry in `investigation-config.json` whose `last_used` is more than 30
   days old, delete `clone_path` and reset that entry's `mode` to `'none'`
@@ -175,7 +175,7 @@ status: in-progress
   matching `update-check.ts`'s non-blocking-startup convention — never
   delay CLI startup on this). Depends on T014.
 
-- [ ] T019 [artifacts: infrastructure] Tests: `ensureClone` (GitHub/GitLab
+- [x] T019 [artifacts: infrastructure] Tests: `ensureClone` (GitHub/GitLab
   success, clone-command failure throws, `always-clone` reuses an existing
   `clone_path` without re-cloning), `refreshCloneIfStale` (no-op when sha
   matches, fetch+checkout when stale, no-op for non-`always-clone` modes),

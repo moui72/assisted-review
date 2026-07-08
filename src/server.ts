@@ -14,6 +14,9 @@ import {
   loadInvestigationConfigs,
   saveInvestigationConfigs,
   configKey,
+  ensureClone,
+  refreshCloneIfStale,
+  cleanupTempClone,
 } from './investigation.js';
 import { fetchFileContent } from './fetch.js';
 import {
@@ -188,7 +191,10 @@ export function startServer(
       if (req.method === 'DELETE') {
         currentCancel?.();
         currentCancel = null;
-        if (ctx.review) await deleteReview(ctx.review.pr).catch(() => {});
+        if (ctx.review) {
+          await deleteReview(ctx.review.pr).catch(() => {});
+          await cleanupTempClone(ctx.review.pr);
+        }
         ctx.review = null;
         ctx.state = null;
         return sendJson(res, 200, { ok: true });
@@ -341,6 +347,9 @@ export function startServer(
       // Cancel any in-flight SSE stream so it can't write stale notes into the new ctx.
       currentCancel?.();
       currentCancel = null;
+      // Switching away from a repo with a temp-clone config cleans it up —
+      // temp clones are scoped to "the rest of this review session."
+      if (ctx.review) await cleanupTempClone(ctx.review.pr);
       try {
         const { review, state } = await loadReview(pr, { mockAi });
         ctx.review = review;
@@ -381,16 +390,30 @@ export function startServer(
             return sendJson(res, 400, { error: `local_path is not an existing directory: ${local_path}` });
           }
         }
-        // TODO(Phase 3): call ensureClone here for 'temp-clone'/'always-clone'
-        // and persist the resulting clone_path; return 502 on clone failure
-        // without persisting.
         const pr = ctx.review.pr;
+        let clonePath: string | undefined;
+        if (mode === 'temp-clone' || mode === 'always-clone') {
+          try {
+            clonePath = await ensureClone({
+              platform: pr.platform,
+              owner: pr.owner,
+              repo: pr.repo,
+              mode,
+              chosen_at: '',
+            });
+          } catch (err) {
+            return sendJson(res, 502, {
+              error: `clone failed: ${err instanceof Error ? err.message : String(err)}`,
+            });
+          }
+        }
         const config: InvestigationConfig = {
           platform: pr.platform,
           owner: pr.owner,
           repo: pr.repo,
           mode: mode as InvestigationConfig['mode'],
           ...(mode === 'local-path' ? { local_path } : {}),
+          ...(clonePath ? { clone_path: clonePath } : {}),
           chosen_at: new Date().toISOString(),
         };
         const configs = await loadInvestigationConfigs();
@@ -420,13 +443,17 @@ export function startServer(
       currentCancel?.();
 
       // Resolve investigation access for this repo (Repo Investigation
-      // Access, infrastructure.md). 'temp-clone'/'always-clone' fall
-      // through to 'none' behavior for now (wired in Phase 3).
+      // Access, infrastructure.md).
       const investigationConfig = await getInvestigationConfig(review.pr);
+      if (investigationConfig.mode === 'always-clone') {
+        await refreshCloneIfStale(investigationConfig, review.meta.head_sha);
+      }
       const streamOpts =
         investigationConfig.mode === 'local-path'
           ? { cwd: investigationConfig.local_path, allowRepoRead: true }
-          : undefined;
+          : investigationConfig.mode === 'temp-clone' || investigationConfig.mode === 'always-clone'
+            ? { cwd: investigationConfig.clone_path, allowRepoRead: true }
+            : undefined;
       let fileContents: Map<string, string> | undefined;
       if (investigationConfig.mode === 'api') {
         const files = isOverview
