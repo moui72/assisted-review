@@ -186,7 +186,7 @@ status: in-progress
 
 ## Phase 4: UI — modal, banner, Settings entry
 
-- [ ] T020 [artifacts: ui] Create `web/src/components/InvestigationModal.tsx`,
+- [x] T020 [artifacts: ui] Create `web/src/components/InvestigationModal.tsx`,
   modeled on the structure of `GitLabAuthModal.tsx` (fixed-overlay container,
   header/body/footer, `open`/`onClose`/`onSuccess` props). Body: five
   radio-style choices (`none`/`local-path`/`api`/`temp-clone`/
@@ -200,7 +200,7 @@ status: in-progress
   `ErrorBanner` on failure, matching `GitLabAuthModal.tsx`'s error-display
   pattern.
 
-- [ ] T021 [artifacts: ui] Add the investigation-access banner: in the AI
+- [x] T021 [artifacts: ui] Add the investigation-access banner: in the AI
   panel area shared by `OverviewView`/`ChunkView` (wherever `ErrorBanner` is
   already used for the Jira setup hint, per `ui.md`), show a dismissible
   banner when `fetchInvestigationConfig()` (T023) returns the unset-default
@@ -209,18 +209,18 @@ status: in-progress
   banner reappears next time the repo is opened until a mode is actually
   chosen. Depends on T020.
 
-- [ ] T022 [artifacts: ui] [parallel] Add an "Investigation access" row to
+- [x] T022 [artifacts: ui] [parallel] Add an "Investigation access" row to
   `web/src/components/SettingsPanel.tsx` showing the current
   `InvestigationConfig.mode` (fetched via T023) with a button that opens
   `InvestigationModal` (T020) to change it. Depends on T020.
 
-- [ ] T023 [artifacts: api, ui] [parallel] Add `fetchInvestigationConfig()`
+- [x] T023 [artifacts: api, ui] [parallel] Add `fetchInvestigationConfig()`
   / `saveInvestigationConfig(mode, local_path?)` thin wrappers to
   `web/src/api.ts`, following the existing fetch-helper convention (see
   `fetchReviews`/`authenticateGitLab` for the pattern — JSON body, throw on
   non-ok with the parsed `{ error }` message).
 
-- [ ] T024 [artifacts: ui] Component tests (`tests/components/`, jsdom
+- [x] T024 [artifacts: ui] Component tests (`tests/components/`, jsdom
   docblock): `InvestigationModal` renders all five choices, selecting
   `local-path` reveals the path input, Save calls
   `saveInvestigationConfig` with the right args and calls `onSuccess` on

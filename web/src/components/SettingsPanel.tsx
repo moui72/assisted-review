@@ -1,5 +1,13 @@
 import { useTheme } from '../theme.tsx';
-import type { PreloadConfig } from '../api.ts';
+import type { InvestigationConfig, PreloadConfig } from '../api.ts';
+
+const MODE_LABEL: Record<InvestigationConfig['mode'], string> = {
+  none: 'Diff only',
+  'local-path': 'Local checkout',
+  api: 'Full changed files',
+  'temp-clone': 'Temporary clone',
+  'always-clone': 'Persistent clone',
+};
 
 function SectionTitle({ children }: { children: string }) {
   return (
@@ -53,11 +61,15 @@ export function SettingsPanel({
   onClose,
   preloadConfig,
   onPreloadChange,
+  investigationMode,
+  onOpenInvestigation,
 }: {
   open: boolean;
   onClose: () => void;
   preloadConfig: PreloadConfig | null;
   onPreloadChange: (cfg: PreloadConfig) => void;
+  investigationMode?: InvestigationConfig['mode'];
+  onOpenInvestigation: () => void;
 }) {
   const { theme, toggle } = useTheme();
 
@@ -112,6 +124,18 @@ export function SettingsPanel({
                 onPreloadChange({ preload_chunks: preloadConfig?.preload_chunks ?? 1, preload_overview: v === 'on' })
               }
             />
+          </Row>
+        </div>
+
+        <SectionTitle>Claude</SectionTitle>
+        <div className="divide-y divide-edge/50">
+          <Row label="Investigation access">
+            <button
+              onClick={onOpenInvestigation}
+              className="rounded border border-edge-strong px-2 py-0.5 font-mono text-[11px] text-muted transition hover:border-fg/40 hover:text-fg"
+            >
+              {MODE_LABEL[investigationMode ?? 'none']}
+            </button>
           </Row>
         </div>
       </div>

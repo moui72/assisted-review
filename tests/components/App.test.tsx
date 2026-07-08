@@ -26,10 +26,17 @@ vi.mock('../../web/src/api.ts', async (importOriginal) => {
     fetchReview: vi.fn(),
     fetchState: vi.fn(),
     postAction: vi.fn(),
+    fetchInvestigationConfig: vi.fn(async () => ({
+      platform: 'github',
+      owner: 'alice',
+      repo: 'proj',
+      mode: 'none',
+      chosen_at: '',
+    })),
   };
 });
 
-import { fetchReview, fetchState, postAction } from '../../web/src/api.ts';
+import { fetchReview, fetchState, postAction, fetchInvestigationConfig } from '../../web/src/api.ts';
 import { App } from '../../web/src/App.tsx';
 
 const pr = { owner: 'alice', repo: 'proj', number: 1, platform: 'github' as const };
@@ -157,5 +164,64 @@ describe('App — displaced comment re-anchoring', () => {
     // Back on Overview, the comment is gone from Displaced Comments.
     await user.click(screen.getByRole('button', { name: 'Overview' }));
     await waitFor(() => expect(screen.queryByText('Displaced comments')).not.toBeInTheDocument());
+  });
+});
+
+describe('App — investigation access banner', () => {
+  it('shows the banner when the repo has no investigation config yet, and opens the modal on click', async () => {
+    const user = userEvent.setup();
+    vi.mocked(fetchReview).mockResolvedValue(review);
+    vi.mocked(fetchState).mockImplementation(async () => initialState());
+    vi.mocked(fetchInvestigationConfig).mockResolvedValue({
+      platform: 'github',
+      owner: 'alice',
+      repo: 'proj',
+      mode: 'none',
+      chosen_at: '',
+    });
+
+    render(<App />);
+    await waitFor(() =>
+      expect(screen.getByText(/Enable deeper investigation/)).toBeInTheDocument(),
+    );
+
+    await user.click(screen.getByText(/Enable deeper investigation/));
+    expect(screen.getByText('Diff only (default)')).toBeInTheDocument();
+  });
+
+  it('does not show the banner once a mode has been chosen', async () => {
+    vi.mocked(fetchReview).mockResolvedValue(review);
+    vi.mocked(fetchState).mockImplementation(async () => initialState());
+    vi.mocked(fetchInvestigationConfig).mockResolvedValue({
+      platform: 'github',
+      owner: 'alice',
+      repo: 'proj',
+      mode: 'api',
+      chosen_at: '2026-01-01T00:00:00.000Z',
+    });
+
+    render(<App />);
+    await waitFor(() => expect(fetchInvestigationConfig).toHaveBeenCalled());
+    expect(screen.queryByText(/Enable deeper investigation/)).not.toBeInTheDocument();
+  });
+
+  it('dismissing the banner hides it', async () => {
+    const user = userEvent.setup();
+    vi.mocked(fetchReview).mockResolvedValue(review);
+    vi.mocked(fetchState).mockImplementation(async () => initialState());
+    vi.mocked(fetchInvestigationConfig).mockResolvedValue({
+      platform: 'github',
+      owner: 'alice',
+      repo: 'proj',
+      mode: 'none',
+      chosen_at: '',
+    });
+
+    render(<App />);
+    await waitFor(() =>
+      expect(screen.getByText(/Enable deeper investigation/)).toBeInTheDocument(),
+    );
+    await user.click(screen.getByRole('button', { name: 'Dismiss' }));
+    expect(screen.queryByText(/Enable deeper investigation/)).not.toBeInTheDocument();
   });
 });

@@ -10,6 +10,7 @@ const cfg: PreloadConfig = { preload_chunks: 1, preload_overview: true };
 function renderPanel(props: Partial<Parameters<typeof SettingsPanel>[0]> = {}) {
   const onClose = vi.fn();
   const onPreloadChange = vi.fn();
+  const onOpenInvestigation = vi.fn();
   const result = render(
     <ThemeProvider>
       <SettingsPanel
@@ -17,11 +18,12 @@ function renderPanel(props: Partial<Parameters<typeof SettingsPanel>[0]> = {}) {
         onClose={onClose}
         preloadConfig={cfg}
         onPreloadChange={onPreloadChange}
+        onOpenInvestigation={onOpenInvestigation}
         {...props}
       />
     </ThemeProvider>,
   );
-  return { ...result, onClose, onPreloadChange };
+  return { ...result, onClose, onPreloadChange, onOpenInvestigation };
 }
 
 describe('SettingsPanel', () => {
@@ -98,6 +100,24 @@ describe('SettingsPanel', () => {
       // Default theme in test environment is dark; clicking light should toggle.
       await userEvent.click(screen.getByRole('button', { name: 'light' }));
       expect(document.documentElement.dataset.theme).toBe('light');
+    });
+  });
+
+  describe('investigation access', () => {
+    it('shows "Diff only" when no mode is set', () => {
+      renderPanel();
+      expect(screen.getByRole('button', { name: 'Diff only' })).toBeInTheDocument();
+    });
+
+    it('shows the current mode label', () => {
+      renderPanel({ investigationMode: 'always-clone' });
+      expect(screen.getByRole('button', { name: 'Persistent clone' })).toBeInTheDocument();
+    });
+
+    it('calls onOpenInvestigation when clicked', async () => {
+      const { onOpenInvestigation } = renderPanel();
+      await userEvent.click(screen.getByRole('button', { name: 'Diff only' }));
+      expect(onOpenInvestigation).toHaveBeenCalled();
     });
   });
 });

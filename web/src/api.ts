@@ -1,6 +1,7 @@
 import type {
   Action,
   GitLabVerdict,
+  InvestigationConfig,
   PrRef,
   Review,
   ReviewState,
@@ -163,6 +164,28 @@ export async function authenticateGitLab(token: string): Promise<void> {
 
 export async function clearGitLabAuth(): Promise<void> {
   await fetch('/api/auth/gitlab', { method: 'DELETE' });
+}
+
+export async function fetchInvestigationConfig(): Promise<InvestigationConfig> {
+  const res = await fetch('/api/investigation-config');
+  if (!res.ok) throw new Error(`/api/investigation-config returned ${res.status}`);
+  return (await res.json()) as InvestigationConfig;
+}
+
+export async function saveInvestigationConfig(
+  mode: InvestigationConfig['mode'],
+  local_path?: string,
+): Promise<InvestigationConfig> {
+  const res = await fetch('/api/investigation-config', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ mode, local_path }),
+  });
+  if (!res.ok) {
+    const data = (await res.json()) as { error?: string };
+    throw new Error(data.error ?? `/api/investigation-config returned ${res.status}`);
+  }
+  return (await res.json()) as InvestigationConfig;
 }
 
 export function errMsg(e: unknown): string {
