@@ -1,6 +1,6 @@
 # assisted-review — Project Status
 
-_Updated: 2026-07-08 (approved plan and generated tasks for claude-investigation-tool-access). Keep this current as artifacts are refined and open questions are resolved._
+_Updated: 2026-07-08 (claude-investigation-tool-access implementation complete). Keep this current as artifacts are refined and open questions are resolved._
 
 ## Artifact Status
 
@@ -15,31 +15,34 @@ _Updated: 2026-07-08 (approved plan and generated tasks for claude-investigation
 
 ## Open Questions
 
-None remain within any single artifact. The plan itself carries two Open
-Questions (not artifact gaps): whether the 30-day `always-clone` idle TTL
-should be env-configurable, and whether a repo-size/clone-count warning is
-needed before opting into `always-clone`.
+None remain within any single artifact. The plan's two Open Questions
+(whether the 30-day `always-clone` idle TTL should be env-configurable,
+whether a repo-size/clone-count warning is needed) remain unresolved but
+non-blocking — documented as tunable-if-needed in `infrastructure.md`.
 
 ## Cross-Artifact Issues
 
-None found this pass. `feedback-claude-investigation-tool-acce-3d5a.md`
-(F001, Reconsidered) is now `planned`, consumed into
-`plan-claude-investigation-tool-access-2026-07-08.md`: `datamodel.md` gained
-`InvestigationConfig`, `api.md` gained `GET`/`POST
-/api/investigation-config` plus a note on `GET /api/claude` consulting it,
-`infrastructure.md` gained a full "Repo Investigation Access" section
-(five modes: `none`/`local-path`/`api`/`temp-clone`/`always-clone`) plus two
-new Production Annotations, and `ui.md` gained `InvestigationModal`, an
-investigation-access banner, and a Settings panel entry. All four
-cross-reference consistently (`InvestigationConfig`/`investigation-config`
-terms checked, no orphaned references).
+None found this pass. `claude-investigation-tool-access` is fully
+implemented: all 26 tasks complete
+(`tasks-claude-investigation-tool-access-60c7.md`), full test suite green
+(478 tests), both typechecks and lint clean. Manual verification against a
+real PR (moui72/assisted-review#62) confirmed all three testable modes
+end-to-end: `local-path` let Claude grep the repo and correctly answer a
+question about code outside the diff; `api` mode answered correctly from
+full diff-touched-file content but explicitly declined to answer about a
+file outside the diff (confirming the documented scope limit);
+`temp-clone`'s directory was removed after closing the review. `none` mode
+was reconfirmed unchanged (still correctly reports having no tools).
+`datamodel.md`'s `InvestigationConfig`, `api.md`'s two new endpoints,
+`infrastructure.md`'s Repo Investigation Access section, and `ui.md`'s
+modal/banner/Settings entry all match the shipped implementation.
 
 ## Constitution Compliance
 
-No violations. Three Complexity Tracking entries recorded in the plan (new
-per-repo persisted config type, new `git`-via-`gh`/`glab repo clone`
-dependency, clone lifecycle/pruning machinery), each justified against the
-simplicity principle — all opt-in, off by default (`mode: 'none'`).
+No violations. The three Complexity Tracking deviations recorded in the
+plan (new per-repo persisted config, `git`-via-`gh`/`glab repo clone`
+dependency, clone lifecycle/pruning machinery) all shipped as designed —
+opt-in, off by default, reusing existing auth and atomic-write patterns.
 
 ## Diagrams
 
@@ -54,31 +57,29 @@ simplicity principle — all opt-in, off by default (`mode: 'none'`).
 
 ## Code-vs-Artifact Defects
 
-0 known defects — see `DEFECTS.md`, last checked 2026-07-03. Note: this plan
-is approved and tasked (26 tasks across 5 phases,
-`tasks-claude-investigation-tool-access-60c7.md`, all unchecked) but nothing
-implemented yet — artifacts-ahead-of-code by design at this stage, not a
-defect.
+0 known defects — see `DEFECTS.md`, last checked 2026-07-03. This branch's
+work is now fully implemented and verified — worth a fresh `/ardd-verify`
+pass at some point given the size of this change, though not urgent (manual
+verification already exercised the real code paths).
 
 ## Feedback
 
-0 open feedback files. `feedback-claude-investigation-tool-acce-3d5a.md` and
-`feedback-inline-comment-editing-ui-7382.md` are both `planned`.
+0 open feedback files. `feedback-claude-investigation-tool-acce-3d5a.md`
+and `feedback-inline-comment-editing-ui-7382.md` are both `planned`.
 
 ## Feature Backlog
 
 13 backlogged · 0 planned · 0 tasked · 5 implemented — see
-`.project/features/`. No feature slugs were targeted by this plan (it
-originated from feedback, not the feature register); the backlogged
-`repo-aware-investigation-mode` entry is effectively superseded in spirit by
-this plan's broader design but was not itself touched — worth reconciling
-(e.g. marking it declined/merged) once this plan ships.
+`.project/features/`. `repo-aware-investigation-mode` (backlogged) is now
+functionally superseded by the broader `claude-investigation-tool-access`
+work — still worth an explicit reconciliation (decline or close out) since
+it wasn't itself touched by this plan (which came from feedback, not the
+feature register).
 
 ## In Flight
 
-- Branch `claude-investigation-tool-access` (current checkout, freshly
-  branched off `main` post `cli-update-check-notice` merge) — plan
-  `approved`, tasks `ready` (0/26 complete, none implemented yet).
+- Branch `claude-investigation-tool-access` (current checkout) — fully
+  implemented and tested; not yet pushed to a PR.
 - Worktree `.claude/worktrees/ardd-codify-trial` (branch
   `ardd-codify-trial`) — no tasks file.
 - Worktree `.claude/worktrees/docs-update-readme-changelog` (branch
@@ -86,9 +87,7 @@ this plan's broader design but was not itself touched — worth reconciling
 
 ## Recommended Next Step
 
-Implement `tasks-claude-investigation-tool-access-60c7.md` (`/ardd-implement`
-or manually, phase by phase — Phase 1 has no dependencies and unblocks
-everything else). Also consider reconciling the now-redundant
-`repo-aware-investigation-mode` backlog entry. Three diagrams are
-outstanding (non-blocking): `/ardd-render datamodel`, `/ardd-render
-infrastructure`, `/ardd-render ui`.
+Push `claude-investigation-tool-access` and open a PR. Consider
+reconciling the now-redundant `repo-aware-investigation-mode` backlog
+entry first. Three diagrams (`datamodel`, `infrastructure`, `ui`) are
+outstanding (non-blocking).
