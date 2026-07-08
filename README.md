@@ -8,12 +8,24 @@
 <p align="center">
   <a href="https://www.npmjs.com/package/assisted-review">
     <picture>
-      <source media="(prefers-color-scheme: dark)" srcset="https://shieldcn.dev/npm/assisted-review.svg?mode=dark" />
-      <img alt="npm version" src="https://shieldcn.dev/npm/assisted-review.svg?mode=light" />
+      <source media="(prefers-color-scheme: dark)" srcset="https://shieldcn.dev/npm/assisted-review.svg?variant=secondary&mode=dark" />
+      <img alt="npm version" src="https://shieldcn.dev/npm/assisted-review.svg?variant=secondary&mode=light" />
+    </picture>
+  </a>
+  <a href="https://www.npmjs.com/package/assisted-review">
+    <picture>
+      <source media="(prefers-color-scheme: dark)" srcset="https://shieldcn.dev/npm/dt/assisted-review.svg?variant=secondary&mode=dark" />
+      <img alt="npm downloads" src="https://shieldcn.dev/npm/dt/assisted-review.svg?variant=secondary&mode=light" />
+    </picture>
+  </a>
+  <a href="https://github.com/moui72/assisted-review/releases">
+    <picture>
+      <source media="(prefers-color-scheme: dark)" srcset="https://shieldcn.dev/github/release/moui72/assisted-review.svg?variant=secondary&mode=dark" />
+      <img alt="latest release" src="https://shieldcn.dev/github/release/moui72/assisted-review.svg?variant=secondary&mode=light" />
     </picture>
   </a>
   <!-- ardd-badge-start -->
-  <a href="https://github.com/moui72/artifact-driven-dev"><img alt="built with ARDD" src="https://shieldcn.dev/badge/built%20with-ARDD-blue.svg" /></a>
+  <a href="https://github.com/moui72/artifact-driven-dev"><img alt="built with ARDD" src="https://shieldcn.dev/badge/built%20with-ARDD-blue.svg?variant=branded" /></a>
   <!-- ardd-badge-end -->
 </p>
 
