@@ -16,7 +16,7 @@ status: in-progress
   `web/src/api.ts` alongside the existing re-exported types (`import type`
   convention, `CLAUDE.md`).
 
-- [ ] T002 [artifacts: infrastructure] Create `src/investigation.ts` with
+- [x] T002 [artifacts: infrastructure] Create `src/investigation.ts` with
   `loadInvestigationConfigs(): Promise<Record<string, InvestigationConfig>>`
   and `saveInvestigationConfigs(configs): Promise<void>` against a single
   `investigation-config.json` file in `STATE_DIR` (import from `./state.js`),
@@ -28,7 +28,7 @@ status: in-progress
   Promise<InvestigationConfig>` returning the stored entry, or a default
   `{ mode: 'none', platform, owner, repo, chosen_at: '' }` shape if unset.
 
-- [ ] T003 [artifacts: infrastructure] Tests for `src/investigation.ts`:
+- [x] T003 [artifacts: infrastructure] Tests for `src/investigation.ts`:
   load with no file (empty map), load with a valid file, load with corrupt
   JSON (treated as empty, not thrown), save-then-load round-trip,
   `getInvestigationConfig` returns the default shape for an unconfigured
