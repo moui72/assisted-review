@@ -28,6 +28,10 @@ vi.mock('../src/review', () => ({
   loadReview: vi.fn(),
 }));
 
+vi.mock('../src/fetch', () => ({
+  fetchFileContent: vi.fn().mockResolvedValue(null),
+}));
+
 vi.mock('../src/submit', async (importOriginal) => {
   const actual = await importOriginal<typeof import('../src/submit')>();
   return { ...actual, submitReview: vi.fn(), submitGitLabReview: vi.fn() };
@@ -55,6 +59,8 @@ import {
   clearGitLabToken,
 } from '../src/gitlab-token';
 import { streamClaude } from '../src/claude';
+import { fetchFileContent } from '../src/fetch';
+import { saveInvestigationConfigs, configKey } from '../src/investigation';
 import type { Review, ReviewState } from '../src/types';
 import { STATE_VERSION, OVERVIEW_ID } from '../src/types';
 
@@ -628,10 +634,78 @@ describe('GET/POST /api/investigation-config', () => {
 });
 
 describe('GET /api/claude', () => {
+  beforeEach(async () => {
+    const { STATE_DIR } = await import('../src/state');
+    await rm(join(STATE_DIR, 'investigation-config.json'), { force: true });
+    vi.mocked(fetchFileContent).mockReset().mockResolvedValue(null);
+  });
+
   it('returns 503 when no review is loaded', async () => {
     const url = await makeServer({ review: null, state: null });
     const res = await get(url, `/api/claude?chunk_id=c1`);
     expect(res.status).toBe(503);
+  });
+
+  it('mode none (default): passes no opts to streamClaude', async () => {
+    const url = await makeServer({ review, state });
+    await get(url, '/api/claude?chunk_id=c1');
+    const lastCall = vi.mocked(streamClaude).mock.calls.at(-1)!;
+    expect(lastCall[2]).toBeUndefined();
+    expect(vi.mocked(fetchFileContent)).not.toHaveBeenCalled();
+  });
+
+  it('mode local-path: passes cwd/allowRepoRead to streamClaude', async () => {
+    await saveInvestigationConfigs({
+      [configKey(pr)]: {
+        platform: pr.platform,
+        owner: pr.owner,
+        repo: pr.repo,
+        mode: 'local-path',
+        local_path: '/some/repo',
+        chosen_at: new Date().toISOString(),
+      },
+    });
+    const url = await makeServer({ review, state });
+    await get(url, '/api/claude?chunk_id=c1');
+    const lastCall = vi.mocked(streamClaude).mock.calls.at(-1)!;
+    expect(lastCall[2]).toEqual({ cwd: '/some/repo', allowRepoRead: true });
+  });
+
+  it('mode api: fetches content for the chunk file and passes it to buildPrompt', async () => {
+    await saveInvestigationConfigs({
+      [configKey(pr)]: {
+        platform: pr.platform,
+        owner: pr.owner,
+        repo: pr.repo,
+        mode: 'api',
+        chosen_at: new Date().toISOString(),
+      },
+    });
+    vi.mocked(fetchFileContent).mockResolvedValue('full file text');
+    const url = await makeServer({ review, state });
+    await get(url, '/api/claude?chunk_id=c1');
+    expect(vi.mocked(fetchFileContent)).toHaveBeenCalledWith(pr, chunk.file, meta.head_sha);
+    const { buildPrompt } = await import('../src/claude');
+    const lastCall = vi.mocked(buildPrompt).mock.calls.at(-1)!;
+    expect(lastCall[3]).toEqual(new Map([[chunk.file, 'full file text']]));
+  });
+
+  it('mode api: skips files fetchFileContent returns null for', async () => {
+    await saveInvestigationConfigs({
+      [configKey(pr)]: {
+        platform: pr.platform,
+        owner: pr.owner,
+        repo: pr.repo,
+        mode: 'api',
+        chosen_at: new Date().toISOString(),
+      },
+    });
+    vi.mocked(fetchFileContent).mockResolvedValue(null);
+    const url = await makeServer({ review, state });
+    await get(url, '/api/claude?chunk_id=c1');
+    const { buildPrompt } = await import('../src/claude');
+    const lastCall = vi.mocked(buildPrompt).mock.calls.at(-1)!;
+    expect(lastCall[3]).toEqual(new Map());
   });
 
   it('returns 404 for an unknown chunk_id', async () => {

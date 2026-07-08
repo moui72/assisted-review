@@ -15,6 +15,7 @@ import {
   saveInvestigationConfigs,
   configKey,
 } from './investigation.js';
+import { fetchFileContent } from './fetch.js';
 import {
   buildOverviewPrompt,
   buildPrompt,
@@ -418,6 +419,26 @@ export function startServer(
       // into the wrong chunk/review once this one completes.
       currentCancel?.();
 
+      // Resolve investigation access for this repo (Repo Investigation
+      // Access, infrastructure.md). 'temp-clone'/'always-clone' fall
+      // through to 'none' behavior for now (wired in Phase 3).
+      const investigationConfig = await getInvestigationConfig(review.pr);
+      const streamOpts =
+        investigationConfig.mode === 'local-path'
+          ? { cwd: investigationConfig.local_path, allowRepoRead: true }
+          : undefined;
+      let fileContents: Map<string, string> | undefined;
+      if (investigationConfig.mode === 'api') {
+        const files = isOverview
+          ? [...new Set(review.chunks.map((c) => c.file))]
+          : [chunk!.file];
+        fileContents = new Map();
+        for (const file of files) {
+          const content = await fetchFileContent(review.pr, file, review.meta.head_sha);
+          if (content !== null) fileContents.set(file, content);
+        }
+      }
+
       // An empty question means "explain/summarize" (an initial note).
       const kind: AiNoteKind = question.trim() ? 'investigation' : 'initial';
       const prompt = isOverview
@@ -426,8 +447,9 @@ export function startServer(
             review.chunks,
             review.overview.jira,
             question,
+            fileContents,
           )
-        : buildPrompt(chunk!, kind, question);
+        : buildPrompt(chunk!, kind, question, fileContents);
       // Suggested-action line only applies to per-chunk "explain" notes.
       const wantsAction = !isOverview && kind === 'initial';
 
@@ -480,7 +502,7 @@ export function startServer(
               res.end();
             });
         },
-      });
+      }, streamOpts);
       currentCancel = cancel;
       req.on('close', () => {
         if (currentCancel === cancel) currentCancel = null;

@@ -56,7 +56,7 @@ status: in-progress
 
 ## Phase 2: `local-path` and `api` modes in Claude invocation
 
-- [ ] T006 [artifacts: infrastructure] In `src/claude.ts`, give
+- [x] T006 [artifacts: infrastructure] In `src/claude.ts`, give
   `streamClaude` a third optional parameter `opts?: { cwd?: string;
   allowRepoRead?: boolean }`. `cwd` defaults to `tmpdir()` as today.
   `allowRepoRead` (default `false`) controls whether `Read`/`Grep`/`Glob`
@@ -65,7 +65,7 @@ status: in-progress
   always) plus `Read Grep Glob` only when `allowRepoRead` is falsy. Pass
   `spawn`'s `cwd` from `opts.cwd`.
 
-- [ ] T007 [artifacts: infrastructure] [parallel] Add
+- [x] T007 [artifacts: infrastructure] [parallel] Add
   `fetchFileContent(pr: PrRef, path: string, sha: string): Promise<string |
   null>` to `src/fetch.ts`. GitHub: `gh api
   repos/{owner}/{repo}/contents/{path}?ref={sha}` via `execFileAsync`,
@@ -80,7 +80,7 @@ status: in-progress
   missing file as "skip it," not a hard error, matching every other
   optional-integration degrade path in `infrastructure.md`.
 
-- [ ] T008 [artifacts: infrastructure] In `src/claude.ts`, add an optional
+- [x] T008 [artifacts: infrastructure] In `src/claude.ts`, add an optional
   `fileContents?: Map<string, string>` parameter to `buildPrompt` and
   `buildOverviewPrompt`. When non-empty, append one "Full file contents:
   {path}" block per entry to the prompt, each clipped via the existing
@@ -88,7 +88,7 @@ status: in-progress
   itself (prevents one huge file from blowing out the whole prompt).
   Depends on T006 (same file, sequential).
 
-- [ ] T009 [artifacts: infrastructure, api] In `src/server.ts`'s `GET
+- [x] T009 [artifacts: infrastructure, api] In `src/server.ts`'s `GET
   /api/claude` handler, before calling `streamClaude`: resolve
   `getInvestigationConfig(ctx.review.pr)`. Branch on `mode`: `'none'` (or
   unset) → call as today; `'local-path'` → pass `opts: { cwd:
@@ -99,13 +99,13 @@ status: in-progress
   left as a `// TODO(Phase 3)` fall-through to `'none'`'s behavior for now.
   Depends on T004, T006, T007, T008.
 
-- [ ] T010 [artifacts: infrastructure] Tests for `streamClaude`'s new
+- [x] T010 [artifacts: infrastructure] Tests for `streamClaude`'s new
   `opts` — assert the spawned `child_process.spawn` call's `cwd` and
   `--disallowed-tools` args reflect `allowRepoRead`/`cwd` correctly in both
   the default and repo-read-enabled cases (existing `child_process` mock
   convention). Depends on T006.
 
-- [ ] T011 [artifacts: infrastructure] [parallel] Tests for
+- [x] T011 [artifacts: infrastructure] [parallel] Tests for
   `fetchFileContent`: GitHub success/`404`-as-null, GitLab via `glab`
   success/failure-as-null, GitLab REST-fallback success/failure-as-null
   (mock `execFile`/`fetch` per existing `fetch.test.ts` conventions). Also
@@ -113,7 +113,7 @@ status: in-progress
   (block present when non-empty, clipped at the char bound, absent when the
   map is empty/omitted). Depends on T007, T008.
 
-- [ ] T012 [artifacts: infrastructure, api] Tests for the `GET
+- [x] T012 [artifacts: infrastructure, api] Tests for the `GET
   /api/claude` mode-branching logic: `'none'` unchanged behavior,
   `'local-path'` passes the right `opts` to a mocked `streamClaude`, `'api'`
   fetches content for the right file set and passes it through. Depends on
