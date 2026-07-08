@@ -12,6 +12,12 @@
       <img alt="npm version" src="https://shieldcn.dev/npm/assisted-review.svg?mode=light" />
     </picture>
   </a>
+  <a href="https://github.com/moui72/assisted-review/releases">
+    <picture>
+      <source media="(prefers-color-scheme: dark)" srcset="https://shieldcn.dev/github/release/moui72/assisted-review.svg?mode=dark" />
+      <img alt="latest release" src="https://shieldcn.dev/github/release/moui72/assisted-review.svg?mode=light" />
+    </picture>
+  </a>
   <!-- ardd-badge-start -->
   <a href="https://github.com/moui72/artifact-driven-dev"><img alt="built with ARDD" src="https://shieldcn.dev/badge/built%20with-ARDD-blue.svg" /></a>
   <!-- ardd-badge-end -->
