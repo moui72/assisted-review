@@ -1,7 +1,7 @@
 ---
 plan: plan-claude-investigation-tool-access-2026-07-08.md
 generated: 2026-07-08
-status: in-progress
+status: completed
 ---
 
 # Tasks
@@ -231,7 +231,7 @@ status: in-progress
 
 ## Phase 5: Manual verification and full-suite check
 
-- [ ] T025 [artifacts: infrastructure, ui] Manual verification, run against
+- [x] T025 [artifacts: infrastructure, ui] Manual verification, run against
   the real app: for a repo with a local checkout available, set `mode:
   'local-path'` and confirm Claude can answer a follow-up question about
   code outside the diff that it couldn't answer under `'none'`. Set `mode:
@@ -242,7 +242,7 @@ status: in-progress
   close the review (`DELETE /api/review`) and confirm the clone directory
   is gone.
 
-- [ ] T026 Run `npx vitest run --coverage` (full suite green, `src/**/*.ts`
+- [x] T026 Run `npx vitest run --coverage` (full suite green, `src/**/*.ts`
   above the 90% statements/lines gate per `constitution.md`'s Quality
   Standards), `npx tsc -p tsconfig.json --noEmit`, and `npx eslint .` — all
   clean.
