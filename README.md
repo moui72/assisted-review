@@ -349,6 +349,16 @@ erDiagram
         number flagged_count
         number viewed_count
     }
+    InvestigationConfig {
+        string platform
+        string owner
+        string repo
+        string mode
+        string local_path
+        string clone_path
+        string chosen_at
+        string last_used
+    }
     SubmitResult {
         boolean ok
         string html_url
@@ -383,20 +393,24 @@ graph TD
     CLI["CLI (src/cli.ts)"]
     Server["Server (src/server.ts, 127.0.0.1:4319)"]
     State[("State files (~/.assisted-review/*.json)")]
+    Clones[("Repo clones (STATE_DIR/repos/)")]
     GitHub["GitHub (gh CLI)"]
     GitLab["GitLab (glab CLI / REST v4 fallback)"]
     Jira["Jira REST API"]
     Claude["Claude CLI (headless subprocess)"]
     OnePassword["1Password CLI (op, optional)"]
+    NpmRegistry["npm Registry (registry.npmjs.org)"]
 
     CLI -->|starts| Server
+    CLI -->|"GET /<pkg>/latest (update check)"| NpmRegistry
     UI -->|"REST + SSE (/api/*)"| Server
     Server -->|"save/load JSON (atomic write)"| State
-    Server -->|"gh pr diff / gh pr view / gh api"| GitHub
-    Server -->|"glab api / mr diff, REST fallback"| GitLab
+    Server -->|"gh pr diff / gh pr view / gh api / gh repo clone"| GitHub
+    Server -->|"glab api / mr diff, REST fallback / glab repo clone"| GitLab
     Server -->|"GET /rest/api/3/issue/{key}"| Jira
     Server -->|"resolve JIRA_TOKEN (op read)"| OnePassword
-    Server -->|"spawn, stream-json"| Claude
+    Server -->|"spawn, stream-json (cwd: tmpdir/local path/clone)"| Claude
+    Server -->|"clone / fetch / checkout / prune"| Clones
 ```
 
 ## UI
@@ -414,6 +428,7 @@ graph TD
     App --> ReviewsMenu["ReviewsMenu.tsx"]
     App --> SettingsPanel["SettingsPanel.tsx"]
     App --> HelpOverlay["HelpOverlay.tsx"]
+    App -->|"investigation-access banner"| InvestigationModal["InvestigationModal.tsx"]
 
     OverviewView -->|"StoredNote[] scoped to OVERVIEW_ID"| AiCommentary1["AiCommentary.tsx"]
     OverviewView --> ErrorBanner["ErrorBanner.tsx (Jira setup banner)"]
@@ -429,6 +444,9 @@ graph TD
     ReviewsMenu --> ReviewsList["ReviewsList.tsx"]
     ReviewsMenu -->|"dismissing the active review"| DeleteReviewConfirm["DeleteReviewConfirm.tsx"]
 
+    SettingsPanel -->|"reopen to change mode"| InvestigationModal
+
     Splash --> Logo["Logo.tsx"]
     TopNav --> Logo
 ```
+
