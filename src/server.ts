@@ -6,9 +6,15 @@ import {
   type IncomingMessage,
   type ServerResponse,
 } from 'node:http';
-import { readFile } from 'node:fs/promises';
+import { readFile, stat } from 'node:fs/promises';
 import { join, normalize, extname } from 'node:path';
 import { applyAction, deleteReview, listReviews, saveState } from './state.js';
+import {
+  getInvestigationConfig,
+  loadInvestigationConfigs,
+  saveInvestigationConfigs,
+  configKey,
+} from './investigation.js';
 import {
   buildOverviewPrompt,
   buildPrompt,
@@ -38,11 +44,20 @@ import {
   OVERVIEW_ID,
   type Action,
   type AiNoteKind,
+  type InvestigationConfig,
   type Platform,
   type PrRef,
   type Review,
   type ReviewState,
 } from './types.js';
+
+const INVESTIGATION_MODES: readonly InvestigationConfig['mode'][] = [
+  'none',
+  'local-path',
+  'api',
+  'temp-clone',
+  'always-clone',
+];
 
 // dist/ is a sibling of this file's dir (src/ under tsx, build/ after tsc).
 const DIST_DIR = join(import.meta.dirname, '..', 'dist');
@@ -336,6 +351,51 @@ export function startServer(
           return sendJson(res, 401, { error: (err as Error).message, auth_required: 'gitlab' });
         }
         return sendJson(res, 502, { error: (err as Error).message });
+      }
+    }
+
+    if (url.pathname === '/api/investigation-config') {
+      if (!ctx.review) return sendJson(res, 503, { error: 'no active review' });
+      if (req.method === 'GET') {
+        return sendJson(res, 200, await getInvestigationConfig(ctx.review.pr));
+      }
+      if (req.method === 'POST') {
+        const { mode, local_path } = JSON.parse(await readBody(req)) as {
+          mode?: string;
+          local_path?: string;
+        };
+        if (!mode || !INVESTIGATION_MODES.includes(mode as InvestigationConfig['mode'])) {
+          return sendJson(res, 400, {
+            error: `mode must be one of ${INVESTIGATION_MODES.join(', ')}`,
+          });
+        }
+        if (mode === 'local-path') {
+          if (!local_path) {
+            return sendJson(res, 400, { error: 'local_path is required for mode local-path' });
+          }
+          try {
+            const st = await stat(local_path);
+            if (!st.isDirectory()) throw new Error('not a directory');
+          } catch {
+            return sendJson(res, 400, { error: `local_path is not an existing directory: ${local_path}` });
+          }
+        }
+        // TODO(Phase 3): call ensureClone here for 'temp-clone'/'always-clone'
+        // and persist the resulting clone_path; return 502 on clone failure
+        // without persisting.
+        const pr = ctx.review.pr;
+        const config: InvestigationConfig = {
+          platform: pr.platform,
+          owner: pr.owner,
+          repo: pr.repo,
+          mode: mode as InvestigationConfig['mode'],
+          ...(mode === 'local-path' ? { local_path } : {}),
+          chosen_at: new Date().toISOString(),
+        };
+        const configs = await loadInvestigationConfigs();
+        configs[configKey(pr)] = config;
+        await saveInvestigationConfigs(configs);
+        return sendJson(res, 200, config);
       }
     }
 

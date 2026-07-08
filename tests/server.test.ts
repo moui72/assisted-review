@@ -1,4 +1,6 @@
 import { vi } from 'vitest';
+import { rm } from 'node:fs/promises';
+import { join } from 'node:path';
 
 vi.mock('../src/state', async (importOriginal) => {
   const actual = await importOriginal<typeof import('../src/state')>();
@@ -549,6 +551,79 @@ describe('DELETE /api/auth/gitlab', () => {
     const body = await res.json() as { ok: boolean };
     expect(body.ok).toBe(true);
     expect(vi.mocked(clearGitLabToken)).toHaveBeenCalled();
+  });
+});
+
+describe('GET/POST /api/investigation-config', () => {
+  beforeEach(async () => {
+    const { STATE_DIR } = await import('../src/state');
+    await rm(join(STATE_DIR, 'investigation-config.json'), { force: true });
+  });
+
+  it('GET returns 503 when no review is loaded', async () => {
+    const url = await makeServer({ review: null, state: null });
+    const res = await get(url, '/api/investigation-config');
+    expect(res.status).toBe(503);
+  });
+
+  it('POST returns 503 when no review is loaded', async () => {
+    const url = await makeServer({ review: null, state: null });
+    const res = await post(url, '/api/investigation-config', { mode: 'none' });
+    expect(res.status).toBe(503);
+  });
+
+  it('GET returns the default none shape for an unconfigured repo', async () => {
+    const url = await makeServer({ review, state });
+    const res = await get(url, '/api/investigation-config');
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as { mode: string; owner: string; repo: string };
+    expect(body).toMatchObject({ mode: 'none', owner: 'alice', repo: 'proj' });
+  });
+
+  it('POST rejects an invalid mode', async () => {
+    const url = await makeServer({ review, state });
+    const res = await post(url, '/api/investigation-config', { mode: 'bogus' });
+    expect(res.status).toBe(400);
+  });
+
+  it('POST rejects local-path with a missing local_path', async () => {
+    const url = await makeServer({ review, state });
+    const res = await post(url, '/api/investigation-config', { mode: 'local-path' });
+    expect(res.status).toBe(400);
+  });
+
+  it('POST rejects local-path pointing at a non-existent directory', async () => {
+    const url = await makeServer({ review, state });
+    const res = await post(url, '/api/investigation-config', {
+      mode: 'local-path',
+      local_path: '/definitely/not/a/real/path/xyz',
+    });
+    expect(res.status).toBe(400);
+  });
+
+  it('POST persists local-path with a real directory, retrievable via GET', async () => {
+    const url = await makeServer({ review, state });
+    const res = await post(url, '/api/investigation-config', {
+      mode: 'local-path',
+      local_path: import.meta.dirname,
+    });
+    expect(res.status).toBe(200);
+    const saved = (await res.json()) as { mode: string; local_path: string };
+    expect(saved.mode).toBe('local-path');
+    expect(saved.local_path).toBe(import.meta.dirname);
+
+    const getRes = await get(url, '/api/investigation-config');
+    const fetched = (await getRes.json()) as { mode: string; local_path: string };
+    expect(fetched.mode).toBe('local-path');
+    expect(fetched.local_path).toBe(import.meta.dirname);
+  });
+
+  it('POST persists mode: none', async () => {
+    const url = await makeServer({ review, state });
+    const res = await post(url, '/api/investigation-config', { mode: 'none' });
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as { mode: string };
+    expect(body.mode).toBe('none');
   });
 });
 

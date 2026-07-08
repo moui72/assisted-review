@@ -35,7 +35,7 @@ status: in-progress
   repo and the stored entry for a configured one. Mock
   `node:fs/promises` per `CLAUDE.md`'s module-mock convention.
 
-- [ ] T004 [artifacts: api, infrastructure] Add `GET`/`POST
+- [x] T004 [artifacts: api, infrastructure] Add `GET`/`POST
   /api/investigation-config` routes to `src/server.ts`. `GET`: `503` if no
   active review; otherwise returns `getInvestigationConfig(ctx.review.pr)`.
   `POST`: `503` if no active review; body `{ mode, local_path? }`; `400` if
@@ -47,7 +47,7 @@ status: in-progress
   the existing map) with `chosen_at: new Date().toISOString()`, return the
   saved config.
 
-- [ ] T005 [artifacts: api] [parallel] Tests for the two new routes in
+- [x] T005 [artifacts: api] [parallel] Tests for the two new routes in
   `src/server.ts`'s existing test file: `GET` returns default shape for an
   unconfigured repo and the stored one after a `POST`; `GET`/`POST` both
   `503` with no active review; `POST` `400` on invalid `mode`; `POST` `400`
