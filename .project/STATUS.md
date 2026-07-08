@@ -1,6 +1,6 @@
 # assisted-review — Project Status
 
-_Updated: 2026-07-07 (cli-update-check-notice planned, tasked, and marked implemented). Keep this current as artifacts are refined and open questions are resolved._
+_Updated: 2026-07-08 (ARDD updated to artifact-driven-dev @ 9189817). Keep this current as artifacts are refined and open questions are resolved._
 
 ## Artifact Status
 
@@ -19,54 +19,60 @@ None remain within any single artifact.
 
 ## Cross-Artifact Issues
 
-None found this pass. `cli-update-check-notice` went through the full
-retroactive loop this session: logged (`/ardd-feature`), designed into
-`infrastructure.md` and planned (`/ardd-plan`), tasked and approved
-(`/ardd-tasks`), and marked `implemented` in the register — code
-(`src/update-check.ts`, `src/cli.ts`) and tests (`tests/update-check.test.ts`)
-were written first, artifacts caught up after. `infrastructure.md`'s new
-"npm Registry (update check)" section, `ASSISTED_REVIEW_NO_UPDATE_CHECK` env
-var, and `update-check.json` Storage entry all match the implementation.
+None found this pass.
 
 ## Constitution Compliance
 
-No violations. Reuses the existing `STATE_DIR` atomic-cache-file pattern and
-built-in `fetch`/`AbortController` — no new dependency, no new abstraction.
+No violations.
 
 ## Diagrams
 
 - datamodel.md — current ✅
 - infrastructure.md — stale ⚠️ (run /ardd-render infrastructure — npm
-  registry update-check integration added 2026-07-07)
-- ui.md — stale ⚠️ (run /ardd-render ui — preload busy-state narrowing added
-  2026-07-06)
+  registry update-check and Repo Investigation Access sections added since
+  last render)
+- ui.md — stale ⚠️ (run /ardd-render ui — preload busy-state narrowing plus
+  InvestigationModal/banner/Settings entry added since last render)
 
 ## Code-vs-Artifact Defects
 
-0 known defects — see `DEFECTS.md`, last checked 2026-07-03.
+0 known defects — see `DEFECTS.md`, last checked 2026-07-03. Worth a fresh
+`/ardd-verify` pass given how much has landed since (update-check,
+claude-investigation-tool-access) — not urgent, but due.
 
 ## Feedback
 
-0 open feedback files. `feedback-inline-comment-editing-ui-7382.md` remains
-`planned` (consumed into `plan-feedback-preload-loading-state-2026-07-06.md`).
+0 open feedback files on `main`. `feedback-inline-comment-editing-ui-7382.md`
+is `planned`. Note: `feedback-claude-investigation-tool-acce-3d5a.md` is
+`planned` on the still-open `claude-investigation-tool-access` branch (#63)
+but hasn't reached `main` yet.
 
 ## Feature Backlog
 
-13 backlogged · 0 planned · 0 tasked · 5 implemented — see
-`.project/features/`. `cli-update-check-notice` is now `implemented`
-(plan `plan-cli-update-check-notice-2026-07-07.md`, tasks
-`tasks-cli-update-check-notice-bb83.md`, all 4 tasks complete).
+13 backlogged · 0 planned · 0 tasked · 5 implemented on `main` — see
+`.project/features/`. Note: `repo-aware-investigation-mode` is marked
+`implemented` (superseded) on the still-open `claude-investigation-tool-access`
+branch (#63) but that flip hasn't reached `main` yet — counts here will shift
+to 12/0/0/6 once #63 merges.
 
 ## In Flight
 
-- Branch `cli-update-check-notice` (current checkout) — plan approved,
-  tasks completed, code implemented and tested; not yet pushed to a PR.
+- PR #63 `claude-investigation-tool-access` — fully implemented, tested,
+  and manually verified against a real PR; open, awaiting review/merge.
+- PR #67 `readme-badges-redesign` — README badge row rebuilt with shieldcn
+  (npm version, npm downloads, latest release, ARDD), gitignores the
+  shieldcn-badges skill; open.
+- PR #68 `ardd-update-9189817` (this branch) — ARDD skills updated from
+  `cd7dbbe` to `9189817`, no pending migrations; open.
 - Worktree `.claude/worktrees/ardd-codify-trial` (branch
   `ardd-codify-trial`) — no tasks file.
 - Worktree `.claude/worktrees/docs-update-readme-changelog` (branch
-  `docs/update-readme-changelog`) — no tasks file.
+  `docs/update-readme-changelog`) — stale, unrelated to current work.
 
 ## Recommended Next Step
 
-Push `cli-update-check-notice` and open a PR. `/ardd-render infrastructure`
-and `/ardd-render ui` are both outstanding (non-blocking).
+Review and merge the three open PRs (#63, #67, #68) — none conflict with
+each other. After #63 merges, re-run `/ardd-analyze` to pick up the
+feature-backlog and feedback shifts it carries. `/ardd-render infrastructure`
+and `/ardd-render ui` are both outstanding (non-blocking). Consider
+`/ardd-verify` given the volume of recent changes.
