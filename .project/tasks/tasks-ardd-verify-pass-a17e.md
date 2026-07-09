@@ -8,7 +8,7 @@ status: in-progress
 
 ## Phase 2: `ReviewsMenu` auth-prompt parity
 
-- [ ] T001 [artifacts: ui, api] In `web/src/components/ReviewsMenu.tsx`,
+- [x] T001 [artifacts: ui, api] In `web/src/components/ReviewsMenu.tsx`,
   add `gitlabAuthOpen` state (`useState(false)`) and a `pendingRef` state
   (`useState('')`) to remember which ref to retry. In `handleOpen`
   (currently: awaits `openReview(refToOpen.trim())`, then checks
@@ -27,7 +27,7 @@ status: in-progress
   another already-saved review) — per the plan, a previously-opened saved
   review doesn't need this prompt.
 
-- [ ] T002 [artifacts: ui] Tests for T001. If `tests/components/
+- [x] T002 [artifacts: ui] Tests for T001. If `tests/components/
   ReviewsMenu.test.tsx` doesn't exist yet, create it following the existing
   component-test conventions (`// @vitest-environment jsdom` docblock,
   `vi.mock('../../web/src/api.ts', ...)` pattern — see

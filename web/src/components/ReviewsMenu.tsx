@@ -12,6 +12,7 @@ import {
   type ReviewSummary,
 } from '../api.ts';
 import { DeleteReviewConfirm } from './DeleteReviewConfirm.tsx';
+import { GitLabAuthModal } from './GitLabAuthModal.tsx';
 import { OpenReviewForm } from './OpenReviewForm.tsx';
 import { prLabel, ReviewsList } from './ReviewsList.tsx';
 
@@ -34,6 +35,8 @@ export function ReviewsMenu({
   const [openError, setOpenError] = useState<string | null>(null);
   const [ref, setRef] = useState('');
   const [confirming, setConfirming] = useState(false);
+  const [gitlabAuthOpen, setGitlabAuthOpen] = useState(false);
+  const [pendingRef, setPendingRef] = useState('');
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -63,6 +66,10 @@ export function ReviewsMenu({
       if (result.review && result.state) {
         onSwitched(result.review, result.state);
         onClose();
+      } else if (result.auth_required === 'gitlab') {
+        setPendingRef(refToOpen.trim());
+        setGitlabAuthOpen(true);
+        return;
       } else {
         setOpenError(result.error ?? 'Failed to open review');
       }
@@ -167,6 +174,14 @@ export function ReviewsMenu({
           />
         )}
       </div>
+      <GitLabAuthModal
+        open={gitlabAuthOpen}
+        onClose={() => setGitlabAuthOpen(false)}
+        onSuccess={() => {
+          setGitlabAuthOpen(false);
+          void handleOpen(pendingRef);
+        }}
+      />
     </div>
   );
 }
