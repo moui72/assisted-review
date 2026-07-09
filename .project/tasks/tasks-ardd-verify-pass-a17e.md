@@ -1,7 +1,7 @@
 ---
 plan: plan-ardd-verify-pass-2026-07-09.md
 generated: 2026-07-09
-status: in-progress
+status: completed
 ---
 
 # Tasks
@@ -80,7 +80,7 @@ status: in-progress
 
 ## Phase 4: Full-suite verification
 
-- [ ] T006 Run `npx vitest run --coverage` (full suite green, `src/**/*.ts`
+- [x] T006 Run `npx vitest run --coverage` (full suite green, `src/**/*.ts`
   above the 90% statements/lines gate per `constitution.md`'s Quality
   Standards), `npx tsc -p tsconfig.json --noEmit`, `npx tsc -p
   web/tsconfig.json --noEmit`, and `npx eslint .` — all clean. Then
