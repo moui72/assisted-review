@@ -2,7 +2,7 @@
 name: datamodel
 status: stable
 last_updated: 2026-07-08
-diagram_status: stale
+diagram_status: current
 ---
 
 # Data Model
