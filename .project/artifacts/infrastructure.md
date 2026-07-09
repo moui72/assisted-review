@@ -1,8 +1,8 @@
 ---
 name: infrastructure
 status: stable
-last_updated: 2026-07-08
-diagram_status: current
+last_updated: 2026-07-09
+diagram_status: stale
 ---
 
 # Infrastructure
@@ -69,6 +69,23 @@ drift out of sync with each other.
   `glab mr view --output json`). If absent, falls back to the GitLab REST API
   v4 directly via `fetch()`, authenticated with `GITLAB_TOKEN` and pointed at
   `GITLAB_HOST` (default `gitlab.com`; supports `http://` for self-hosted).
+- **Browser-entered token** (`src/gitlab-token.ts`) — a second, higher-priority
+  credential source for the REST-fallback path specifically (the `glab` CLI
+  path always uses `glab`'s own auth, never this). `getGitLabToken()`
+  resolves browser-stored token first, then `GITLAB_TOKEN`, matching this
+  module's own doc comment: "Resolution order: browser-stored token →
+  `GITLAB_TOKEN` env var → `GitLabAuthError`." The browser token is entered
+  via `GitLabAuthModal` (`ui.md`), submitted through `POST
+  /api/auth/gitlab` (`api.md`), held in memory (`_browserToken`) and
+  persisted to `STATE_DIR/gitlab-token` (mode `0o600`, atomic
+  tmp-then-`rename()` write, same convention as every other file in this
+  section) so it survives a server restart — loaded back into memory once,
+  fire-and-forget, at server startup (`loadGitLabToken()`, called from
+  `startServer()` in `src/server.ts`). `DELETE /api/auth/gitlab` clears
+  both the in-memory and on-disk copy, falling back to `GITLAB_TOKEN` (if
+  set). `GitLabAuthError` (thrown when neither source has a token) is what
+  `POST /api/reviews/open` catches to return `401 { auth_required: 'gitlab'
+  }` (`api.md`) rather than the generic `502`.
 - **Pagination**: `glabApiPaginatedJson` — `glab api --paginate` on the CLI
   path, or manual `x-next-page` header following on the REST path. Same
   pattern reused for GitLab MR diffs (`fetchGitLabDiffREST`) and commit lists
@@ -368,6 +385,9 @@ raw token.
   `STATE_DIR` holds the `InvestigationConfig` map (`datamodel.md`); repo
   clones for `temp-clone`/`always-clone` modes live under
   `STATE_DIR/repos/` (see Repo Investigation Access, above).
+- **GitLab browser token**: `STATE_DIR/gitlab-token` holds a raw (not JSON)
+  browser-entered GitLab PAT, mode `0o600`, same atomic tmp-then-`rename()`
+  write. See the GitLab entry in Integration Components, above.
 
 ## Configuration / Environment
 

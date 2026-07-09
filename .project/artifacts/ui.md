@@ -1,8 +1,8 @@
 ---
 name: ui
 status: stable
-last_updated: 2026-07-08
-diagram_status: current
+last_updated: 2026-07-09
+diagram_status: stale
 ---
 
 # UI
@@ -36,6 +36,12 @@ Shown when the server has no active review and hasn't finished its initial
 load-attempt failure state. Lets the user type/paste a ref and open it
 (`POST /api/reviews/open`). Distinct from the plain "Loading…" state shown
 before the first `fetchReview()`/`fetchState()` resolves.
+
+If opening returns `auth_required: 'gitlab'` (`api.md`), opens
+`GitLabAuthModal` instead of showing a generic error; on successful token
+save, closes the modal and retries the same ref automatically. See
+`GitLabAuthModal.tsx` below and `infrastructure.md`'s GitLab entry for the
+token this saves.
 
 ### Overview (`OverviewView.tsx`)
 
@@ -137,6 +143,18 @@ Shared across views, listed by concern:
   - **`DeleteReviewConfirm.tsx`** — the confirmation footer shown when
     dismissing the currently active review, including the
     switch-vs-clear-session messaging.
+  Opening a ref (via `OpenReviewForm` or `ReviewsList`'s switch action) that
+  returns `auth_required: 'gitlab'` opens `GitLabAuthModal` the same way
+  `Splash.tsx` does, retrying the same ref on successful save — this
+  in-app "Open a review" path and the initial Splash screen both handle the
+  GitLab auth prompt identically.
+- **`GitLabAuthModal.tsx`** — a Personal Access Token entry form (`open`/
+  `onClose`/`onSuccess` props, matching every other modal's shape). Save
+  calls `POST /api/auth/gitlab` (`api.md`); on success, calls `onSuccess`
+  so the caller (`Splash.tsx` or `ReviewsMenu.tsx`) can close it and retry
+  whatever ref triggered the `401`. Not tied to any specific PR/MR — it's
+  purely "give the server a GitLab token," reusable from any auth-required
+  moment.
 - **`SettingsPanel.tsx`** — theme toggle (delegates to `useTheme()`),
   preload behavior (`preload_chunks` count, `preload_overview` on/off,
   persisted to `localStorage` (`ar-preload-chunks`, `ar-preload-overview`)
@@ -240,7 +258,7 @@ Shared across views, listed by concern:
 
 Global `keydown` listener in `App.tsx`, disabled while focus is in a
 `TEXTAREA`/`INPUT`, with modal-specific short-circuits (Submit/Reviews/
-Settings/Help each only listen for `Escape` while open). Full binding table
+Settings/Help/Investigation each only listen for `Escape` while open). Full binding table
 is in `README.md` and mirrored in `HelpOverlay.tsx`; notably `→`/`←` (or
 `j`/`k`/`n`/`p`) navigate without side effects, `⌘→`/`⌘←` (Ctrl on
 Win/Linux) skip to the next/previous *unviewed* chunk, and `↵` both marks

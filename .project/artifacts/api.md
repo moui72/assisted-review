@@ -1,7 +1,7 @@
 ---
 name: api
 status: stable
-last_updated: 2026-07-08
+last_updated: 2026-07-09
 ---
 
 # API
@@ -128,7 +128,33 @@ state), then fetches + loads the review via `loadReview()`
 (`infrastructure.md`), replaces `ctx.review`/`ctx.state`, persists the
 (possibly freshly-migrated) state, and returns `{ review, state }`. `502` on
 fetch failure (bad ref resolves, but `gh`/`glab` fails — e.g. not found, not
-authenticated).
+authenticated). `401 { error, auth_required: 'gitlab' }` specifically when
+`loadReview()` throws `GitLabAuthError` — no GitLab token available via
+either the browser-entered store or `GITLAB_TOKEN` (see `GET`/`POST`/`DELETE
+/api/auth/gitlab` and the Auth section below). The frontend's `Splash.tsx`
+handles this by opening `GitLabAuthModal` (`ui.md`) and retrying the same
+`ref` on successful token save; `ReviewsMenu.tsx`'s in-app "Open a review"
+form does the same.
+
+### `GET /api/auth/gitlab`
+
+Returns `{ authenticated: boolean, source: 'browser' | 'env' | null }` —
+whether a GitLab token is currently available and where it came from
+(`gitLabTokenSource()`, `infrastructure.md`). No active review required.
+
+### `POST /api/auth/gitlab`
+
+Body: `{ token: string }`. `400` if `token` is missing/blank. Persists the
+token via `setGitLabToken()` (`infrastructure.md`) — in-memory immediately,
+and to disk so it survives a server restart. Returns `{ ok: true }`. This is
+what `GitLabAuthModal` (`ui.md`) calls on save.
+
+### `DELETE /api/auth/gitlab`
+
+Clears the browser-stored token (`clearGitLabToken()`, `infrastructure.md`)
+from memory and disk. Falls back to `GITLAB_TOKEN` (if set) on the next
+GitLab call, same as if a browser token had never been stored. Returns
+`{ ok: true }`.
 
 ### `GET /api/investigation-config`
 
@@ -205,15 +231,29 @@ themselves don't need their own generic try/catch.
 
 ## Auth
 
-None, by design. See `constitution.md` Principle I — the server binds to
-`127.0.0.1` only; there is no session/token concept at the API layer.
-Authorization for the *external* operations (submitting a review, fetching a
-private repo) is entirely delegated to whatever `gh auth` / `glab auth` /
-Jira credentials the local environment already has configured. A future
-hosted/multi-user direction would need a session/auth layer here plus
-per-user scoping of the single global `AppContext` (see `infrastructure.md`),
-but that's not planned work — see `CLAUDE.md` for the standing guideline on
-not gratuitously foreclosing it in new code.
+None at the API layer, by design. See `constitution.md` Principle I — the
+server binds to `127.0.0.1` only; there is no session/token concept
+protecting these routes themselves, and anyone with access to the local
+machine can call any of them.
+
+Authorization for the *external* operations (submitting a review, fetching
+a private repo) is delegated to whatever credentials are available — for
+GitHub, entirely to `gh auth`; for Jira, to the configured env vars; for
+GitLab, primarily to `glab auth`/`GITLAB_TOKEN`, but **not exclusively** —
+a GitLab token can also be entered through the browser UI
+(`GitLabAuthModal`, `ui.md`) and persisted server-side at
+`STATE_DIR/gitlab-token` (`infrastructure.md`), taking priority over
+`GITLAB_TOKEN` when both are present. This is the one place this server
+manages a credential itself rather than fully deferring to the local
+environment — a deliberate exception (GitLab has no CLI-auth equivalent as
+frictionless as `gh auth login` for a quick one-off review), not an
+oversight, but worth being precise about rather than folding it into "fully
+delegated to the local environment."
+
+A future hosted/multi-user direction would need a session/auth layer here
+plus per-user scoping of the single global `AppContext` (see
+`infrastructure.md`), but that's not planned work — see `CLAUDE.md` for the
+standing guideline on not gratuitously foreclosing it in new code.
 
 ## Production Annotations
 
