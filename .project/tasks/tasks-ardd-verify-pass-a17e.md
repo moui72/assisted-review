@@ -71,7 +71,7 @@ status: in-progress
   handler, not just the modal's own internal `onKeyDown`. Run `npx vitest
   run --coverage` to confirm.
 
-- [ ] T005 [artifacts: ui] Manual verification (no automated test): run the
+- [x] T005 [artifacts: ui] Manual verification (no automated test): run the
   app (`pnpm dev`), open a review, click the investigation-access banner
   to open `InvestigationModal`, and confirm pressing `f`/`c`/arrow keys
   does nothing to the chunk underneath and `Escape` closes the modal —
