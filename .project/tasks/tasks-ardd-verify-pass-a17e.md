@@ -1,7 +1,7 @@
 ---
 plan: plan-ardd-verify-pass-2026-07-09.md
 generated: 2026-07-09
-status: ready
+status: in-progress
 ---
 
 # Tasks
