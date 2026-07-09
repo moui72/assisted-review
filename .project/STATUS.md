@@ -1,8 +1,8 @@
 # assisted-review — Project Status
 
-_Updated: 2026-07-09 (drafted plan for /ardd-verify defect fixes; documented GitLab browser-auth flow). Keep this current as artifacts are refined and open questions are resolved._
+_Updated: 2026-07-09 (approved plan and generated tasks for the /ardd-verify defect fixes). Keep this current as artifacts are refined and open questions are resolved._
 
-ARDD update available: installed `9189817`, source at `5fba0e5` — run
+ARDD update available: installed `9189817`, source at `8c7a8db` — run
 `/ardd-update`.
 
 ## Artifact Status
@@ -10,7 +10,7 @@ ARDD update available: installed `9189817`, source at `5fba0e5` — run
 | Artifact | Status | Open questions |
 |---|---|---|
 | constitution.md | stable ✅ (v3.2.0) | — |
-| datamodel.md | stable ✅ (diagram stale on this branch, current on `main` pending #69) | — |
+| datamodel.md | stable ✅ | — |
 | infrastructure.md | stable ✅ (diagram stale) | — |
 | api.md | stable ✅ | — |
 | ui.md | stable ✅ (diagram stale) | — |
@@ -22,11 +22,12 @@ None remain within any single artifact.
 
 ## Cross-Artifact Issues
 
-None found this pass. `api.md`, `infrastructure.md`, and `ui.md` were
-updated to document the GitLab browser-auth flow consistently — cross-links
-between the three (`GET`/`POST`/`DELETE /api/auth/gitlab` in `api.md`,
-`src/gitlab-token.ts` storage in `infrastructure.md`, `GitLabAuthModal.tsx`
-in `ui.md`) all resolve to matching descriptions.
+None found this pass. `api.md`, `infrastructure.md`, and `ui.md`
+consistently document the GitLab browser-auth flow (`GET`/`POST`/`DELETE
+/api/auth/gitlab` in `api.md`, `src/gitlab-token.ts` storage in
+`infrastructure.md`, `GitLabAuthModal.tsx` in `ui.md`), now merged to
+`main` via PR #69 (diagrams) and PR #71 (this doc work), which both
+merged since this plan was drafted.
 
 ## Constitution Compliance
 
@@ -34,22 +35,20 @@ No violations.
 
 ## Diagrams
 
-- datamodel.md — stale ⚠️ on this branch (current on `main`, pending PR #69)
+- datamodel.md — current ✅ (via PR #69)
 - infrastructure.md — stale ⚠️ (GitLab browser-token entry added
-  2026-07-09, on top of the pending #69 render)
-- ui.md — stale ⚠️ (`GitLabAuthModal` component entry added 2026-07-09, on
-  top of the pending #69 render)
+  2026-07-09, after #69's render)
+- ui.md — stale ⚠️ (`GitLabAuthModal` component entry added 2026-07-09,
+  after #69's render)
 
 ## Code-vs-Artifact Defects
 
 6 known defects — see `DEFECTS.md`, last checked 2026-07-08. 3 of the 4
-machine-surfaced ones (`2c7929b5`, `e1c63afa`, `0c265570` — the GitLab
-browser-auth documentation gap) are resolved by this session's artifact
-updates, pending a fresh `/ardd-verify` pass to confirm. The 4th
-(`c5de09b4`, `InvestigationModal` keyboard short-circuit bug) and the
-`ReviewsMenu` auth-prompt-parity gap are planned
-(`plan-ardd-verify-pass-2026-07-09.md`, Phases 2–3) but not yet
-implemented.
+machine-surfaced ones (GitLab browser-auth documentation gap) are resolved
+by the artifact updates merged in PR #71, pending a fresh `/ardd-verify`
+pass to confirm. The 4th (`InvestigationModal` keyboard short-circuit bug)
+and the `ReviewsMenu` auth-prompt-parity gap are now tasked
+(`tasks-ardd-verify-pass-a17e.md`, Phases 2–3) but not yet implemented.
 
 ## Feedback
 
@@ -64,13 +63,11 @@ and `feedback-inline-comment-editing-ui-7382.md` are both `planned`.
 
 ## In Flight
 
-- Branch `ardd-verify-pass` (current checkout), open as PR #70 —
-  `plan-ardd-verify-pass-2026-07-09.md` drafted (`status: draft`); Phase 1
-  (artifact documentation) already applied and pushed, Phases 2–3 (code
-  fixes) not yet started. Implementing them here will update PR #70 rather
-  than open a new one.
-- PR #69 `ardd-render-diagrams` — Mermaid diagrams refreshed for
-  datamodel/infrastructure/UI; open, not yet merged; independent of #70.
+- Branch `ardd-verify-defect-fixes` (current checkout), open as PR #71 —
+  plan approved, tasks `ready` (0/6 complete): `ReviewsMenu` auth-prompt
+  parity (T001-T002), `InvestigationModal` keyboard short-circuit fix
+  (T003-T005), full-suite verification (T006). Implementing these will
+  update PR #71.
 - Worktree `.claude/worktrees/ardd-codify-trial` (branch
   `ardd-codify-trial`) — no tasks file.
 - Worktree `.claude/worktrees/docs-update-readme-changelog` (branch
@@ -78,11 +75,8 @@ and `feedback-inline-comment-editing-ui-7382.md` are both `planned`.
 
 ## Recommended Next Step
 
-Run `/ardd-tasks` to select `plan-ardd-verify-pass-2026-07-09.md` (approves
-it, generates its task list), then implement Phases 2–3 (`ReviewsMenu` auth
-parity, `InvestigationModal` keyboard fix) on this same branch — it already
-has an open PR (#70), so this becomes an update to that PR rather than a
-new one. After implementing, re-run `/ardd-verify` to confirm the
-documentation-only defects are resolved. Merge PR #69 whenever convenient
-(independent of this work). Consider `/ardd-update` (source has moved to
-`5fba0e5`).
+Implement `tasks-ardd-verify-pass-a17e.md` (T001 first — `ReviewsMenu` auth
+parity has no dependencies). After implementing, re-run `/ardd-verify` to
+confirm all four machine-surfaced defects and the `ReviewsMenu` UX
+asymmetry are resolved. Consider `/ardd-update` (source has moved to
+`8c7a8db`).

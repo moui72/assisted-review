@@ -1,5 +1,5 @@
 ---
-status: draft
+status: approved
 branch: ardd-verify-pass
 created: 2026-07-09
 features: []
