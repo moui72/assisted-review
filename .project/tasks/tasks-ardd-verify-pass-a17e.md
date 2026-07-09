@@ -45,7 +45,7 @@ status: in-progress
 
 ## Phase 3: Fix `InvestigationModal`'s missing keyboard short-circuit
 
-- [ ] T003 [artifacts: ui] In `web/src/App.tsx`'s `onKey` handler (the
+- [x] T003 [artifacts: ui] In `web/src/App.tsx`'s `onKey` handler (the
   function containing the existing `if (submitOpen) {...}`, `if
   (reviewsOpen) {...}`, `if (settingsOpen) {...}`, `if (helpOpen) {...}`
   checks around line 313-333), add an equivalent block for
@@ -60,7 +60,7 @@ status: in-progress
   settingsOpen`) so the handler closure captures the current value —
   without this the check would silently use a stale value.
 
-- [ ] T004 [artifacts: ui] Tests for T003. Extend
+- [x] T004 [artifacts: ui] Tests for T003. Extend
   `tests/components/App.test.tsx`'s existing "investigation access banner"
   describe block (or add a new one) to cover: with the investigation modal
   open (click the banner to open it), pressing a navigation/action key

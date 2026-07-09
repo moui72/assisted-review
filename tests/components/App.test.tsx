@@ -224,4 +224,36 @@ describe('App — investigation access banner', () => {
     await user.click(screen.getByRole('button', { name: 'Dismiss' }));
     expect(screen.queryByText(/Enable deeper investigation/)).not.toBeInTheDocument();
   });
+
+  it('suppresses global keyboard shortcuts while open, and Escape closes it', async () => {
+    const user = userEvent.setup();
+    vi.mocked(fetchReview).mockResolvedValue(review);
+    vi.mocked(fetchState).mockImplementation(async () => initialState());
+    vi.mocked(fetchInvestigationConfig).mockResolvedValue({
+      platform: 'github',
+      owner: 'alice',
+      repo: 'proj',
+      mode: 'none',
+      chosen_at: '',
+    });
+
+    render(<App />);
+    await waitFor(() =>
+      expect(screen.getByText(/Enable deeper investigation/)).toBeInTheDocument(),
+    );
+    await user.click(screen.getByText(/Enable deeper investigation/));
+    expect(screen.getByText('Diff only (default)')).toBeInTheDocument();
+
+    // Still on the Overview page — ArrowRight normally navigates into the
+    // first chunk, which would unmount this text. It must not fire while
+    // the modal is open.
+    expect(screen.getByText(/chunks one at a time/)).toBeInTheDocument();
+    await user.keyboard('{ArrowRight}');
+    expect(screen.getByText(/chunks one at a time/)).toBeInTheDocument();
+    expect(screen.getByText('Diff only (default)')).toBeInTheDocument();
+
+    // Escape closes the modal via the global handler.
+    await user.keyboard('{Escape}');
+    expect(screen.queryByText('Diff only (default)')).not.toBeInTheDocument();
+  });
 });

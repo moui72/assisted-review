@@ -322,6 +322,10 @@ export function App() {
         if (e.key === 'Escape') setSettingsOpen(false);
         return;
       }
+      if (investigationModalOpen) {
+        if (e.key === 'Escape') setInvestigationModalOpen(false);
+        return;
+      }
       if (e.key === '?') {
         e.preventDefault();
         setHelpOpen((o) => !o);
@@ -370,6 +374,7 @@ export function App() {
     submitOpen,
     reviewsOpen,
     settingsOpen,
+    investigationModalOpen,
     index,
   ]);
 
