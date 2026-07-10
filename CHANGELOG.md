@@ -1,3 +1,10 @@
+## [1.11.4](https://github.com/moui72/assisted-review/compare/v1.11.3...v1.11.4) (2026-07-10)
+
+
+### Bug Fixes
+
+* AI/prompt fixes (tool-refusal, conversation context, markdown rendering) ([#79](https://github.com/moui72/assisted-review/issues/79)) ([954607e](https://github.com/moui72/assisted-review/commit/954607e4841651be179df4ac5c0f1b603f6fd3e3))
+
 ## [1.11.3](https://github.com/moui72/assisted-review/compare/v1.11.2...v1.11.3) (2026-07-10)
 
 
