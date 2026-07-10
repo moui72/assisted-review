@@ -1,12 +1,12 @@
 # assisted-review — Project Status
 
-_Updated: 2026-07-10 (both `log-version-on-launch` and the
-`ardd-verify-pass` defect fixes have merged to `main`; new UX and bug
-feedback captured via `/ardd-feedback`, including a real root-cause finding
-in `src/claude.ts`'s prompt-building and a Cmd+C-hijack bug in the global
-keyboard handler; new feature idea `linkify-pr-header-and-diff-fil` logged
-to the backlog). Keep this current as artifacts are refined and open
-questions are resolved._
+_Updated: 2026-07-10 (`tasks-ai-prompt-fixes-17b2.md` completed — all 8
+tasks across 3 phases: tool-refusal fix, Ask-Claude conversation context,
+and markdown rendering for chunk-panel follow-up notes. Plan had no bound
+features, so no backlog flips. Work is on branch `ai-prompt-fixes`, not yet
+pushed — `workflow_mode: collaborative` means it needs a pushed branch/PR
+to merge.) Keep this current as artifacts are refined and open questions
+are resolved._
 
 ## Artifact Status
 
@@ -25,10 +25,7 @@ None remain within any single artifact.
 
 ## Cross-Artifact Issues
 
-None found this pass. `api.md`, `infrastructure.md`, and `ui.md` all
-document the new `app_version` field consistently, and all three
-cross-reference the shipped code (`src/pkg-info.ts`, `src/cli.ts`,
-`src/server.ts`'s `GET /api/config` handler, `SettingsPanel.tsx`).
+None found this pass.
 
 ## Constitution Compliance
 
@@ -42,42 +39,33 @@ No violations.
 
 ## Code-vs-Artifact Defects
 
-`.project/DEFECTS.md` still lists 4 entries but is stale — last checked
-2026-07-08, before the `ReviewsMenu.tsx`/`App.tsx` GitLab-auth and
-keyboard-shortcut fixes merged to `main` (PR #72). Those 4 entries should
-now reproduce as resolved; run `/ardd-verify` to confirm and regenerate the
-file fresh.
+`.project/DEFECTS.md` still lists entries but is stale — last checked
+2026-07-08. Run `/ardd-verify` to confirm and regenerate the file fresh.
 
 ## Feedback
 
-8 feedback file(s) — see `.project/feedback/`:
+3 open feedback file(s) — see `.project/feedback/`:
 - `feedback-cmd-c-copy-broken-7a77.md` (open — bug: Cmd+C doesn't copy
   anywhere in the app outside a focused textarea/input, because the global
   keydown handler's `c` branch in `App.tsx:358-360` isn't guarded by the
   `mod` flag the way `ArrowRight`/`ArrowLeft` already are, so Cmd+C matches
   the bare-`c` "focus comment box" shortcut, calls `preventDefault()`, and
   steals focus).
-- `feedback-ai-note-followup-rendering-3deb.md` (open — Ask Claude
-  follow-up notes render as flat unformatted text instead of parsing
-  markdown — bold, code fences, bullet lists).
-- `feedback-ask-ai-conversation-context-6109.md` (open — Ask Claude
-  follow-up questions don't include prior turns/initial analysis in the
-  prompt — each question is answered cold, with no conversational memory).
 - `feedback-overview-resume-review-41d6.md` (open — Overview page's
   footer button always reads "Begin review →" even after chunks have
   already been viewed; should read "Resume review" once `state.viewed` is
   non-empty).
-- `feedback-investigation-mode-tool-refusal-4e7d.md` (open — bug: in
-  clone/local-path investigation modes the agent still refuses to
-  investigate the repo even when explicitly told it has permission,
-  because `buildPrompt`/`buildOverviewPrompt` in `src/claude.ts:50-52,86-91`
-  hard-code "do not use tools" regardless of the `allowRepoRead` grant
-  `server.ts` actually gives it — the prompt text contradicts the real
-  tool grant).
+- `feedback-readme-rewrite-move-mermaid-di-6e04.md` (open — README needs a
+  rewrite for npm publication (F001); Mermaid diagrams currently in
+  README.md don't render on npmjs.com and should move elsewhere (F002); a
+  Reconsidered item (F003) notes `/ardd-render`'s hardcoded README-only
+  target can't support F002 and has already been filed upstream as
+  `moui72/artifact-driven-dev#2` — not resolvable in this repo alone).
 
-`feedback-claude-investigation-tool-acce-3d5a.md`,
-`feedback-inline-comment-editing-ui-7382.md`, and
-`feedback-log-version-on-launch-f832.md` are all `planned`.
+`feedback-ai-note-followup-rendering-3deb.md`,
+`feedback-ask-ai-conversation-context-6109.md`, and
+`feedback-investigation-mode-tool-refusal-4e7d.md` were fully addressed by
+`tasks-ai-prompt-fixes-17b2.md`, now `status: completed`.
 
 ## Feature Backlog
 
@@ -89,18 +77,18 @@ link to that file in the PR's GitHub diff view). Target with
 
 ## In Flight
 
-None — no other worktrees, no draft plans/PRs pending.
+- Branch `ai-prompt-fixes` — `tasks-ai-prompt-fixes-17b2.md` is
+  `status: completed` (8/8), bound to `plan-ai-prompt-fixes-2026-07-10.md`
+  (`status: approved`, `features: []`). Not yet pushed — `workflow_mode:
+  collaborative` means this needs to reach `origin/main` (push + PR) to
+  land.
 
 ## Recommended Next Step
 
-A fresh `/ardd-verify` pass is overdue (stale since 2026-07-08) to confirm
-the 4 current `DEFECTS.md` entries are resolved and regenerate the file,
-and to refresh the two stale diagrams (`infrastructure.md`/`ui.md`) via
-`/ardd-render`. Separately, three open bug/UX feedback items are ready to
-be picked up by the next `/ardd-plan`:
-`feedback-cmd-c-copy-broken-7a77.md` (trivial one-line fix, but breaks a
-basic OS-level expectation everywhere in the app — worth prioritizing
-alongside or ahead of the investigation-mode bug),
-`feedback-investigation-mode-tool-refusal-4e7d.md` (defeats the point of
-choosing a clone/local-path investigation mode), and
-`feedback-overview-resume-review-41d6.md` (lower-priority UX polish).
+Push branch `ai-prompt-fixes` and open a draft PR for
+`tasks-ai-prompt-fixes-17b2.md`'s completed work (tool-refusal fix,
+Ask-Claude conversation context, markdown-rendered chunk-panel notes).
+Separately, a fresh `/ardd-verify` pass is overdue (stale since
+2026-07-08), and three small open feedback items (Cmd+C copy, Overview
+resume-review label, README/Mermaid rewrite) are ready for a future
+`/ardd-plan`.

@@ -1,6 +1,7 @@
 import { useState, type RefObject } from 'react';
 import type { AiNoteKind, StoredNote } from '../api.ts';
 import { ErrorBanner } from './ErrorBanner.tsx';
+import { Markdown } from './Markdown.tsx';
 
 /** A note not yet persisted — the live-streaming preview shown while a
  *  Claude request is in flight. Same content fields as `StoredNote`, minus
@@ -26,24 +27,28 @@ function Note({
   const tone = note.kind === 'initial' ? 'text-fg/85' : 'text-muted';
   return (
     <div className="group">
-      <p className={`font-serif text-[14.5px] leading-[1.7] ${tone}`}>
-        {label && (
-          <span className="mr-2 align-middle font-sans text-[10px] font-medium tracking-[0.14em] text-accent/80 uppercase">
-            {label}
-            {note.kind === 'investigation' && note.prompt ? ` · ${note.prompt}` : ''}
-          </span>
-        )}
-        {note.body}
+      {(label || (onDelete && 'id' in note)) && (
+        <p className="font-serif text-[14.5px] leading-[1.7]">
+          {label && (
+            <span className="mr-2 align-middle font-sans text-[10px] font-medium tracking-[0.14em] text-accent/80 uppercase">
+              {label}
+              {note.kind === 'investigation' && note.prompt ? ` · ${note.prompt}` : ''}
+            </span>
+          )}
+          {onDelete && 'id' in note && (
+            <button
+              onClick={() => onDelete(note.id)}
+              className="ml-2 align-middle font-sans text-[10px] text-faint opacity-0 transition group-hover:opacity-100 hover:text-[var(--del-fg)]"
+            >
+              delete
+            </button>
+          )}
+        </p>
+      )}
+      <div className="flex items-start">
+        <Markdown className={`font-serif text-[14.5px] leading-[1.7] ${tone}`}>{note.body}</Markdown>
         {live && <span className="ml-0.5 inline-block animate-pulse text-accent">▍</span>}
-        {onDelete && 'id' in note && (
-          <button
-            onClick={() => onDelete(note.id)}
-            className="ml-2 align-middle font-sans text-[10px] text-faint opacity-0 transition group-hover:opacity-100 hover:text-[var(--del-fg)]"
-          >
-            delete
-          </button>
-        )}
-      </p>
+      </div>
       {note.suggested_action && (
         <div className="mt-2 flex gap-2 rounded-md border border-accent/25 bg-accent/[0.07] px-3 py-2">
           <span className="select-none text-accent" aria-hidden>
