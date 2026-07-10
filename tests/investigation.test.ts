@@ -15,6 +15,7 @@ import {
   cleanupTempClone,
   sweepOrphanedTempClones,
   pruneStaleClones,
+  markConfigUsed,
   REPOS_DIR,
 } from '../src/investigation';
 import type { InvestigationConfig, PrRef } from '../src/types';
@@ -335,5 +336,69 @@ describe('pruneStaleClones', () => {
     await saveInvestigationConfigs({ 'github:o/r': config });
     await pruneStaleClones();
     expect((await loadInvestigationConfigs())['github:o/r']).toEqual(config);
+  });
+});
+
+describe('markConfigUsed', () => {
+  it('bumps last_used to roughly now for an existing config', async () => {
+    await saveInvestigationConfigs({
+      'github:o/r': {
+        platform: 'github',
+        owner: 'o',
+        repo: 'r',
+        mode: 'always-clone',
+        clone_path: join(REPOS_DIR, 'github-o-r'),
+        chosen_at: '2020-01-01T00:00:00.000Z',
+      },
+    });
+    const before = Date.now();
+    await markConfigUsed(pr);
+    const stored = (await loadInvestigationConfigs())['github:o/r'];
+    expect(stored.last_used).toBeDefined();
+    const ts = Date.parse(stored.last_used!);
+    expect(ts).toBeGreaterThanOrEqual(before);
+    expect(ts).toBeLessThanOrEqual(Date.now());
+    // Rest of the config is preserved.
+    expect(stored.mode).toBe('always-clone');
+    expect(stored.chosen_at).toBe('2020-01-01T00:00:00.000Z');
+  });
+
+  it('is a no-op when the repo has no persisted config', async () => {
+    await markConfigUsed(pr);
+    expect(await loadInvestigationConfigs()).toEqual({});
+  });
+
+  // Regression for the verify-pass defect: a config that never had `last_used`
+  // set was never TTL-prunable. Once marked used, the idle clock starts, so a
+  // later (>30d) prune can actually fire.
+  it('makes an always-clone with no prior last_used eligible for later pruning', async () => {
+    const dest = join(REPOS_DIR, 'github-o-r');
+    await mkdir(dest, { recursive: true });
+    await saveInvestigationConfigs({
+      'github:o/r': {
+        platform: 'github',
+        owner: 'o',
+        repo: 'r',
+        mode: 'always-clone',
+        clone_path: dest,
+        chosen_at: '2020-01-01T00:00:00.000Z',
+        // no last_used — the pre-fix state that could never prune
+      },
+    });
+    // Before any use: prune is a no-op (last_used is unset → NaN → skipped).
+    await pruneStaleClones();
+    expect((await loadInvestigationConfigs())['github:o/r'].mode).toBe('always-clone');
+
+    // Simulate a use that then goes idle >30 days by writing the bumped value
+    // back into the past, then prune.
+    await markConfigUsed(pr);
+    const configs = await loadInvestigationConfigs();
+    configs['github:o/r'].last_used = new Date(
+      Date.now() - 31 * 24 * 60 * 60 * 1000,
+    ).toISOString();
+    await saveInvestigationConfigs(configs);
+    await pruneStaleClones();
+    expect((await loadInvestigationConfigs())['github:o/r'].mode).toBe('none');
+    await expect(stat(dest)).rejects.toThrow();
   });
 });

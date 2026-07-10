@@ -17,6 +17,7 @@ import {
   ensureClone,
   refreshCloneIfStale,
   cleanupTempClone,
+  markConfigUsed,
 } from './investigation.js';
 import { fetchFileContent } from './fetch.js';
 import {
@@ -418,6 +419,10 @@ export function startServer(
           ...(mode === 'local-path' ? { local_path } : {}),
           ...(clonePath ? { clone_path: clonePath } : {}),
           chosen_at: new Date().toISOString(),
+          // Seed the idle clock at creation so an always-clone that's chosen
+          // but never subsequently investigated still prunes 30 days later,
+          // rather than living forever with an unset `last_used`.
+          ...(mode === 'always-clone' ? { last_used: new Date().toISOString() } : {}),
         };
         const configs = await loadInvestigationConfigs();
         configs[configKey(pr)] = config;
@@ -450,6 +455,8 @@ export function startServer(
       const investigationConfig = await getInvestigationConfig(review.pr);
       if (investigationConfig.mode === 'always-clone') {
         await refreshCloneIfStale(investigationConfig, review.meta.head_sha);
+        // Bump the idle clock so this actively-used clone isn't TTL-pruned.
+        await markConfigUsed(review.pr);
       }
       const streamOpts =
         investigationConfig.mode === 'local-path'
