@@ -29,8 +29,11 @@ jobs:
           cache: 'pnpm'
           registry-url: 'https://registry.npmjs.org'
 
+      # Pinned, not `npm@latest` — that floated onto a broken 12.0.0 prerelease
+      # missing the `sigstore` dependency its provenance path requires,
+      # breaking `npm publish` (https://github.com/npm/cli/issues/9722).
       - name: Upgrade npm
-        run: npm install -g npm@latest
+        run: npm install -g npm@11.18.0
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
