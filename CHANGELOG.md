@@ -1,3 +1,10 @@
+## [1.11.2](https://github.com/moui72/assisted-review/compare/v1.11.1...v1.11.2) (2026-07-10)
+
+
+### Bug Fixes
+
+* **ci:** pin npm version in publish workflow, remove Codecov upload ([#73](https://github.com/moui72/assisted-review/issues/73)) ([f60cc09](https://github.com/moui72/assisted-review/commit/f60cc098ceaea8c973fee397c77a2cb7e9f6bf26))
+
 ## [1.11.1](https://github.com/moui72/assisted-review/compare/v1.11.0...v1.11.1) (2026-07-10)
 
 
