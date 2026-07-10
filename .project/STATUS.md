@@ -1,8 +1,11 @@
 # assisted-review — Project Status
 
-_Updated: 2026-07-10 (`/ardd-implement` completed all 11 tasks in
-`tasks-log-version-on-launch-e638.md`). Keep this current as artifacts are
-refined and open questions are resolved._
+_Updated: 2026-07-10 (both `log-version-on-launch` and the
+`ardd-verify-pass` defect fixes have merged to `main`; new UX and bug
+feedback captured via `/ardd-feedback`, including a real root-cause finding
+in `src/claude.ts`'s prompt-building and a Cmd+C-hijack bug in the global
+keyboard handler). Keep this current as artifacts are refined and open
+questions are resolved._
 
 ## Artifact Status
 
@@ -22,14 +25,9 @@ None remain within any single artifact.
 ## Cross-Artifact Issues
 
 None found this pass. `api.md`, `infrastructure.md`, and `ui.md` all
-document the new `app_version` field consistently: `infrastructure.md`
-distinguishes the unconditional startup version line from the conditional
-update-check notice, `api.md`'s `GET /api/config` documents the
-`app_version` response field, and `ui.md`'s `SettingsPanel.tsx` description
-documents the new "About" version row — all three cross-reference each
-other and match the shipped code (`src/pkg-info.ts`'s `resolvePkg()`,
-`src/cli.ts`'s `reportVersion()`, `src/server.ts`'s `GET /api/config`
-handler, `web/src/components/SettingsPanel.tsx`).
+document the new `app_version` field consistently, and all three
+cross-reference the shipped code (`src/pkg-info.ts`, `src/cli.ts`,
+`src/server.ts`'s `GET /api/config` handler, `SettingsPanel.tsx`).
 
 ## Constitution Compliance
 
@@ -43,20 +41,38 @@ No violations.
 
 ## Code-vs-Artifact Defects
 
-4 known defects — see `.project/DEFECTS.md`, last checked 2026-07-08. Run
-`/ardd-verify` to refresh (a full pass is overdue — the file has read
-`_Last verified: 2026-07-08` since before the current branch's work
-started).
+`.project/DEFECTS.md` still lists 4 entries but is stale — last checked
+2026-07-08, before the `ReviewsMenu.tsx`/`App.tsx` GitLab-auth and
+keyboard-shortcut fixes merged to `main` (PR #72). Those 4 entries should
+now reproduce as resolved; run `/ardd-verify` to confirm and regenerate the
+file fresh.
 
 ## Feedback
 
-5 feedback file(s) — see `.project/feedback/`:
+8 feedback file(s) — see `.project/feedback/`:
+- `feedback-cmd-c-copy-broken-7a77.md` (open — bug: Cmd+C doesn't copy
+  anywhere in the app outside a focused textarea/input, because the global
+  keydown handler's `c` branch in `App.tsx:358-360` isn't guarded by the
+  `mod` flag the way `ArrowRight`/`ArrowLeft` already are, so Cmd+C matches
+  the bare-`c` "focus comment box" shortcut, calls `preventDefault()`, and
+  steals focus).
 - `feedback-ai-note-followup-rendering-3deb.md` (open — Ask Claude
   follow-up notes render as flat unformatted text instead of parsing
   markdown — bold, code fences, bullet lists).
 - `feedback-ask-ai-conversation-context-6109.md` (open — Ask Claude
   follow-up questions don't include prior turns/initial analysis in the
   prompt — each question is answered cold, with no conversational memory).
+- `feedback-overview-resume-review-41d6.md` (open — Overview page's
+  footer button always reads "Begin review →" even after chunks have
+  already been viewed; should read "Resume review" once `state.viewed` is
+  non-empty).
+- `feedback-investigation-mode-tool-refusal-4e7d.md` (open — bug: in
+  clone/local-path investigation modes the agent still refuses to
+  investigate the repo even when explicitly told it has permission,
+  because `buildPrompt`/`buildOverviewPrompt` in `src/claude.ts:50-52,86-91`
+  hard-code "do not use tools" regardless of the `allowRepoRead` grant
+  `server.ts` actually gives it — the prompt text contradicts the real
+  tool grant).
 
 `feedback-claude-investigation-tool-acce-3d5a.md`,
 `feedback-inline-comment-editing-ui-7382.md`, and
@@ -69,20 +85,18 @@ started).
 
 ## In Flight
 
-- Draft plan `plan-ardd-verify-pass-2026-07-09.md` (branch `ardd-verify-pass`,
-  not yet approved/tasked) — targets the 4 machine-surfaced `DEFECTS.md`
-  entries. A fresh `/ardd-verify` pass should confirm whether this plan is
-  still needed or should be superseded.
-- Worktree `.claude/worktrees/polished-juggling-curry` (branch
-  `worktree-polished-juggling-curry`, locked) — no tasks file
-  (`tasks=none`); purpose unclear from this branch, not investigated this
-  pass.
+None — no other worktrees, no draft plans/PRs pending.
 
 ## Recommended Next Step
 
-`tasks-log-version-on-launch-e638.md` is now `completed` (11/11) on branch
-`log-version-on-launch` — merge this branch to land the version-on-launch
-feature. Separately, a fresh `/ardd-verify` pass is overdue to confirm the
-4 known `DEFECTS.md` entries are resolved (stale since 2026-07-08), refresh
-the two stale diagrams (`infrastructure.md`/`ui.md`), and settle whether
-`plan-ardd-verify-pass-2026-07-09.md` is still needed.
+A fresh `/ardd-verify` pass is overdue (stale since 2026-07-08) to confirm
+the 4 current `DEFECTS.md` entries are resolved and regenerate the file,
+and to refresh the two stale diagrams (`infrastructure.md`/`ui.md`) via
+`/ardd-render`. Separately, three open bug/UX feedback items are ready to
+be picked up by the next `/ardd-plan`:
+`feedback-cmd-c-copy-broken-7a77.md` (trivial one-line fix, but breaks a
+basic OS-level expectation everywhere in the app — worth prioritizing
+alongside or ahead of the investigation-mode bug),
+`feedback-investigation-mode-tool-refusal-4e7d.md` (defeats the point of
+choosing a clone/local-path investigation mode), and
+`feedback-overview-resume-review-41d6.md` (lower-priority UX polish).
