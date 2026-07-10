@@ -70,6 +70,7 @@ name: constitution
 status: stable
 last_updated: 2026-07-02
 next_step_prompt: true
+workflow_mode: collaborative
 ---
 
 # assisted-review Constitution
