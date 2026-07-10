@@ -394,6 +394,7 @@ graph TD
     Server["Server (src/server.ts, 127.0.0.1:4319)"]
     State[("State files (~/.assisted-review/*.json)")]
     Clones[("Repo clones (STATE_DIR/repos/)")]
+    GitLabToken[("GitLab browser token (STATE_DIR/gitlab-token, 0o600)")]
     GitHub["GitHub (gh CLI)"]
     GitLab["GitLab (glab CLI / REST v4 fallback)"]
     Jira["Jira REST API"]
@@ -404,9 +405,12 @@ graph TD
     CLI -->|starts| Server
     CLI -->|"GET /<pkg>/latest (update check)"| NpmRegistry
     UI -->|"REST + SSE (/api/*)"| Server
+    UI -->|"POST/DELETE /api/auth/gitlab (PAT entry)"| Server
     Server -->|"save/load JSON (atomic write)"| State
+    Server -->|"save/load PAT (atomic write)"| GitLabToken
     Server -->|"gh pr diff / gh pr view / gh api / gh repo clone"| GitHub
     Server -->|"glab api / mr diff, REST fallback / glab repo clone"| GitLab
+    GitLabToken -.->|"resolved before GITLAB_TOKEN"| GitLab
     Server -->|"GET /rest/api/3/issue/{key}"| Jira
     Server -->|"resolve JIRA_TOKEN (op read)"| OnePassword
     Server -->|"spawn, stream-json (cwd: tmpdir/local path/clone)"| Claude
@@ -443,9 +447,11 @@ graph TD
     ReviewsMenu --> OpenReviewForm["OpenReviewForm.tsx"]
     ReviewsMenu --> ReviewsList["ReviewsList.tsx"]
     ReviewsMenu -->|"dismissing the active review"| DeleteReviewConfirm["DeleteReviewConfirm.tsx"]
+    ReviewsMenu -->|"auth_required: gitlab"| GitLabAuthModal["GitLabAuthModal.tsx"]
 
     SettingsPanel -->|"reopen to change mode"| InvestigationModal
 
+    Splash -->|"auth_required: gitlab"| GitLabAuthModal
     Splash --> Logo["Logo.tsx"]
     TopNav --> Logo
 ```

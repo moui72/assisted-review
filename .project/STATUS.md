@@ -1,8 +1,8 @@
 # assisted-review — Project Status
 
-_Updated: 2026-07-09 (drafted plan for /ardd-verify defect fixes; documented GitLab browser-auth flow). Keep this current as artifacts are refined and open questions are resolved._
+_Updated: 2026-07-09 (completed ardd-verify-pass defect-fix tasks — all 6 tasks done, including documenting the GitLab browser-auth flow). Keep this current as artifacts are refined and open questions are resolved._
 
-ARDD update available: installed `9189817`, source at `5fba0e5` — run
+ARDD update available: installed `9189817`, source at `759e03f` — run
 `/ardd-update`.
 
 ## Artifact Status
@@ -10,10 +10,10 @@ ARDD update available: installed `9189817`, source at `5fba0e5` — run
 | Artifact | Status | Open questions |
 |---|---|---|
 | constitution.md | stable ✅ (v3.2.0) | — |
-| datamodel.md | stable ✅ (diagram stale on this branch, current on `main` pending #69) | — |
-| infrastructure.md | stable ✅ (diagram stale) | — |
+| datamodel.md | stable ✅ | — |
+| infrastructure.md | stable ✅ | — |
 | api.md | stable ✅ | — |
-| ui.md | stable ✅ (diagram stale) | — |
+| ui.md | stable ✅ | — |
 | features.md | register (no status field, by design) | — |
 
 ## Open Questions
@@ -34,22 +34,21 @@ No violations.
 
 ## Diagrams
 
-- datamodel.md — stale ⚠️ on this branch (current on `main`, pending PR #69)
-- infrastructure.md — stale ⚠️ (GitLab browser-token entry added
-  2026-07-09, on top of the pending #69 render)
-- ui.md — stale ⚠️ (`GitLabAuthModal` component entry added 2026-07-09, on
-  top of the pending #69 render)
+- datamodel.md — current ✅
+- infrastructure.md — current ✅ (GitLab browser-token entry added
+  2026-07-09, re-rendered)
+- ui.md — current ✅ (`GitLabAuthModal` component entry added 2026-07-09,
+  re-rendered)
 
 ## Code-vs-Artifact Defects
 
-6 known defects — see `DEFECTS.md`, last checked 2026-07-08. 3 of the 4
-machine-surfaced ones (`2c7929b5`, `e1c63afa`, `0c265570` — the GitLab
-browser-auth documentation gap) are resolved by this session's artifact
-updates, pending a fresh `/ardd-verify` pass to confirm. The 4th
-(`c5de09b4`, `InvestigationModal` keyboard short-circuit bug) and the
-`ReviewsMenu` auth-prompt-parity gap are planned
-(`plan-ardd-verify-pass-2026-07-09.md`, Phases 2–3) but not yet
-implemented.
+6 known defects — see `DEFECTS.md`, last checked 2026-07-08. All 4
+machine-surfaced ones are now resolved in code: GitLab browser-auth flow
+documented (`api.md`/`infrastructure.md`/`ui.md`, PR #71), `ReviewsMenu`
+auth-prompt parity with `Splash` implemented (T001-T002), and the
+`InvestigationModal` keyboard short-circuit bug fixed (T003-T005). A
+fresh `/ardd-verify` pass would confirm and refresh `DEFECTS.md`
+(currently stale relative to these fixes).
 
 ## Feedback
 
@@ -64,13 +63,6 @@ and `feedback-inline-comment-editing-ui-7382.md` are both `planned`.
 
 ## In Flight
 
-- Branch `ardd-verify-pass` (current checkout), open as PR #70 —
-  `plan-ardd-verify-pass-2026-07-09.md` drafted (`status: draft`); Phase 1
-  (artifact documentation) already applied and pushed, Phases 2–3 (code
-  fixes) not yet started. Implementing them here will update PR #70 rather
-  than open a new one.
-- PR #69 `ardd-render-diagrams` — Mermaid diagrams refreshed for
-  datamodel/infrastructure/UI; open, not yet merged; independent of #70.
 - Worktree `.claude/worktrees/ardd-codify-trial` (branch
   `ardd-codify-trial`) — no tasks file.
 - Worktree `.claude/worktrees/docs-update-readme-changelog` (branch
@@ -78,11 +70,13 @@ and `feedback-inline-comment-editing-ui-7382.md` are both `planned`.
 
 ## Recommended Next Step
 
-Run `/ardd-tasks` to select `plan-ardd-verify-pass-2026-07-09.md` (approves
-it, generates its task list), then implement Phases 2–3 (`ReviewsMenu` auth
-parity, `InvestigationModal` keyboard fix) on this same branch — it already
-has an open PR (#70), so this becomes an update to that PR rather than a
-new one. After implementing, re-run `/ardd-verify` to confirm the
-documentation-only defects are resolved. Merge PR #69 whenever convenient
-(independent of this work). Consider `/ardd-update` (source has moved to
-`5fba0e5`).
+Merge PR #72 (this branch, `ardd-verify-defect-fixes`), then run a fresh
+`/ardd-verify` pass to confirm all defects are resolved and refresh
+`DEFECTS.md`. Consider `/ardd-update` (source has moved to `759e03f`).
+
+## Unsigned Commits
+
+5 commits on `ardd-verify-defect-fixes` from this session are unsigned
+(1Password was locked): `d98f543`, `7a12fdd`, `85b7f34`, `b3680ec`,
+`6f26102`. Re-sign before merging, e.g.
+`git rebase d98f543^ --exec "git commit --amend --no-edit -S"`.
