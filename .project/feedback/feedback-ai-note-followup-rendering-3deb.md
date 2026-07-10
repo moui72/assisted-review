@@ -1,13 +1,13 @@
 ---
-status: open
+status: planned
 created: 2026-07-10
-plan: null
+plan: plan-ai-prompt-fixes-2026-07-10.md
 ---
 
 # Feedback
 
 ## Bugs
-- [ ] F001 The Ask Claude follow-up note ("asked · ...") in the chunk panel
+- [x] F001 The Ask Claude follow-up note ("asked · ...") in the chunk panel
   renders as one unbroken block of plain text — the raw markdown from the
   agent's response (bold `**...**`, code fences, bullet lists) is not being
   parsed/rendered, so headers, code blocks, and list items all run together

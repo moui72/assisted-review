@@ -1,13 +1,13 @@
 ---
-status: open
+status: planned
 created: 2026-07-10
-plan: null
+plan: plan-ai-prompt-fixes-2026-07-10.md
 ---
 
 # Feedback
 
 ## Bugs
-- [ ] F001 The "Ask Claude" follow-up input doesn't behave like an
+- [x] F001 The "Ask Claude" follow-up input doesn't behave like an
   interactive/conversational session — each question is answered from a
   freshly built prompt containing only the diff hunk and the new question
   text (`buildPrompt()`/`buildOverviewPrompt()` in `src/claude.ts`), with no
