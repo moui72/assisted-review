@@ -4,7 +4,8 @@ _Updated: 2026-07-10 (both `log-version-on-launch` and the
 `ardd-verify-pass` defect fixes have merged to `main`; new UX and bug
 feedback captured via `/ardd-feedback`, including a real root-cause finding
 in `src/claude.ts`'s prompt-building and a Cmd+C-hijack bug in the global
-keyboard handler). Keep this current as artifacts are refined and open
+keyboard handler; new feature idea `linkify-pr-header-and-diff-fil` logged
+to the backlog). Keep this current as artifacts are refined and open
 questions are resolved._
 
 ## Artifact Status
@@ -80,8 +81,11 @@ file fresh.
 
 ## Feature Backlog
 
-12 backlogged · 0 planned · 0 tasked · 6 implemented — see
-`.project/features/`.
+13 backlogged · 0 planned · 0 tasked · 6 implemented — see
+`.project/features/`. Newest: `linkify-pr-header-and-diff-fil` (make the
+PR title link out to the PR on GitHub, and each diff chunk's file name
+link to that file in the PR's GitHub diff view). Target with
+`/ardd-plan linkify-pr-header-and-diff-fil`.
 
 ## In Flight
 
