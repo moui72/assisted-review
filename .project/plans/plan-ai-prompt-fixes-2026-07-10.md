@@ -1,5 +1,5 @@
 ---
-status: draft
+status: approved
 branch: ai-prompt-fixes
 created: 2026-07-10
 features: []
