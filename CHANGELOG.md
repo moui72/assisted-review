@@ -1,3 +1,10 @@
+## [1.11.1](https://github.com/moui72/assisted-review/compare/v1.11.0...v1.11.1) (2026-07-10)
+
+
+### Bug Fixes
+
+* **ardd:** complete ardd-verify-pass defect fixes ([#72](https://github.com/moui72/assisted-review/issues/72)) ([b4e5e35](https://github.com/moui72/assisted-review/commit/b4e5e353fdf98152d412bf3ddf15f64d600bbef2))
+
 # [1.11.0](https://github.com/moui72/assisted-review/compare/v1.10.0...v1.11.0) (2026-07-08)
 
 
