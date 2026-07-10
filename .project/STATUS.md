@@ -1,8 +1,8 @@
 # assisted-review — Project Status
 
-_Updated: 2026-07-10 (approved `plan-log-version-on-launch-2026-07-10.md`
-and generated its 11-task list via `/ardd-tasks`). Keep this current as
-artifacts are refined and open questions are resolved._
+_Updated: 2026-07-10 (`/ardd-implement` completed all 11 tasks in
+`tasks-log-version-on-launch-e638.md`). Keep this current as artifacts are
+refined and open questions are resolved._
 
 ## Artifact Status
 
@@ -22,10 +22,14 @@ None remain within any single artifact.
 ## Cross-Artifact Issues
 
 None found this pass. `api.md`, `infrastructure.md`, and `ui.md` all
-document the GitLab browser-auth flow consistently — cross-links between
-the three (`GET`/`POST`/`DELETE /api/auth/gitlab` in `api.md`,
-`src/gitlab-token.ts` storage in `infrastructure.md`, `GitLabAuthModal.tsx`
-in `ui.md`) all resolve to matching descriptions.
+document the new `app_version` field consistently: `infrastructure.md`
+distinguishes the unconditional startup version line from the conditional
+update-check notice, `api.md`'s `GET /api/config` documents the
+`app_version` response field, and `ui.md`'s `SettingsPanel.tsx` description
+documents the new "About" version row — all three cross-reference each
+other and match the shipped code (`src/pkg-info.ts`'s `resolvePkg()`,
+`src/cli.ts`'s `reportVersion()`, `src/server.ts`'s `GET /api/config`
+handler, `web/src/components/SettingsPanel.tsx`).
 
 ## Constitution Compliance
 
@@ -39,21 +43,18 @@ No violations.
 
 ## Code-vs-Artifact Defects
 
-6 known defects — see `DEFECTS.md`, last checked 2026-07-08 (stale relative
-to current `main`). All 4 machine-surfaced ones are believed resolved in
-code: GitLab browser-auth flow documented (`api.md`/`infrastructure.md`/
-`ui.md`, PR #71), `ReviewsMenu` auth-prompt parity with `Splash`
-implemented, and the `InvestigationModal` keyboard short-circuit bug fixed
-— all merged via PR #72. A fresh `/ardd-verify` pass would confirm and
-refresh `DEFECTS.md`.
+4 known defects — see `.project/DEFECTS.md`, last checked 2026-07-08. Run
+`/ardd-verify` to refresh (a full pass is overdue — the file has read
+`_Last verified: 2026-07-08` since before the current branch's work
+started).
 
 ## Feedback
 
-2 open feedback files, to be picked up by a future `/ardd-plan`:
-- `feedback-ai-note-followup-rendering-3deb.md` (F001: Ask-Claude
+5 feedback file(s) — see `.project/feedback/`:
+- `feedback-ai-note-followup-rendering-3deb.md` (open — Ask Claude
   follow-up notes render as flat unformatted text instead of parsing
   markdown — bold, code fences, bullet lists).
-- `feedback-ask-ai-conversation-context-6109.md` (F001: Ask Claude
+- `feedback-ask-ai-conversation-context-6109.md` (open — Ask Claude
   follow-up questions don't include prior turns/initial analysis in the
   prompt — each question is answered cold, with no conversational memory).
 
@@ -68,15 +69,10 @@ refresh `DEFECTS.md`.
 
 ## In Flight
 
-- Branch `log-version-on-launch` (current checkout) — plan approved,
-  `tasks-log-version-on-launch-e638.md` ready, 0/11 complete. Run
-  `/ardd-implement` to execute.
 - Draft plan `plan-ardd-verify-pass-2026-07-09.md` (branch `ardd-verify-pass`,
   not yet approved/tasked) — targets the 4 machine-surfaced `DEFECTS.md`
-  entries. Believed already resolved in code via PR #72 (per this file's
-  Code-vs-Artifact Defects section below); a fresh `/ardd-verify` pass should
-  confirm before deciding whether this plan is still needed or should be
-  superseded.
+  entries. A fresh `/ardd-verify` pass should confirm whether this plan is
+  still needed or should be superseded.
 - Worktree `.claude/worktrees/polished-juggling-curry` (branch
   `worktree-polished-juggling-curry`, locked) — no tasks file
   (`tasks=none`); purpose unclear from this branch, not investigated this
@@ -84,10 +80,9 @@ refresh `DEFECTS.md`.
 
 ## Recommended Next Step
 
-Run `/ardd-implement` to execute `tasks-log-version-on-launch-e638.md`'s 11
-tasks (CLI startup version log, `GET /api/config` + `SettingsPanel.tsx`
-version display, tests) on this branch. Separately, a fresh `/ardd-verify`
-pass is overdue to confirm the 6 known `DEFECTS.md` entries are resolved
-(stale since 2026-07-08), refresh the two stale diagrams
-(`infrastructure.md`/`ui.md`), and settle whether `plan-ardd-verify-pass-
-2026-07-09.md` is still needed.
+`tasks-log-version-on-launch-e638.md` is now `completed` (11/11) on branch
+`log-version-on-launch` — merge this branch to land the version-on-launch
+feature. Separately, a fresh `/ardd-verify` pass is overdue to confirm the
+4 known `DEFECTS.md` entries are resolved (stale since 2026-07-08), refresh
+the two stale diagrams (`infrastructure.md`/`ui.md`), and settle whether
+`plan-ardd-verify-pass-2026-07-09.md` is still needed.
