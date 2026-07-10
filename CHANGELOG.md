@@ -1,3 +1,10 @@
+## [1.11.3](https://github.com/moui72/assisted-review/compare/v1.11.2...v1.11.3) (2026-07-10)
+
+
+### Bug Fixes
+
+* **ui:** Log running app version on launch ([#75](https://github.com/moui72/assisted-review/issues/75)) ([8443115](https://github.com/moui72/assisted-review/commit/8443115cee365cdc2130776ca592d7e10af1b738))
+
 ## [1.11.2](https://github.com/moui72/assisted-review/compare/v1.11.1...v1.11.2) (2026-07-10)
 
 
