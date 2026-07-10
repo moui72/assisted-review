@@ -1,8 +1,8 @@
 ---
 name: ui
 status: stable
-last_updated: 2026-07-09
-diagram_status: current
+last_updated: 2026-07-10
+diagram_status: stale
 ---
 
 # UI
@@ -161,7 +161,10 @@ Shared across views, listed by concern:
   layered over the server default from `GET /api/config`), and an
   "Investigation access" row showing the active repo's current
   `InvestigationConfig.mode` (`datamodel.md`) with a button that reopens
-  `InvestigationModal` to change it.
+  `InvestigationModal` to change it. A read-only "About" section (rendered
+  only when present) shows the running `app_version` (`api.md`'s
+  `GET /api/config`), sourced from `PreloadConfig.app_version` — the same
+  value `src/cli.ts` logs to the console at startup.
 - **`InvestigationModal.tsx`** — presents the five investigation-access
   choices (`none`/`local-path`/`api`/`temp-clone`/`always-clone`, see
   `infrastructure.md`'s Repo Investigation Access) with a short

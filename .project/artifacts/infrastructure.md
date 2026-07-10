@@ -1,8 +1,8 @@
 ---
 name: infrastructure
 status: stable
-last_updated: 2026-07-09
-diagram_status: current
+last_updated: 2026-07-10
+diagram_status: stale
 ---
 
 # Infrastructure
@@ -310,6 +310,13 @@ behavior — until the reviewer explicitly opts in via the UI modal
 - **Purpose**: on every CLI start, tells the user (via a single `console.error`
   line) when a newer version of the package is published, without ever
   delaying or interrupting startup.
+- **Distinct from the version banner**: `src/cli.ts`'s `reportVersion()`
+  unconditionally prints `<name> v<version>` at startup, before this check
+  even runs — it always fires, has nothing to do with the registry, and its
+  resolved version is what's passed to `startServer()` as `appVersion` (see
+  API — `GET /api/config`'s `app_version` field). This update check is the
+  separate, conditional line that only appears when a newer version exists;
+  the two must not be conflated into one behavior.
 - **Fetch**: `GET https://registry.npmjs.org/<pkg>/latest`, via `fetch()`, with
   a 1.5s `AbortController` timeout — cheap enough that a slow/unreachable
   registry can't meaningfully stall anything, since the caller (`src/cli.ts`)

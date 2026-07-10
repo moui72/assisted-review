@@ -12,9 +12,6 @@
 
 import './env.js'; // load .env before any module reads process.env
 import { execFile } from 'node:child_process';
-import { readFile } from 'node:fs/promises';
-import { fileURLToPath } from 'node:url';
-import { dirname, join } from 'node:path';
 import { parseRef } from './parse-ref.js';
 import { startServer } from './server.js';
 import { saveState } from './state.js';
@@ -22,18 +19,27 @@ import { loadReview } from './review.js';
 import { setupJira } from './setup-jira.js';
 import { checkForUpdate } from './update-check.js';
 import { sweepOrphanedTempClones, pruneStaleClones } from './investigation.js';
+import { resolvePkg } from './pkg-info.js';
 import type { Review, ReviewState } from './types.js';
 
 async function reportIfOutdated(): Promise<void> {
   try {
-    const here = dirname(fileURLToPath(import.meta.url));
-    const pkg = JSON.parse(
-      await readFile(join(here, '..', 'package.json'), 'utf8'),
-    ) as { name: string; version: string };
+    const pkg = await resolvePkg();
     const message = await checkForUpdate(pkg.name, pkg.version);
     if (message) console.error(`\n  ${message}\n`);
   } catch {
     // Never let the update check disrupt startup.
+  }
+}
+
+async function reportVersion(): Promise<string | undefined> {
+  try {
+    const pkg = await resolvePkg();
+    console.error(`${pkg.name} v${pkg.version}`);
+    return pkg.version;
+  } catch {
+    // Never let version resolution disrupt startup.
+    return undefined;
   }
 }
 
@@ -71,6 +77,7 @@ function parseArgs(argv: string[]): {
 }
 
 async function main(): Promise<void> {
+  const appVersion = await reportVersion();
   void reportIfOutdated(); // fire-and-forget; never blocks startup
   void sweepOrphanedTempClones(); // fire-and-forget; never blocks startup
   void pruneStaleClones(); // fire-and-forget; never blocks startup
@@ -136,7 +143,7 @@ async function main(): Promise<void> {
 
   const { url } = await startServer(
     { review, state },
-    { port, serveUi: !apiOnly, mockAi, preloadChunks, preloadOverview },
+    { port, serveUi: !apiOnly, mockAi, preloadChunks, preloadOverview, appVersion },
   );
 
   if (apiOnly) {

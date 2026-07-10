@@ -135,6 +135,7 @@ export interface StartOptions {
   mockAi?: boolean;
   preloadChunks?: number;
   preloadOverview?: boolean;
+  appVersion?: string;
 }
 
 export function startServer(
@@ -146,6 +147,7 @@ export function startServer(
     mockAi = false,
     preloadChunks = 1,
     preloadOverview = true,
+    appVersion = '',
   }: StartOptions = {},
 ): Promise<{ url: string }> {
   void loadGitLabToken();
@@ -180,6 +182,7 @@ export function startServer(
       return sendJson(res, 200, {
         preload_chunks: preloadChunks,
         preload_overview: preloadOverview,
+        app_version: appVersion,
       });
     }
 
