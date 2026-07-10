@@ -1,7 +1,7 @@
 ---
 plan: plan-ai-prompt-fixes-2026-07-10.md
 generated: 2026-07-10
-status: in-progress
+status: completed
 ---
 
 # Tasks
@@ -52,7 +52,7 @@ status: in-progress
 
 ## Phase 3: Markdown rendering for chunk-panel notes
 
-- [ ] T007 [artifacts: ui] In `web/src/components/AiCommentary.tsx`'s `Note`
+- [x] T007 [artifacts: ui] In `web/src/components/AiCommentary.tsx`'s `Note`
   component, replace the plain-text `{note.body}` render (currently inline
   inside the `<p>` at the component's body) with
   `<Markdown className="...">{note.body}</Markdown>`, importing `Markdown`
@@ -64,7 +64,7 @@ status: in-progress
   layout assumptions (e.g. cursor appended inline after `{note.body}`)
   no longer hold once `note.body` is block-level.
   [feedback: feedback-ai-note-followup-rendering-3deb F001]
-- [ ] T008 [parallel] Add a component test under `tests/components/`
+- [x] T008 [parallel] Add a component test under `tests/components/`
   (`// @vitest-environment jsdom` docblock, matching this project's existing
   component-test convention) rendering `AiCommentary` with a `StoredNote`
   whose `body` contains markdown (bold text, a fenced code block, and a
