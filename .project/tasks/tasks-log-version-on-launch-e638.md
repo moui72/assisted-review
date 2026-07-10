@@ -19,7 +19,7 @@ status: in-progress
   isn't complex enough to need an abstraction beyond avoiding a copy-paste
   bug. Print this line before `reportIfOutdated()`'s conditional notice, not
   replacing it.
-- [ ] T002 [artifacts: infrastructure] Update `infrastructure.md`'s "npm
+- [x] T002 [artifacts: infrastructure] Update `infrastructure.md`'s "npm
   Registry (update check)" section: note the new unconditional startup
   version line is a *separate* behavior from the existing conditional
   outdated-version notice — keep the two clearly distinguished so a future
@@ -48,9 +48,9 @@ launch, whether or not an update is available.
   new read-only row rendering `preloadConfig?.app_version` using the
   existing `Row` component (matching the pattern used for the
   theme/preload/investigation-access rows).
-- [ ] T007 [parallel] [artifacts: api] Document the new `app_version` field
+- [x] T007 [parallel] [artifacts: api] Document the new `app_version` field
   on `GET /api/config` in `api.md`. Stamp `last_updated`.
-- [ ] T008 [parallel] [artifacts: ui] Document the new version row in
+- [x] T008 [parallel] [artifacts: ui] Document the new version row in
   `SettingsPanel.tsx`'s component description in `ui.md`. Stamp
   `last_updated` and set `diagram_status: stale` (unless already
   `unrendered`).

@@ -1,7 +1,7 @@
 ---
 name: api
 status: stable
-last_updated: 2026-07-09
+last_updated: 2026-07-10
 ---
 
 # API
@@ -27,9 +27,13 @@ open reviews server-side (only multiple *saved* ones, listed via
 ### `GET /api/config`
 
 Returns preload behavior config: `{ preload_chunks: number, preload_overview:
-boolean }`, sourced from `StartOptions` (in turn from `PRELOAD_CHUNKS` /
-`PRELOAD_OVERVIEW` env vars). Used by the frontend to decide how aggressively
-to prefetch AI commentary.
+boolean, app_version: string }`, sourced from `StartOptions` (in turn from
+`PRELOAD_CHUNKS` / `PRELOAD_OVERVIEW` env vars, and — for `app_version` —
+the running package's resolved version, the same value `src/cli.ts` prints
+at startup; see `infrastructure.md`'s npm Registry section for how it's
+distinguished from the update-check notice). Used by the frontend to decide
+how aggressively to prefetch AI commentary, and to display the running
+version (`ui.md` — Settings panel).
 
 ### `GET /api/review`
 
