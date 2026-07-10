@@ -1,8 +1,9 @@
 # assisted-review — Project Status
 
-_Updated: 2026-07-10 (`/ardd-implement` completed all 11 tasks in
-`tasks-log-version-on-launch-e638.md`). Keep this current as artifacts are
-refined and open questions are resolved._
+_Updated: 2026-07-10 (both `log-version-on-launch` and the
+`ardd-verify-pass` defect fixes have merged to `main`; new UX feedback
+captured via `/ardd-feedback`). Keep this current as artifacts are refined
+and open questions are resolved._
 
 ## Artifact Status
 
@@ -22,14 +23,9 @@ None remain within any single artifact.
 ## Cross-Artifact Issues
 
 None found this pass. `api.md`, `infrastructure.md`, and `ui.md` all
-document the new `app_version` field consistently: `infrastructure.md`
-distinguishes the unconditional startup version line from the conditional
-update-check notice, `api.md`'s `GET /api/config` documents the
-`app_version` response field, and `ui.md`'s `SettingsPanel.tsx` description
-documents the new "About" version row — all three cross-reference each
-other and match the shipped code (`src/pkg-info.ts`'s `resolvePkg()`,
-`src/cli.ts`'s `reportVersion()`, `src/server.ts`'s `GET /api/config`
-handler, `web/src/components/SettingsPanel.tsx`).
+document the new `app_version` field consistently, and all three
+cross-reference the shipped code (`src/pkg-info.ts`, `src/cli.ts`,
+`src/server.ts`'s `GET /api/config` handler, `SettingsPanel.tsx`).
 
 ## Constitution Compliance
 
@@ -43,20 +39,25 @@ No violations.
 
 ## Code-vs-Artifact Defects
 
-4 known defects — see `.project/DEFECTS.md`, last checked 2026-07-08. Run
-`/ardd-verify` to refresh (a full pass is overdue — the file has read
-`_Last verified: 2026-07-08` since before the current branch's work
-started).
+`.project/DEFECTS.md` still lists 4 entries but is stale — last checked
+2026-07-08, before the `ReviewsMenu.tsx`/`App.tsx` GitLab-auth and
+keyboard-shortcut fixes merged to `main` (PR #72). Those 4 entries should
+now reproduce as resolved; run `/ardd-verify` to confirm and regenerate the
+file fresh.
 
 ## Feedback
 
-5 feedback file(s) — see `.project/feedback/`:
+6 feedback file(s) — see `.project/feedback/`:
 - `feedback-ai-note-followup-rendering-3deb.md` (open — Ask Claude
   follow-up notes render as flat unformatted text instead of parsing
   markdown — bold, code fences, bullet lists).
 - `feedback-ask-ai-conversation-context-6109.md` (open — Ask Claude
   follow-up questions don't include prior turns/initial analysis in the
   prompt — each question is answered cold, with no conversational memory).
+- `feedback-overview-resume-review-41d6.md` (open — Overview page's
+  footer button always reads "Begin review →" even after chunks have
+  already been viewed; should read "Resume review" once `state.viewed` is
+  non-empty).
 
 `feedback-claude-investigation-tool-acce-3d5a.md`,
 `feedback-inline-comment-editing-ui-7382.md`, and
@@ -69,20 +70,12 @@ started).
 
 ## In Flight
 
-- Draft plan `plan-ardd-verify-pass-2026-07-09.md` (branch `ardd-verify-pass`,
-  not yet approved/tasked) — targets the 4 machine-surfaced `DEFECTS.md`
-  entries. A fresh `/ardd-verify` pass should confirm whether this plan is
-  still needed or should be superseded.
-- Worktree `.claude/worktrees/polished-juggling-curry` (branch
-  `worktree-polished-juggling-curry`, locked) — no tasks file
-  (`tasks=none`); purpose unclear from this branch, not investigated this
-  pass.
+None — no other worktrees, no draft plans/PRs pending.
 
 ## Recommended Next Step
 
-`tasks-log-version-on-launch-e638.md` is now `completed` (11/11) on branch
-`log-version-on-launch` — merge this branch to land the version-on-launch
-feature. Separately, a fresh `/ardd-verify` pass is overdue to confirm the
-4 known `DEFECTS.md` entries are resolved (stale since 2026-07-08), refresh
-the two stale diagrams (`infrastructure.md`/`ui.md`), and settle whether
-`plan-ardd-verify-pass-2026-07-09.md` is still needed.
+A fresh `/ardd-verify` pass is overdue (stale since 2026-07-08) to confirm
+the 4 current `DEFECTS.md` entries are resolved and regenerate the file,
+and to refresh the two stale diagrams (`infrastructure.md`/`ui.md`) via
+`/ardd-render`. Separately, `feedback-overview-resume-review-41d6.md` is
+ready to be picked up by the next `/ardd-plan`.
