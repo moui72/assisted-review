@@ -8,19 +8,19 @@ status: in-progress
 
 ## Phase 1: Tool-refusal fix
 
-- [ ] T001 [artifacts: infrastructure] Add an `allowRepoRead: boolean`
+- [x] T001 [artifacts: infrastructure] Add an `allowRepoRead: boolean`
   parameter to `buildPrompt` and `buildOverviewPrompt` in `src/claude.ts`.
   When `true`, replace the intro sentence "Answer only from the diff shown;
   do not use tools." with text that invites the model to use Read/Grep/Glob
   to investigate the repo (available at the process's `cwd`) in addition to
   the diff shown. When `false`/omitted, keep the existing diff-only intro
   unchanged. [feedback: feedback-investigation-mode-tool-refusal-4e7d F001]
-- [ ] T002 In `src/server.ts`'s `/api/claude` handler, derive a boolean from
+- [x] T002 In `src/server.ts`'s `/api/claude` handler, derive a boolean from
   the existing `streamOpts` computation (non-`undefined` means repo access
   was granted — `local-path`/`temp-clone`/`always-clone` modes) and pass it
   as `allowRepoRead` to both `buildOverviewPrompt(...)` and `buildPrompt(...)`
   call sites. [feedback: feedback-investigation-mode-tool-refusal-4e7d F001]
-- [ ] T003 [parallel] Add unit tests in `tests/claude.test.ts` (or the
+- [x] T003 [parallel] Add unit tests in `tests/claude.test.ts` (or the
   existing test file covering `buildPrompt`/`buildOverviewPrompt`) asserting:
   `allowRepoRead: true` produces the investigation-inviting intro sentence
   and omits "do not use tools"; `allowRepoRead: false`/omitted produces the

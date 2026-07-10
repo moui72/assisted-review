@@ -471,6 +471,7 @@ export function startServer(
 
       // An empty question means "explain/summarize" (an initial note).
       const kind: AiNoteKind = question.trim() ? 'investigation' : 'initial';
+      const allowRepoRead = streamOpts !== undefined;
       const prompt = isOverview
         ? buildOverviewPrompt(
             review.meta,
@@ -478,8 +479,9 @@ export function startServer(
             review.overview.jira,
             question,
             fileContents,
+            allowRepoRead,
           )
-        : buildPrompt(chunk!, kind, question, fileContents);
+        : buildPrompt(chunk!, kind, question, fileContents, allowRepoRead);
       // Suggested-action line only applies to per-chunk "explain" notes.
       const wantsAction = !isOverview && kind === 'initial';
 

@@ -74,6 +74,21 @@ describe('buildPrompt', () => {
     expect(p).toContain('(truncated)');
     expect(p.length).toBeLessThan(huge.length);
   });
+
+  it('invites tool use and omits the no-tools line when allowRepoRead is true', () => {
+    const p = buildPrompt(chunk, 'initial', '', undefined, true);
+    expect(p).not.toMatch(/do not use tools/i);
+    expect(p).toMatch(/Read\/Grep\/Glob/);
+  });
+
+  it('keeps the diff-only intro when allowRepoRead is false or omitted', () => {
+    const withFalse = buildPrompt(chunk, 'initial', '', undefined, false);
+    const withoutArg = buildPrompt(chunk, 'initial', '');
+    expect(withFalse).toMatch(/do not use tools/i);
+    expect(withoutArg).toMatch(/do not use tools/i);
+    expect(withFalse).not.toMatch(/Read\/Grep\/Glob/);
+    expect(withoutArg).not.toMatch(/Read\/Grep\/Glob/);
+  });
 });
 
 describe('splitSuggestedAction — body cleaning', () => {
@@ -214,5 +229,17 @@ describe('buildOverviewPrompt', () => {
     const m = p.match(/Files changed \((\d+)\)/);
     expect(m).not.toBeNull();
     expect(m![1]).toBe('1'); // deduped to one unique file
+  });
+
+  it('invites tool use when allowRepoRead is true', () => {
+    const p = buildOverviewPrompt(meta, [chunk], noJira, '', undefined, true);
+    expect(p).toMatch(/Read\/Grep\/Glob/);
+  });
+
+  it('omits the tool-use invitation when allowRepoRead is false or omitted', () => {
+    const withFalse = buildOverviewPrompt(meta, [chunk], noJira, '', undefined, false);
+    const withoutArg = buildOverviewPrompt(meta, [chunk], noJira, '');
+    expect(withFalse).not.toMatch(/Read\/Grep\/Glob/);
+    expect(withoutArg).not.toMatch(/Read\/Grep\/Glob/);
   });
 });

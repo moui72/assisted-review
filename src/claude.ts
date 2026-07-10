@@ -45,11 +45,14 @@ export function buildPrompt(
   kind: AiNoteKind,
   question: string,
   fileContents?: Map<string, string>,
+  allowRepoRead?: boolean,
 ): string {
   const intro =
     'You are assisting a code reviewer reviewing a GitHub pull request. ' +
     'Be concise and direct — lead with the most important point, no hedging, no preamble. ' +
-    'Answer only from the diff shown; do not use tools.';
+    (allowRepoRead
+      ? 'The diff hunk is shown below; you may also use Read/Grep/Glob to investigate the surrounding repo (checked out at the current working directory) for additional context.'
+      : 'Answer only from the diff shown; do not use tools.');
   const ctx =
     `File: ${chunk.file}\n\nDiff hunk:\n\`\`\`diff\n${chunk.diff}\n\`\`\`` +
     fileContentsBlock(fileContents);
@@ -79,6 +82,7 @@ export function buildOverviewPrompt(
   jira: JiraContext,
   question: string,
   fileContents?: Map<string, string>,
+  allowRepoRead?: boolean,
 ): string {
   const files = [...new Set(chunks.map((c) => c.file))];
   const combinedDiff = clip(chunks.map((c) => c.diff).join('\n'), MAX_DIFF_CHARS);
@@ -87,8 +91,12 @@ export function buildOverviewPrompt(
     ? `Answer the reviewer's question about this pull request: "${question.trim()}". Be concise and concrete.`
     : `In 3-6 sentences, orient the reviewer: summarize what this PR changes and why — the intent and the shape of the change across files. Ground it in the description and ticket if provided. No preamble, no headings, no "suggested action" line.`;
 
+  const repoNote = allowRepoRead
+    ? ' You may also use Read/Grep/Glob to investigate the repo (checked out at the current working directory) for additional context.'
+    : '';
+
   const parts = [
-    `You are orienting a code reviewer before they review a pull request. ${task}`,
+    `You are orienting a code reviewer before they review a pull request. ${task}${repoNote}`,
     `PR title: ${meta.title}`,
   ];
   if (meta.body.trim()) parts.push(`PR description:\n${clip(meta.body.trim(), 4000)}`);
