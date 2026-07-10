@@ -1,11 +1,12 @@
 # assisted-review — Project Status
 
-_Updated: 2026-07-10 (approved `plan-ai-prompt-fixes-2026-07-10.md` and
-generated `tasks-ai-prompt-fixes-17b2.md` — 8 tasks across 3 phases: tool-
-refusal fix, Ask-Claude conversation context, and markdown rendering for
-chunk-panel follow-up notes. No features bound to this plan, so no backlog
-flips. Work is on branch `ai-prompt-fixes`, not yet pushed.) Keep this
-current as artifacts are refined and open questions are resolved._
+_Updated: 2026-07-10 (`tasks-ai-prompt-fixes-17b2.md` completed — all 8
+tasks across 3 phases: tool-refusal fix, Ask-Claude conversation context,
+and markdown rendering for chunk-panel follow-up notes. Plan had no bound
+features, so no backlog flips. Work is on branch `ai-prompt-fixes`, not yet
+pushed — `workflow_mode: collaborative` means it needs a pushed branch/PR
+to merge.) Keep this current as artifacts are refined and open questions
+are resolved._
 
 ## Artifact Status
 
@@ -38,12 +39,12 @@ No violations.
 
 ## Code-vs-Artifact Defects
 
-`.project/DEFECTS.md` still lists 4 entries but is stale — last checked
+`.project/DEFECTS.md` still lists entries but is stale — last checked
 2026-07-08. Run `/ardd-verify` to confirm and regenerate the file fresh.
 
 ## Feedback
 
-6 planned · 3 open feedback file(s) — see `.project/feedback/`:
+3 open feedback file(s) — see `.project/feedback/`:
 - `feedback-cmd-c-copy-broken-7a77.md` (open — bug: Cmd+C doesn't copy
   anywhere in the app outside a focused textarea/input, because the global
   keydown handler's `c` branch in `App.tsx:358-360` isn't guarded by the
@@ -62,12 +63,9 @@ No violations.
   `moui72/artifact-driven-dev#2` — not resolvable in this repo alone).
 
 `feedback-ai-note-followup-rendering-3deb.md`,
-`feedback-ask-ai-conversation-context-6109.md`,
-`feedback-investigation-mode-tool-refusal-4e7d.md` are now `planned`
-(consumed by `plan-ai-prompt-fixes-2026-07-10.md`), alongside
-`feedback-claude-investigation-tool-acce-3d5a.md`,
-`feedback-inline-comment-editing-ui-7382.md`, and
-`feedback-log-version-on-launch-f832.md` from earlier plans.
+`feedback-ask-ai-conversation-context-6109.md`, and
+`feedback-investigation-mode-tool-refusal-4e7d.md` were fully addressed by
+`tasks-ai-prompt-fixes-17b2.md`, now `status: completed`.
 
 ## Feature Backlog
 
@@ -79,18 +77,18 @@ link to that file in the PR's GitHub diff view). Target with
 
 ## In Flight
 
-- Branch `ai-prompt-fixes` — `tasks-ai-prompt-fixes-17b2.md` (`status:
-  ready`, 0/8), bound to `plan-ai-prompt-fixes-2026-07-10.md`
-  (`status: approved`). Not yet pushed — `workflow_mode: collaborative`
-  means this needs a pushed branch/draft PR before a delegated
-  `/ardd-implement` worktree can see it. Run `/ardd-implement` to execute.
+- Branch `ai-prompt-fixes` — `tasks-ai-prompt-fixes-17b2.md` is
+  `status: completed` (8/8), bound to `plan-ai-prompt-fixes-2026-07-10.md`
+  (`status: approved`, `features: []`). Not yet pushed — `workflow_mode:
+  collaborative` means this needs to reach `origin/main` (push + PR) to
+  land.
 
 ## Recommended Next Step
 
-Run `/ardd-implement` to select `tasks-ai-prompt-fixes-17b2.md` and start
-executing its 8 tasks. Since `workflow_mode: collaborative`, this will need
-the branch pushed (and likely a draft PR opened) before a delegated
-worktree can pick it up. Separately, a fresh `/ardd-verify` pass is overdue
-(stale since 2026-07-08), and three small open feedback items (Cmd+C copy,
-Overview resume-review label, README/Mermaid rewrite) are ready for a
-future `/ardd-plan`.
+Push branch `ai-prompt-fixes` and open a draft PR for
+`tasks-ai-prompt-fixes-17b2.md`'s completed work (tool-refusal fix,
+Ask-Claude conversation context, markdown-rendered chunk-panel notes).
+Separately, a fresh `/ardd-verify` pass is overdue (stale since
+2026-07-08), and three small open feedback items (Cmd+C copy, Overview
+resume-review label, README/Mermaid rewrite) are ready for a future
+`/ardd-plan`.
