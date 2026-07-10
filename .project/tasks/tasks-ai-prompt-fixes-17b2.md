@@ -28,7 +28,7 @@ status: in-progress
 
 ## Phase 2: Conversation context
 
-- [ ] T004 [artifacts: ui, api] Add an optional `history?: StoredNote[]`
+- [x] T004 [artifacts: ui, api] Add an optional `history?: StoredNote[]`
   parameter to `buildPrompt` and `buildOverviewPrompt` in `src/claude.ts`.
   When non-empty, render prior notes (excluding `kind: 'error'`) as a
   transcript block ahead of the new question/instruction — one entry per
@@ -37,14 +37,14 @@ status: in-progress
   answered:"), followed by each note's `body`. When `history` is
   empty/omitted, prompt output is unchanged (byte-identical to before this
   task). [feedback: feedback-ask-ai-conversation-context-6109 F001]
-- [ ] T005 In `src/server.ts`'s `/api/claude` handler, before invoking the
+- [x] T005 In `src/server.ts`'s `/api/claude` handler, before invoking the
   builders, gather prior notes for the target `chunk_id` (or `OVERVIEW_ID`
   for the overview) from `review.notes` — i.e. `review.notes.filter(n =>
   n.chunk_id === (isOverview ? OVERVIEW_ID : chunk!.id))` — and pass them as
   `history` to `buildPrompt`/`buildOverviewPrompt`. This must run before the
   new question's own note is added to state, so the new question is never
   included in its own history. [feedback: feedback-ask-ai-conversation-context-6109 F001]
-- [ ] T006 [parallel] Add unit tests in `tests/claude.test.ts` asserting: a
+- [x] T006 [parallel] Add unit tests in `tests/claude.test.ts` asserting: a
   follow-up call with non-empty `history` includes prior turns' prompts and
   bodies in the built prompt; a call with empty/omitted `history` produces
   output identical to the pre-existing (no-history) behavior; a `history`

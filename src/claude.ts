@@ -5,7 +5,7 @@
 
 import { spawn } from 'node:child_process';
 import { tmpdir } from 'node:os';
-import type { AiNoteKind, Chunk, JiraContext, PrMeta } from './types.js';
+import type { AiNoteKind, Chunk, JiraContext, PrMeta, StoredNote } from './types.js';
 
 const MAX_DIFF_CHARS = 12000;
 const MAX_JIRA_DESC = 1200;
@@ -37,6 +37,19 @@ function fileContentsBlock(fileContents?: Map<string, string>): string {
   return `\n\n${blocks.join('\n\n')}`;
 }
 
+/** Render prior notes (excluding `error`) as a labeled transcript block, so a
+ *  follow-up question has the conversation's history instead of a cold start. */
+function historyBlock(history?: StoredNote[]): string {
+  const entries = (history ?? []).filter((n) => n.kind !== 'error');
+  if (entries.length === 0) return '';
+  const turns = entries.map((n) =>
+    n.kind === 'investigation' && n.prompt
+      ? `Reviewer asked: "${n.prompt}"\nYou answered: ${n.body}`
+      : `You summarized:\n${n.body}`,
+  );
+  return `\n\nPrior conversation:\n${turns.join('\n\n')}`;
+}
+
 /** Build the prompt for a chunk. Empty question → an "explain this hunk" note.
  *  `fileContents` (investigation mode 'api') appends full file text for
  *  diff-touched files, in addition to the diff hunk itself. */
@@ -46,6 +59,7 @@ export function buildPrompt(
   question: string,
   fileContents?: Map<string, string>,
   allowRepoRead?: boolean,
+  history?: StoredNote[],
 ): string {
   const intro =
     'You are assisting a code reviewer reviewing a GitHub pull request. ' +
@@ -55,7 +69,8 @@ export function buildPrompt(
       : 'Answer only from the diff shown; do not use tools.');
   const ctx =
     `File: ${chunk.file}\n\nDiff hunk:\n\`\`\`diff\n${chunk.diff}\n\`\`\`` +
-    fileContentsBlock(fileContents);
+    fileContentsBlock(fileContents) +
+    historyBlock(history);
   if (kind === 'investigation' && question.trim()) {
     return `${intro}\n\nThe reviewer asks about this hunk: "${question.trim()}"\n\n${ctx}\n\nAnswer in 2-5 sentences or a few short bullets.`;
   }
@@ -83,6 +98,7 @@ export function buildOverviewPrompt(
   question: string,
   fileContents?: Map<string, string>,
   allowRepoRead?: boolean,
+  history?: StoredNote[],
 ): string {
   const files = [...new Set(chunks.map((c) => c.file))];
   const combinedDiff = clip(chunks.map((c) => c.diff).join('\n'), MAX_DIFF_CHARS);
@@ -112,6 +128,8 @@ export function buildOverviewPrompt(
   parts.push(`Files changed (${files.length}): ${files.join(', ')}`);
   parts.push(`Combined diff (may be truncated):\n\`\`\`diff\n${combinedDiff}\n\`\`\``);
   if (fileContents && fileContents.size > 0) parts.push(fileContentsBlock(fileContents).trim());
+  const hist = historyBlock(history).trim();
+  if (hist) parts.push(hist);
   return parts.join('\n\n');
 }
 

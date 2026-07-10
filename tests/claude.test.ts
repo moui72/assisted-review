@@ -1,5 +1,5 @@
 import { splitSuggestedAction, buildPrompt, buildOverviewPrompt } from '../src/claude';
-import type { Chunk, JiraContext, PrMeta } from '../src/types';
+import type { Chunk, JiraContext, PrMeta, StoredNote } from '../src/types';
 
 describe('splitSuggestedAction', () => {
   it('splits a trailing "Suggested action:" line from the body', () => {
@@ -88,6 +88,39 @@ describe('buildPrompt', () => {
     expect(withoutArg).toMatch(/do not use tools/i);
     expect(withFalse).not.toMatch(/Read\/Grep\/Glob/);
     expect(withoutArg).not.toMatch(/Read\/Grep\/Glob/);
+  });
+
+  const historyNotes: StoredNote[] = [
+    {
+      id: 'n1',
+      chunk_id: 'c1',
+      kind: 'investigation',
+      prompt: 'why rename b?',
+      body: 'Because a was ambiguous.',
+      created_at: '2026-07-10T00:00:00Z',
+    },
+  ];
+
+  it('includes prior turns in the prompt when history is non-empty', () => {
+    const p = buildPrompt(chunk, 'investigation', 'anything else?', undefined, false, historyNotes);
+    expect(p).toContain('why rename b?');
+    expect(p).toContain('Because a was ambiguous.');
+  });
+
+  it('produces output identical to the no-history case when history is empty or omitted', () => {
+    const withEmpty = buildPrompt(chunk, 'initial', '', undefined, false, []);
+    const withoutArg = buildPrompt(chunk, 'initial', '', undefined, false);
+    expect(withEmpty).toBe(withoutArg);
+  });
+
+  it('excludes error-kind notes from the rendered transcript', () => {
+    const withError: StoredNote[] = [
+      ...historyNotes,
+      { id: 'n2', chunk_id: 'c1', kind: 'error', body: 'stream failed', created_at: '2026-07-10T00:01:00Z' },
+    ];
+    const p = buildPrompt(chunk, 'initial', '', undefined, false, withError);
+    expect(p).not.toContain('stream failed');
+    expect(p).toContain('Because a was ambiguous.');
   });
 });
 
@@ -241,5 +274,36 @@ describe('buildOverviewPrompt', () => {
     const withoutArg = buildOverviewPrompt(meta, [chunk], noJira, '');
     expect(withFalse).not.toMatch(/Read\/Grep\/Glob/);
     expect(withoutArg).not.toMatch(/Read\/Grep\/Glob/);
+  });
+
+  const historyNotes: StoredNote[] = [
+    {
+      id: 'n1',
+      chunk_id: '__overview__',
+      kind: 'initial',
+      body: 'This PR adds feature X.',
+      created_at: '2026-07-10T00:00:00Z',
+    },
+  ];
+
+  it('includes prior turns in the prompt when history is non-empty', () => {
+    const p = buildOverviewPrompt(meta, [chunk], noJira, 'anything else?', undefined, false, historyNotes);
+    expect(p).toContain('This PR adds feature X.');
+  });
+
+  it('produces output identical to the no-history case when history is empty or omitted', () => {
+    const withEmpty = buildOverviewPrompt(meta, [chunk], noJira, '', undefined, false, []);
+    const withoutArg = buildOverviewPrompt(meta, [chunk], noJira, '', undefined, false);
+    expect(withEmpty).toBe(withoutArg);
+  });
+
+  it('excludes error-kind notes from the rendered transcript', () => {
+    const withError: StoredNote[] = [
+      ...historyNotes,
+      { id: 'n2', chunk_id: '__overview__', kind: 'error', body: 'stream failed', created_at: '2026-07-10T00:01:00Z' },
+    ];
+    const p = buildOverviewPrompt(meta, [chunk], noJira, '', undefined, false, withError);
+    expect(p).not.toContain('stream failed');
+    expect(p).toContain('This PR adds feature X.');
   });
 });

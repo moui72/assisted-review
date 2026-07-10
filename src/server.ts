@@ -472,6 +472,8 @@ export function startServer(
       // An empty question means "explain/summarize" (an initial note).
       const kind: AiNoteKind = question.trim() ? 'investigation' : 'initial';
       const allowRepoRead = streamOpts !== undefined;
+      const targetId = isOverview ? OVERVIEW_ID : chunk!.id;
+      const history = initialState.notes.filter((n) => n.chunk_id === targetId);
       const prompt = isOverview
         ? buildOverviewPrompt(
             review.meta,
@@ -480,8 +482,9 @@ export function startServer(
             question,
             fileContents,
             allowRepoRead,
+            history,
           )
-        : buildPrompt(chunk!, kind, question, fileContents, allowRepoRead);
+        : buildPrompt(chunk!, kind, question, fileContents, allowRepoRead, history);
       // Suggested-action line only applies to per-chunk "explain" notes.
       const wantsAction = !isOverview && kind === 'initial';
 
