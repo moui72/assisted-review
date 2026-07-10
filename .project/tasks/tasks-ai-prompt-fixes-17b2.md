@@ -1,7 +1,7 @@
 ---
 plan: plan-ai-prompt-fixes-2026-07-10.md
 generated: 2026-07-10
-status: ready
+status: in-progress
 ---
 
 # Tasks
