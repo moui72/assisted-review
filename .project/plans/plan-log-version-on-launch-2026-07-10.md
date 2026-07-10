@@ -1,5 +1,5 @@
 ---
-status: draft
+status: approved
 branch: log-version-on-launch
 created: 2026-07-10
 features: []

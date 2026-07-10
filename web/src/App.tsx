@@ -84,6 +84,7 @@ export function App() {
       setPreloadConfig({
         preload_chunks: storedChunks !== null ? Number(storedChunks) : serverCfg.preload_chunks,
         preload_overview: storedOverview !== null ? storedOverview !== 'false' : serverCfg.preload_overview,
+        app_version: serverCfg.app_version,
       });
     }).catch(() => {});
     Promise.all([fetchReview(), fetchState()])

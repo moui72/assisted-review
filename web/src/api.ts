@@ -108,6 +108,7 @@ export function streamClaude(
 export interface PreloadConfig {
   preload_chunks: number;
   preload_overview: boolean;
+  app_version?: string;
 }
 
 export async function fetchConfig(): Promise<PreloadConfig> {

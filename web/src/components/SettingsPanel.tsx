@@ -138,6 +138,19 @@ export function SettingsPanel({
             </button>
           </Row>
         </div>
+
+        {preloadConfig?.app_version && (
+          <>
+            <SectionTitle>About</SectionTitle>
+            <div className="divide-y divide-edge/50">
+              <Row label="Version">
+                <span className="font-mono text-[11px] text-muted">
+                  {preloadConfig.app_version}
+                </span>
+              </Row>
+            </div>
+          </>
+        )}
       </div>
     </div>
   );

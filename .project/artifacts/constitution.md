@@ -69,6 +69,7 @@ during this refine pass along with the rest of the document.
 name: constitution
 status: stable
 last_updated: 2026-07-02
+next_step_prompt: true
 ---
 
 # assisted-review Constitution

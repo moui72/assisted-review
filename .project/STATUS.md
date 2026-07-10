@@ -1,12 +1,8 @@
 # assisted-review — Project Status
 
-_Updated: 2026-07-10 (PR #73 merged — npm publish pin + Codecov removal;
-drafted `plan-log-version-on-launch-2026-07-10.md` from the log-version
-feedback item). Keep this current as artifacts are refined and open
-questions are resolved._
-
-ARDD update available: installed `9189817`, source at `759e03f` — run
-`/ardd-update`.
+_Updated: 2026-07-10 (approved `plan-log-version-on-launch-2026-07-10.md`
+and generated its 11-task list via `/ardd-tasks`). Keep this current as
+artifacts are refined and open questions are resolved._
 
 ## Artifact Status
 
@@ -72,17 +68,26 @@ refresh `DEFECTS.md`.
 
 ## In Flight
 
-- Branch `log-version-on-launch` (current checkout) —
-  `plan-log-version-on-launch-2026-07-10.md` drafted (`status: draft`), not
-  yet approved/tasked. Run `/ardd-tasks` to select and approve it.
+- Branch `log-version-on-launch` (current checkout) — plan approved,
+  `tasks-log-version-on-launch-e638.md` ready, 0/11 complete. Run
+  `/ardd-implement` to execute.
+- Draft plan `plan-ardd-verify-pass-2026-07-09.md` (branch `ardd-verify-pass`,
+  not yet approved/tasked) — targets the 4 machine-surfaced `DEFECTS.md`
+  entries. Believed already resolved in code via PR #72 (per this file's
+  Code-vs-Artifact Defects section below); a fresh `/ardd-verify` pass should
+  confirm before deciding whether this plan is still needed or should be
+  superseded.
+- Worktree `.claude/worktrees/polished-juggling-curry` (branch
+  `worktree-polished-juggling-curry`, locked) — no tasks file
+  (`tasks=none`); purpose unclear from this branch, not investigated this
+  pass.
 
 ## Recommended Next Step
 
-Run `/ardd-tasks` to select `plan-log-version-on-launch-2026-07-10.md`
-(approves it, generates its task list), then implement its 3 phases (CLI
-startup version log, `GET /api/config` + `SettingsPanel.tsx` version
-display, tests) on this branch. Separately, a fresh `/ardd-verify` pass is
-overdue to confirm the 6 known `DEFECTS.md` entries are resolved (stale
-since 2026-07-08) and refresh the two stale diagrams
-(`infrastructure.md`/`ui.md`). Consider `/ardd-update` (source has moved to
-`759e03f`).
+Run `/ardd-implement` to execute `tasks-log-version-on-launch-e638.md`'s 11
+tasks (CLI startup version log, `GET /api/config` + `SettingsPanel.tsx`
+version display, tests) on this branch. Separately, a fresh `/ardd-verify`
+pass is overdue to confirm the 6 known `DEFECTS.md` entries are resolved
+(stale since 2026-07-08), refresh the two stale diagrams
+(`infrastructure.md`/`ui.md`), and settle whether `plan-ardd-verify-pass-
+2026-07-09.md` is still needed.
