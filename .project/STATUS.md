@@ -3,8 +3,9 @@
 _Updated: 2026-07-10 (both `log-version-on-launch` and the
 `ardd-verify-pass` defect fixes have merged to `main`; new UX and bug
 feedback captured via `/ardd-feedback`, including a real root-cause finding
-in `src/claude.ts`'s prompt-building). Keep this current as artifacts are
-refined and open questions are resolved._
+in `src/claude.ts`'s prompt-building and a Cmd+C-hijack bug in the global
+keyboard handler). Keep this current as artifacts are refined and open
+questions are resolved._
 
 ## Artifact Status
 
@@ -48,7 +49,13 @@ file fresh.
 
 ## Feedback
 
-7 feedback file(s) — see `.project/feedback/`:
+8 feedback file(s) — see `.project/feedback/`:
+- `feedback-cmd-c-copy-broken-7a77.md` (open — bug: Cmd+C doesn't copy
+  anywhere in the app outside a focused textarea/input, because the global
+  keydown handler's `c` branch in `App.tsx:358-360` isn't guarded by the
+  `mod` flag the way `ArrowRight`/`ArrowLeft` already are, so Cmd+C matches
+  the bare-`c` "focus comment box" shortcut, calls `preventDefault()`, and
+  steals focus).
 - `feedback-ai-note-followup-rendering-3deb.md` (open — Ask Claude
   follow-up notes render as flat unformatted text instead of parsing
   markdown — bold, code fences, bullet lists).
@@ -85,9 +92,11 @@ None — no other worktrees, no draft plans/PRs pending.
 A fresh `/ardd-verify` pass is overdue (stale since 2026-07-08) to confirm
 the 4 current `DEFECTS.md` entries are resolved and regenerate the file,
 and to refresh the two stale diagrams (`infrastructure.md`/`ui.md`) via
-`/ardd-render`. Separately, `feedback-overview-resume-review-41d6.md` and
-`feedback-investigation-mode-tool-refusal-4e7d.md` (the latter a real
-functional bug affecting every non-`api`/non-`none` investigation mode) are
-ready to be picked up by the next `/ardd-plan` — the bug is worth
-prioritizing given it defeats the point of choosing a clone/local-path mode
-at all.
+`/ardd-render`. Separately, three open bug/UX feedback items are ready to
+be picked up by the next `/ardd-plan`:
+`feedback-cmd-c-copy-broken-7a77.md` (trivial one-line fix, but breaks a
+basic OS-level expectation everywhere in the app — worth prioritizing
+alongside or ahead of the investigation-mode bug),
+`feedback-investigation-mode-tool-refusal-4e7d.md` (defeats the point of
+choosing a clone/local-path investigation mode), and
+`feedback-overview-resume-review-41d6.md` (lower-priority UX polish).
