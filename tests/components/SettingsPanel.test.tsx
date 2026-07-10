@@ -103,6 +103,19 @@ describe('SettingsPanel', () => {
     });
   });
 
+  describe('version display', () => {
+    it('renders the app_version from preloadConfig', () => {
+      renderPanel({ preloadConfig: { ...cfg, app_version: '1.11.0' } });
+      expect(screen.getByText('1.11.0')).toBeInTheDocument();
+      expect(screen.getByText('Version')).toBeInTheDocument();
+    });
+
+    it('does not render an About section when app_version is absent', () => {
+      renderPanel();
+      expect(screen.queryByText('Version')).not.toBeInTheDocument();
+    });
+  });
+
   describe('investigation access', () => {
     it('shows "Diff only" when no mode is set', () => {
       renderPanel();

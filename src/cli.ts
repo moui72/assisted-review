@@ -12,9 +12,6 @@
 
 import './env.js'; // load .env before any module reads process.env
 import { execFile } from 'node:child_process';
-import { readFile } from 'node:fs/promises';
-import { fileURLToPath } from 'node:url';
-import { dirname, join } from 'node:path';
 import { parseRef } from './parse-ref.js';
 import { startServer } from './server.js';
 import { saveState } from './state.js';
@@ -22,14 +19,8 @@ import { loadReview } from './review.js';
 import { setupJira } from './setup-jira.js';
 import { checkForUpdate } from './update-check.js';
 import { sweepOrphanedTempClones, pruneStaleClones } from './investigation.js';
+import { resolvePkg } from './pkg-info.js';
 import type { Review, ReviewState } from './types.js';
-
-async function resolvePkg(): Promise<{ name: string; version: string }> {
-  const here = dirname(fileURLToPath(import.meta.url));
-  return JSON.parse(
-    await readFile(join(here, '..', 'package.json'), 'utf8'),
-  ) as { name: string; version: string };
-}
 
 async function reportIfOutdated(): Promise<void> {
   try {

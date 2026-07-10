@@ -60,7 +60,7 @@ Deliverable: opening Settings shows the running version, sourced from
 
 ## Phase 3: Tests
 
-- [ ] T009 [artifacts: infrastructure] `src/cli.ts` is excluded from the
+- [x] T009 [artifacts: infrastructure] `src/cli.ts` is excluded from the
   90% backend coverage gate (constitution: "untestable entry points"), and
   no `tests/cli.test.ts` currently exists — don't create test scaffolding
   around `main()`'s process-exit/browser-open side effects just for this.
@@ -69,11 +69,11 @@ Deliverable: opening Settings shows the running version, sourced from
   isolation); if T001 inlined the resolution instead, skip this task and
   verify the startup line manually (`node build/cli.js --help` or similar)
   before marking Phase 1 done.
-- [ ] T010 [artifacts: api] In `tests/server.test.ts`, extend (or add
+- [x] T010 [artifacts: api] In `tests/server.test.ts`, extend (or add
   alongside) the existing `GET /api/config` test: assert the response
   includes `app_version` matching the value passed via `StartOptions`
   when starting the test server instance.
-- [ ] T011 [artifacts: ui] In `tests/components/SettingsPanel.test.tsx`, add
+- [x] T011 [artifacts: ui] In `tests/components/SettingsPanel.test.tsx`, add
   a test asserting the new version row renders `app_version` from a mocked
   `fetchConfig()` result.
 

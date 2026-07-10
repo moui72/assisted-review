@@ -148,6 +148,17 @@ describe('GET /api/config', () => {
     expect(typeof body.preload_chunks).toBe('number');
     expect(typeof body.preload_overview).toBe('boolean');
   });
+
+  it('returns app_version matching the value passed via StartOptions', async () => {
+    const { url } = await startServer(
+      { review: null, state: null },
+      { port: 0, serveUi: false, appVersion: '9.9.9-test' },
+    );
+    const res = await get(url, '/api/config');
+    expect(res.status).toBe(200);
+    const body = await res.json() as { app_version: string };
+    expect(body.app_version).toBe('9.9.9-test');
+  });
 });
 
 describe('GET /api/review', () => {
