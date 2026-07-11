@@ -1,12 +1,9 @@
 # assisted-review — Project Status
 
-_Updated: 2026-07-10 (`tasks-ai-prompt-fixes-17b2.md` completed — all 8
-tasks across 3 phases: tool-refusal fix, Ask-Claude conversation context,
-and markdown rendering for chunk-panel follow-up notes. Plan had no bound
-features, so no backlog flips. Work is on branch `ai-prompt-fixes`, not yet
-pushed — `workflow_mode: collaborative` means it needs a pushed branch/PR
-to merge.) Keep this current as artifacts are refined and open questions
-are resolved._
+_Updated: 2026-07-10 (verify + refine — `last_used` broken-contract fixed in #80; the 4 remaining doc-drift findings resolved on branch `docs/ardd-refine-verify-drift`; DEFECTS.md now all-clear). Keep this current as artifacts are refined and open questions are resolved._
+
+ARDD source checkout not found at its recorded path — run `/ardd-update` to
+re-record it.
 
 ## Artifact Status
 
@@ -17,7 +14,7 @@ are resolved._
 | infrastructure.md | stable ✅ | — |
 | api.md | stable ✅ | — |
 | ui.md | stable ✅ | — |
-| features.md | register (no status field, by design) | — |
+| features.md | register (per-feature files, no status field on index) | — |
 
 ## Open Questions
 
@@ -39,56 +36,39 @@ No violations.
 
 ## Code-vs-Artifact Defects
 
-`.project/DEFECTS.md` still lists entries but is stale — last checked
-2026-07-08. Run `/ardd-verify` to confirm and regenerate the file fresh.
+None — `DEFECTS.md` all-clear, last checked 2026-07-10. The 4 doc-drift
+findings from this pass (the #79 prompt behaviors + always-clone refresh
+wording in `infrastructure.md`, and the `progress` field in
+`api.md`/`datamodel.md`) were fixed on `docs/ardd-refine-verify-drift`; the
+two prior `last_used` broken-contracts remain resolved via #80.
 
 ## Feedback
 
-3 open feedback file(s) — see `.project/feedback/`:
-- `feedback-cmd-c-copy-broken-7a77.md` (open — bug: Cmd+C doesn't copy
-  anywhere in the app outside a focused textarea/input, because the global
-  keydown handler's `c` branch in `App.tsx:358-360` isn't guarded by the
-  `mod` flag the way `ArrowRight`/`ArrowLeft` already are, so Cmd+C matches
-  the bare-`c` "focus comment box" shortcut, calls `preventDefault()`, and
-  steals focus).
-- `feedback-overview-resume-review-41d6.md` (open — Overview page's
-  footer button always reads "Begin review →" even after chunks have
-  already been viewed; should read "Resume review" once `state.viewed` is
-  non-empty).
-- `feedback-readme-rewrite-move-mermaid-di-6e04.md` (open — README needs a
-  rewrite for npm publication (F001); Mermaid diagrams currently in
-  README.md don't render on npmjs.com and should move elsewhere (F002); a
-  Reconsidered item (F003) notes `/ardd-render`'s hardcoded README-only
-  target can't support F002 and has already been filed upstream as
-  `moui72/artifact-driven-dev#2` — not resolvable in this repo alone).
-
-`feedback-ai-note-followup-rendering-3deb.md`,
-`feedback-ask-ai-conversation-context-6109.md`, and
-`feedback-investigation-mode-tool-refusal-4e7d.md` were fully addressed by
-`tasks-ai-prompt-fixes-17b2.md`, now `status: completed`.
+3 open feedback file(s) — see `.project/feedback/`, will be picked up by the
+next `/ardd-plan`:
+- `feedback-cmd-c-copy-broken-7a77.md`
+- `feedback-overview-resume-review-41d6.md`
+- `feedback-readme-rewrite-move-mermaid-di-6e04.md`
 
 ## Feature Backlog
 
 13 backlogged · 0 planned · 0 tasked · 6 implemented — see
-`.project/features/`. Newest: `linkify-pr-header-and-diff-fil` (make the
-PR title link out to the PR on GitHub, and each diff chunk's file name
-link to that file in the PR's GitHub diff view). Target with
-`/ardd-plan linkify-pr-header-and-diff-fil`.
+`.project/features/`. Target a backlogged slug with `/ardd-plan <slug>`.
 
 ## In Flight
 
-- Branch `ai-prompt-fixes` — `tasks-ai-prompt-fixes-17b2.md` is
-  `status: completed` (8/8), bound to `plan-ai-prompt-fixes-2026-07-10.md`
-  (`status: approved`, `features: []`). Not yet pushed — `workflow_mode:
-  collaborative` means this needs to reach `origin/main` (push + PR) to
-  land.
+Two sibling worktrees exist but neither has an active tasks file, and there
+are no open draft PRs (collaborative mode) — nothing unmerged in flight:
+- `.claude/worktrees/ardd-codify-trial` (branch `ardd-codify-trial`) — clean.
+- `.claude/worktrees/docs-update-readme-changelog` (branch
+  `docs/update-readme-changelog`) — clean, stale/unrelated.
 
 ## Recommended Next Step
 
-Push branch `ai-prompt-fixes` and open a draft PR for
-`tasks-ai-prompt-fixes-17b2.md`'s completed work (tool-refusal fix,
-Ask-Claude conversation context, markdown-rendered chunk-panel notes).
-Separately, a fresh `/ardd-verify` pass is overdue (stale since
-2026-07-08), and three small open feedback items (Cmd+C copy, Overview
-resume-review label, README/Mermaid rewrite) are ready for a future
-`/ardd-plan`.
+Push `docs/ardd-refine-verify-drift` and open a PR — it carries the four
+artifact fixes plus the refreshed DEFECTS.md/STATUS.md. After it merges,
+re-render the two stale diagrams (`/ardd-render infrastructure`,
+`/ardd-render ui`) and run `/ardd-update` to re-record the moved ARDD source
+path. New feature work: `/ardd-plan <slug>` against a backlogged feature, or
+`/ardd-plan` to consume the 3 open feedback items (Cmd+C copy, Overview
+resume-review label, README/Mermaid rewrite).

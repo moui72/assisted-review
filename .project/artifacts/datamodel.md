@@ -1,7 +1,7 @@
 ---
 name: datamodel
 status: stable
-last_updated: 2026-07-08
+last_updated: 2026-07-10
 diagram_status: current
 ---
 
@@ -278,6 +278,13 @@ wire response after calling the adapter (see `api.md`).
 | error | string? | `gh`/`glab` stderr or synthesized message |
 | payload | ReviewPayload? | Echoed on failure server-side only, for a future manual-submit fallback; never reaches the client |
 | state | ReviewState | Added by the `/api/submit` route handler, not the submit adapter itself |
+
+The GitLab adapter (`submitGitLabReview`) actually returns `SubmitResult &
+{ progress: GitLabSubmitProgress }` — a `progress` member carrying which
+comments/note/approve already landed. Like `payload`, it is server-side-only:
+the `/api/submit` route strips it before replying (`api.md`), and the client
+receives the same information via `state.gitlab_submit_progress` instead. The
+GitHub adapter's return is a plain `SubmitResult` (no `progress`).
 
 ### Action
 
