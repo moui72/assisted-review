@@ -1,10 +1,9 @@
 # assisted-review — Project Status
 
-_Updated: 2026-07-11 (analyze after `/ardd-tasks` — `plan-readme-and-ux-fixes` approved, `tasks-readme-and-ux-fixes-0fc5.md` generated (6 tasks, ready)). Keep this current as artifacts are refined and open questions are resolved._
+_Updated: 2026-07-11 (analyze after `/ardd-implement` — all 6 tasks of `tasks-readme-and-ux-fixes` complete on branch `readme-and-ux-fixes`, awaiting a PR to `main`). Keep this current as artifacts are refined and open questions are resolved._
 
-ARDD update available: installed `f68208f`, source at `da95ab9` — run
-`/ardd-update`. (The source checkout is actively advancing this session; a
-re-update installs whatever it currently points at.)
+ARDD update available: installed `f68208f`, source at `ba8b0b0` — run
+`/ardd-update` (the source checkout is actively advancing this session).
 
 ## Artifact Status
 
@@ -19,8 +18,7 @@ re-update installs whatever it currently points at.)
 
 ## Open Questions
 
-None within any single artifact. The active plan carries two
-implementation-time open questions (`docs/ARCHITECTURE.md` shape, README depth).
+None within any single artifact.
 
 ## Cross-Artifact Issues
 
@@ -36,8 +34,8 @@ No violations.
 - infrastructure.md — current ✅
 - ui.md — current ✅
 
-(Plan Phase 2 (T004–T005) will relocate these from `README.md` to
-`docs/ARCHITECTURE.md` via `render_target`.)
+All three now render to `docs/ARCHITECTURE.md` (via `render_target`
+frontmatter), not `README.md`.
 
 ## Code-vs-Artifact Defects
 
@@ -50,22 +48,22 @@ None — `DEFECTS.md` all-clear, last checked 2026-07-10.
 
 ## Active Plans
 
-- `plan-readme-and-ux-fixes-2026-07-11.md` — **approved**, branch
-  `readme-and-ux-fixes`. Tasks: `tasks-readme-and-ux-fixes-0fc5.md`
-  (**ready**, 0/6). Phases: P1 Cmd+C fix + Resume-review label + `ui.md`
-  (T001–T003); P2 diagram relocation to `docs/ARCHITECTURE.md` (T004–T005);
-  P3 README rewrite (T006). Run `/ardd-implement` to execute.
+- `plan-readme-and-ux-fixes-2026-07-11.md` — **approved**, tasks
+  `tasks-readme-and-ux-fixes-0fc5.md` **completed (6/6)** on branch
+  `readme-and-ux-fixes`. Delivered: Cmd+C copy fix, Overview "Resume review"
+  label, `ui.md` sync, diagram relocation to `docs/ARCHITECTURE.md`, and a
+  leaner npm-focused README. Not yet merged to `main`.
 
 ## In Flight
 
-Work-in-progress lives on the current branch `readme-and-ux-fixes` (the
-approved plan + its ready tasks file, not yet merged). Two sibling worktrees
-exist but neither has an active tasks file, and there are no open draft PRs:
-- `.claude/worktrees/ardd-codify-trial` (branch `ardd-codify-trial`) — clean.
-- `.claude/worktrees/docs-update-readme-changelog` — clean, stale/unrelated.
+Completed work sits on branch `readme-and-ux-fixes` (8 commits, tests green),
+not yet pushed or PR'd — collaborative mode lands it via a PR to `main`. Two
+sibling worktrees exist but neither has an active tasks file; no open draft
+PRs yet.
 
 ## Recommended Next Step
 
-Run `/ardd-implement` to execute `tasks-readme-and-ux-fixes-0fc5.md` (6 tasks,
-ready). In collaborative mode the branch/plan/tasks must reach `origin/main`
-for a delegated worktree to pick them up — or implement inline on this branch.
+Push `readme-and-ux-fixes` and open a PR to `main` (collaborative mode — the
+completed work lands via the PR). The 3 consumed feedback files are already
+`planned` and become historical record once merged. After merge, an
+`/ardd-verify` pass would confirm the artifact/code changes stay consistent.
