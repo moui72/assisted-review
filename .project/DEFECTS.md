@@ -1,24 +1,32 @@
 # Defects
 
-_Last verified: 2026-07-10_
+_Last verified: 2026-07-11_
 
 No defects found — artifacts match the codebase as of this run.
 
-The four documentation-drift findings from the 2026-07-10 verify pass were
-resolved in the same change that records this all-clear
-(`docs/ardd-refine-verify-drift`):
+Survey against `main` at `994d8c1` (PRs #80–#83 merged). Confirmed
+code-side:
 
-- `infrastructure.md` — Prompt-construction section now documents the
-  `allowRepoRead`-conditional intro and `history`/prior-conversation
-  threading added to `buildPrompt`/`buildOverviewPrompt` in #79.
-- `infrastructure.md` — always-clone refresh is now described as comparing
-  the clone's actual `git rev-parse HEAD` to `head_sha` (not `last_used`'s
-  "recorded sha"), and clarifies `last_used` is an ISO timestamp bumped per
-  call.
-- `api.md` — `POST /api/submit` now notes both server-side-only members
-  (`payload` and `progress`) are stripped before the response.
-- `datamodel.md` — `SubmitResult` now documents the GitLab adapter's
-  `SubmitResult & { progress }` return member.
+- **ui.md** — the bare-`c` shortcut is guarded on `!mod`
+  (`web/src/App.tsx:358`) and the Overview footer flips to "Resume review"
+  via `hasViewed` (`web/src/components/OverviewView.tsx`), matching the
+  Keyboard Model and Overview descriptions.
+- **infrastructure.md** — `buildPrompt`/`buildOverviewPrompt` take
+  `allowRepoRead` (intro swaps on repo access) and `history` (prior-turn
+  transcript) (`src/claude.ts`); the always-clone refresh compares
+  `git rev-parse HEAD` to `head_sha` (`src/investigation.ts:97`) and
+  `markConfigUsed` bumps the `last_used` ISO timestamp the 30-day prune
+  reads — all as documented.
+- **api.md / datamodel.md** — the GitLab submit adapter returns
+  `SubmitResult & { progress }` (`src/submit.ts:179`) and the `/api/submit`
+  route strips both `payload` and `progress` (`src/server.ts:306`).
+- **datamodel.md** — `src/types.ts` entities (including
+  `InvestigationConfig.last_used`) still match field-for-field.
 
-The two `last_used` broken-contracts from the 2026-07-08/earlier passes
-remain resolved (fixed in #80).
+The `f`/`a` (and `n`/`p`) unguarded-modifier keyboard bug noted this session
+is a **code bug**, not a code-vs-artifact drift — no artifact claims those
+keys are mod-guarded — so it is tracked as open feedback
+(`feedback-keyboard-mod-guard-f-and-a-sho-17aa.md`), not here.
+
+All prior findings (the `last_used` broken-contract and four documentation
+drifts) remain resolved.
