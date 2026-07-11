@@ -389,70 +389,77 @@ erDiagram
 
 ```mermaid
 graph TD
-    UI["Browser UI (React, web/src/)"]
-    CLI["CLI (src/cli.ts)"]
-    Server["Server (src/server.ts, 127.0.0.1:4319)"]
-    State[("State files (~/.assisted-review/*.json)")]
-    Clones[("Repo clones (STATE_DIR/repos/)")]
-    GitLabToken[("GitLab browser token (STATE_DIR/gitlab-token, 0o600)")]
-    GitHub["GitHub (gh CLI)"]
-    GitLab["GitLab (glab CLI / REST v4 fallback)"]
-    Jira["Jira REST API"]
-    Claude["Claude CLI (headless subprocess)"]
-    OnePassword["1Password CLI (op, optional)"]
-    NpmRegistry["npm Registry (registry.npmjs.org)"]
+    subgraph local["Local machine — 127.0.0.1 only"]
+        CLI["CLI (src/cli.ts)"]
+        Browser["React UI (dist/) in browser"]
+        Server["HTTP server (src/server.ts)<br/>REST + one SSE endpoint, :4319"]
+        subgraph state["State dir (~/.assisted-review/)"]
+            StateFiles["Review state JSON<br/>one file per PR/MR"]
+            InvCfg["investigation-config.json"]
+            Clones["repos/ — temp &amp; always clones"]
+            GLToken["gitlab-token (0o600)"]
+            UpdCache["update-check.json"]
+        end
+    end
+
+    subgraph ext["External tools &amp; services (subprocesses / HTTP)"]
+        GH["gh CLI → GitHub"]
+        GLAB["glab CLI / REST → GitLab"]
+        Jira["Jira REST API"]
+        Claude["claude CLI — headless, read-only"]
+        NPM["npm registry"]
+        OP["op — 1Password, optional"]
+    end
 
     CLI -->|starts| Server
-    CLI -->|"GET /<pkg>/latest (update check)"| NpmRegistry
-    UI -->|"REST + SSE (/api/*)"| Server
-    UI -->|"POST/DELETE /api/auth/gitlab (PAT entry)"| Server
-    Server -->|"save/load JSON (atomic write)"| State
-    Server -->|"save/load PAT (atomic write)"| GitLabToken
-    Server -->|"gh pr diff / gh pr view / gh api / gh repo clone"| GitHub
-    Server -->|"glab api / mr diff, REST fallback / glab repo clone"| GitLab
-    GitLabToken -.->|"resolved before GITLAB_TOKEN"| GitLab
-    Server -->|"GET /rest/api/3/issue/{key}"| Jira
-    Server -->|"resolve JIRA_TOKEN (op read)"| OnePassword
-    Server -->|"spawn, stream-json (cwd: tmpdir/local path/clone)"| Claude
-    Server -->|"clone / fetch / checkout / prune"| Clones
+    Browser <-->|"REST + SSE (/api/*)"| Server
+    Server -->|"fetch diff/meta, submit review"| GH
+    Server -->|"fetch diff/meta, submit, clone"| GLAB
+    Server -->|"issue + epic context"| Jira
+    Server -->|"stream commentary"| Claude
+    Server -->|"load / atomic save"| StateFiles
+    Server -->|"read/write chosen mode"| InvCfg
+    Server -->|"clone / refresh / prune"| Clones
+    Server -->|"read/write browser token"| GLToken
+    Server -->|"once-per-24h check"| NPM
+    Server -.->|"resolve JIRA_TOKEN reference"| OP
+    Claude -.->|"Read/Grep/Glob in repo-access modes"| Clones
 ```
 
 ## UI
 
 ```mermaid
 graph TD
-    App["App.tsx (navigation, drafts, Claude stream)"]
+    App["App.tsx<br/>navigation · active Claude stream · drafts"]
 
+    App -->|"index -1"| Overview["OverviewView.tsx"]
+    App -->|"index 0..N-1"| Chunk["ChunkView.tsx"]
     App --> Splash["Splash.tsx"]
-    App --> OverviewView["OverviewView.tsx"]
-    App --> ChunkView["ChunkView.tsx"]
-    App -->|"viewed/flagged/commented per chunk"| TopNav["TopNav.tsx"]
-    App --> ResponseBar["ResponseBar.tsx"]
-    App -->|"SubmitResponse (stale-SHA, comment_errors)"| SubmitModal["SubmitModal.tsx"]
+    App -->|"per-chunk viewed/flagged/commented"| TopNav["TopNav.tsx"]
+    App -->|"isMac · re-anchor mode"| ResponseBar["ResponseBar.tsx"]
+    App --> SubmitModal["SubmitModal.tsx"]
     App --> ReviewsMenu["ReviewsMenu.tsx"]
     App --> SettingsPanel["SettingsPanel.tsx"]
     App --> HelpOverlay["HelpOverlay.tsx"]
-    App -->|"investigation-access banner"| InvestigationModal["InvestigationModal.tsx"]
 
-    OverviewView -->|"StoredNote[] scoped to OVERVIEW_ID"| AiCommentary1["AiCommentary.tsx"]
-    OverviewView --> ErrorBanner["ErrorBanner.tsx (Jira setup banner)"]
-    OverviewView --> Markdown1["Markdown.tsx (PR description)"]
+    Splash --> GLAuth["GitLabAuthModal.tsx"]
 
-    ChunkView --> DiffPane["DiffPane.tsx"]
-    ChunkView -->|"StoredNote[] scoped to chunk id"| AiCommentary2["AiCommentary.tsx"]
+    Overview --> MD1["Markdown.tsx"]
+    Overview --> EB["ErrorBanner.tsx"]
+    Overview -->|"scoped OVERVIEW_ID"| AiC["AiCommentary.tsx"]
 
-    AiCommentary1 --> Markdown2["Markdown.tsx (note body)"]
-    AiCommentary2 --> Markdown2
+    Chunk --> DiffPane["DiffPane.tsx"]
+    Chunk -->|"scoped chunk id"| AiC
+    DiffPane --> CommentCard["CommentCard — inline, edit/delete"]
 
-    ReviewsMenu --> OpenReviewForm["OpenReviewForm.tsx"]
+    AiC -->|"StoredNote[] · deletableNoteIds"| Note["Note (StoredNote | NotePreview)"]
+    Note --> MD2["Markdown.tsx"]
+
+    ReviewsMenu --> OpenForm["OpenReviewForm.tsx"]
     ReviewsMenu --> ReviewsList["ReviewsList.tsx"]
-    ReviewsMenu -->|"dismissing the active review"| DeleteReviewConfirm["DeleteReviewConfirm.tsx"]
-    ReviewsMenu -->|"auth_required: gitlab"| GitLabAuthModal["GitLabAuthModal.tsx"]
+    ReviewsMenu --> DelConfirm["DeleteReviewConfirm.tsx"]
+    ReviewsMenu --> GLAuth
 
-    SettingsPanel -->|"reopen to change mode"| InvestigationModal
-
-    Splash -->|"auth_required: gitlab"| GitLabAuthModal
-    Splash --> Logo["Logo.tsx"]
-    TopNav --> Logo
+    SettingsPanel --> InvModal["InvestigationModal.tsx"]
 ```
 
