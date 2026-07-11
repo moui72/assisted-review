@@ -1,3 +1,10 @@
+## [1.11.6](https://github.com/moui72/assisted-review/compare/v1.11.5...v1.11.6) (2026-07-11)
+
+
+### Bug Fixes
+
+* guard remaining single-letter shortcuts with !mod ([#84](https://github.com/moui72/assisted-review/issues/84)) ([6b96f84](https://github.com/moui72/assisted-review/commit/6b96f846998469059082e39db6e7d45037996c93)), closes [#83](https://github.com/moui72/assisted-review/issues/83)
+
 ## [1.11.5](https://github.com/moui72/assisted-review/compare/v1.11.4...v1.11.5) (2026-07-11)
 
 
