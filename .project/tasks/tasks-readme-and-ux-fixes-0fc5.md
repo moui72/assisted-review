@@ -44,7 +44,7 @@ status: in-progress
   `ardd-render`. Frontmatter only — no diagram or README change in this task.
   (feedback: feedback-readme-rewrite-move-mermaid-di F002)
 
-- [ ] T005 [artifacts: datamodel, infrastructure, ui] Depends on T004. Run
+- [x] T005 [artifacts: datamodel, infrastructure, ui] Depends on T004. Run
   `/ardd-render datamodel`, `/ardd-render infrastructure`, `/ardd-render ui` so
   each diagram is upserted into `docs/ARCHITECTURE.md` (created if absent) at
   its `render_section`, then remove the `## Datamodel`, `## Infrastructure`,
