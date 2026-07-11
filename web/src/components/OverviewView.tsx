@@ -289,6 +289,7 @@ export function OverviewView({
   ai,
   onBegin,
   chunkCount,
+  hasViewed = false,
   displacedComments,
   displacedNotes,
   displacedFlags,
@@ -303,6 +304,8 @@ export function OverviewView({
   ai: AiPanelProps;
   onBegin: () => void;
   chunkCount: number;
+  /** True once any chunk has been viewed — flips the footer CTA to "Resume review". */
+  hasViewed?: boolean;
   displacedComments: DraftComment[];
   displacedNotes: StoredNote[];
   displacedFlags: FlaggedEntry[];
@@ -366,13 +369,15 @@ export function OverviewView({
           ) : (
             <>
               <span className="font-sans text-[12px] text-faint">
-                Review {chunkCount} chunks one at a time.
+                {hasViewed
+                  ? 'Pick up where you left off.'
+                  : `Review ${chunkCount} chunks one at a time.`}
               </span>
               <button
                 onClick={onBegin}
                 className="rounded-md bg-accent px-4 py-1.5 text-[12.5px] font-semibold text-bg transition hover:brightness-110"
               >
-                Begin review →
+                {hasViewed ? 'Resume review →' : 'Begin review →'}
               </button>
             </>
           )}

@@ -19,7 +19,7 @@ status: in-progress
   the comment textarea and does NOT `preventDefault`, while a bare `c` still
   does. (feedback: feedback-cmd-c-copy-broken F001)
 
-- [ ] T002 [artifacts: ui] [parallel] In `OverviewView`, make the footer
+- [x] T002 [artifacts: ui] [parallel] In `OverviewView`, make the footer
   "Begin review →" button read "Resume review" when `state.viewed` is
   non-empty, keeping "Begin review →" when it is empty. Preserve the existing
   zero-chunk branch (`chunkCount === 0` → "No reviewable changes…", no button).

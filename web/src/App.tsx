@@ -531,6 +531,7 @@ export function App() {
                 ai={aiPanel}
                 onBegin={() => jump(0)}
                 chunkCount={total}
+                hasViewed={(state?.viewed.length ?? 0) > 0}
                 displacedComments={displacedComments}
                 displacedNotes={displacedNotes}
                 displacedFlags={displacedFlags}
