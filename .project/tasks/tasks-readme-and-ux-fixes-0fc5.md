@@ -1,7 +1,7 @@
 ---
 plan: plan-readme-and-ux-fixes-2026-07-11.md
 generated: 2026-07-11
-status: in-progress
+status: completed
 ---
 
 # Tasks
@@ -54,7 +54,7 @@ status: in-progress
 
 ## Phase 3: README rewrite for npm
 
-- [ ] T006 Depends on Phase 2 (README diagram sections already removed).
+- [x] T006 Depends on Phase 2 (README diagram sections already removed).
   Rewrite `README.md` for npm publication: a concise description of what
   assisted-review is, install (`npm i -g assisted-review`), a quickstart
   (open a PR/MR for review), key configuration/env vars (Jira, GitLab, preload,

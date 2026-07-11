@@ -198,18 +198,9 @@ src/         TypeScript backend (ESM, compiled to build/)
 web/         Vite + React + Tailwind UI → builds into dist/, served by the server
 ```
 
-- **`cli.ts`** — entry point; parses the PR/MR ref, fetches the diff and metadata, extracts Jira keys, and hands off to the server. Starts in splash-screen mode when no ref is given.
-- **`fetch.ts` / `parse-ref.ts` / `parse-diff.ts`** — fetch the raw diff and PR/MR metadata via `gh`/`glab`, parse the ref format, and slice the unified diff into reviewable chunks.
-- **`gitlab-rest.ts` / `gitlab-token.ts`** — GitLab transport (prefers the `glab` CLI, falls back to the REST API v4 via `GITLAB_TOKEN`) and token resolution (raw value, `op://`, `env:`, or `cmd:` reference).
-- **`server.ts`** — Node.js HTTP server providing the REST and SSE API (`/api/review`, `/api/state`, `/api/action`, `/api/claude` (SSE), `/api/submit`, `/api/reviews`, `/api/reviews/open`, `/api/auth/gitlab`, `/api/investigation-config`, `/api/config`). Serves the pre-built React UI from `dist/` unless `--api-only` is set.
-- **`state.ts`** — loads and persists review state (viewed, flagged, comments, AI notes) as JSON in `~/.assisted-review/`.
-- **`investigation.ts`** — per-repo config for how much repo access Claude gets during investigation (diff-only, a local checkout, full-file API reads, or a managed clone), plus clone lifecycle (cloning, refresh, pruning).
-- **`claude.ts`** — spawns headless `claude` as a subprocess and streams JSON-formatted commentary back to the server.
-- **`submit.ts`** — assembles drafted comments into a review payload and posts it via `gh api` (GitHub) or the GitLab discussions/notes/approve endpoints (GitLab).
-- **`jira.ts`** — fetches issue and epic data from the Jira REST API using env-configured credentials.
-- **`update-check.ts`** — checks the npm registry for a newer published version in the background and prints a notice on startup if out of date.
-
-State lives in `~/.assisted-review/` (override with `ASSISTED_REVIEW_STATE_DIR`).
+Per-module detail and the datamodel/infrastructure/UI diagrams are in
+[`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md). Review state lives in
+`~/.assisted-review/` (override with `ASSISTED_REVIEW_STATE_DIR`).
 
 ## Contributing
 

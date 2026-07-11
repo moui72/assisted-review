@@ -226,3 +226,31 @@ graph TD
     SettingsPanel --> InvModal["InvestigationModal.tsx"]
 ```
 
+
+## Backend modules
+
+```
+src/         TypeScript backend (ESM, compiled to build/)
+  cli.ts        entry: parse ref → fetch → chunks → Jira → serve
+  fetch.ts · parse-ref.ts · parse-diff.ts   diff/PR ingestion (GitHub + GitLab)
+  gitlab-rest.ts · gitlab-token.ts          GitLab glab-CLI-or-REST transport, token resolution
+  server.ts     localhost HTTP server
+  state.ts      persisted review state (~/.assisted-review/<key>.json)
+  investigation.ts   per-repo Claude investigation-access config + clone lifecycle
+  claude.ts     headless Claude bridge (stream-json)
+  submit.ts     publish drafted comments as a real PR/MR review
+  jira.ts       Jira REST fetch (env-configured)
+  update-check.ts    background npm-registry version check
+web/         Vite + React + Tailwind UI → builds into dist/, served by the server
+```
+
+- **`cli.ts`** — entry point; parses the PR/MR ref, fetches the diff and metadata, extracts Jira keys, and hands off to the server. Starts in splash-screen mode when no ref is given.
+- **`fetch.ts` / `parse-ref.ts` / `parse-diff.ts`** — fetch the raw diff and PR/MR metadata via `gh`/`glab`, parse the ref format, and slice the unified diff into reviewable chunks.
+- **`gitlab-rest.ts` / `gitlab-token.ts`** — GitLab transport (prefers the `glab` CLI, falls back to the REST API v4 via `GITLAB_TOKEN`) and token resolution (raw value, `op://`, `env:`, or `cmd:` reference).
+- **`server.ts`** — Node.js HTTP server providing the REST and SSE API (`/api/review`, `/api/state`, `/api/action`, `/api/claude` (SSE), `/api/submit`, `/api/reviews`, `/api/reviews/open`, `/api/auth/gitlab`, `/api/investigation-config`, `/api/config`). Serves the pre-built React UI from `dist/` unless `--api-only` is set.
+- **`state.ts`** — loads and persists review state (viewed, flagged, comments, AI notes) as JSON in `~/.assisted-review/`.
+- **`investigation.ts`** — per-repo config for how much repo access Claude gets during investigation (diff-only, a local checkout, full-file API reads, or a managed clone), plus clone lifecycle (cloning, refresh, pruning).
+- **`claude.ts`** — spawns headless `claude` as a subprocess and streams JSON-formatted commentary back to the server.
+- **`submit.ts`** — assembles drafted comments into a review payload and posts it via `gh api` (GitHub) or the GitLab discussions/notes/approve endpoints (GitLab).
+- **`jira.ts`** — fetches issue and epic data from the Jira REST API using env-configured credentials.
+- **`update-check.ts`** — checks the npm registry for a newer published version in the background and prints a notice on startup if out of date.
