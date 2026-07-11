@@ -27,7 +27,7 @@ status: in-progress
   chunks and flips to "Resume review" once `state.viewed` contains a chunk id.
   (feedback: feedback-overview-resume-review F001)
 
-- [ ] T003 [artifacts: ui] Update `ui.md` to match T001/T002: in the Keyboard
+- [x] T003 [artifacts: ui] Update `ui.md` to match T001/T002: in the Keyboard
   Model, note the bare-`c` comment shortcut is mod-guarded so `Cmd/Ctrl+C`
   passes through to native copy; in the Overview/States description, note the
   footer button reads "Begin review →" vs "Resume review" based on whether
