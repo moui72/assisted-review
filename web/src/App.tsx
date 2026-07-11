@@ -352,16 +352,16 @@ export function App() {
           go(1); // overview → begin review
         else markViewedNext();
       } else if (e.key === 'Escape') markUnread();
-      else if (e.key === 'n' || e.key === 'j') go(1);
-      else if (e.key === 'p' || e.key === 'k') go(-1);
-      else if (e.key === 'f') toggleFlag();
+      // Single-letter shortcuts all fire only without a modifier (!mod), so
+      // browser combos (⌘F find, ⌘A select-all, ⌘N/⌘P, ⌘C copy, …) fall
+      // through to their native handlers instead of being hijacked.
+      else if ((e.key === 'n' || e.key === 'j') && !mod) go(1);
+      else if ((e.key === 'p' || e.key === 'k') && !mod) go(-1);
+      else if (e.key === 'f' && !mod) toggleFlag();
       else if (e.key === 'c' && !mod) {
-        // Bare `c` focuses the comment box; guard on !mod so ⌘C/Ctrl+C
-        // falls through to the browser's native copy instead of being
-        // preventDefault'd and stealing focus.
         e.preventDefault();
         textareaRef.current?.focus();
-      } else if (e.key === 'a') {
+      } else if (e.key === 'a' && !mod) {
         e.preventDefault();
         askRef.current?.focus();
       }

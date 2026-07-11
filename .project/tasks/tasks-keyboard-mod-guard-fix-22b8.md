@@ -8,7 +8,7 @@ status: in-progress
 
 ## Phase 1: Guard single-letter shortcuts
 
-- [ ] T001 [artifacts: ui] In `web/src/App.tsx`'s global keydown `onKey`
+- [x] T001 [artifacts: ui] In `web/src/App.tsx`'s global keydown `onKey`
   handler, add `&& !mod` to the single-letter shortcut branches — `n`/`p`
   (and the `j`/`k` nav aliases), `f` (flag), and `a` (ask) — mirroring the
   already-guarded `c` branch. A held `⌘`/`Ctrl` then falls through to the

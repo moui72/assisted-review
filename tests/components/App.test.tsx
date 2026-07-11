@@ -167,8 +167,8 @@ describe('App — displaced comment re-anchoring', () => {
   });
 });
 
-describe('App — Cmd/Ctrl+C copy passthrough', () => {
-  it('does not preventDefault on ⌘/Ctrl+C, but still handles bare c', async () => {
+describe('App — modifier combos pass through single-letter shortcuts', () => {
+  it('does not preventDefault on ⌘/Ctrl + c/a/f, but bare c and a still act', async () => {
     vi.mocked(fetchReview).mockResolvedValue(review);
     vi.mocked(fetchState).mockResolvedValue(initialState());
 
@@ -177,18 +177,22 @@ describe('App — Cmd/Ctrl+C copy passthrough', () => {
     // handler is only wired up once loaded).
     await waitFor(() => expect(screen.getByText('Displaced comments')).toBeInTheDocument());
 
-    // ⌘/Ctrl+C must fall through to the browser's native copy — the global
-    // handler's bare-`c` branch is guarded by !mod, so it does not
-    // preventDefault. (metaKey+ctrlKey both set so `mod` is true on either
-    // platform's IS_MAC branch.)
-    const copy = createEvent.keyDown(window, { key: 'c', ctrlKey: true, metaKey: true });
-    fireEvent(window, copy);
-    expect(copy.defaultPrevented).toBe(false);
+    // ⌘/Ctrl + a single-letter shortcut must fall through to the browser's
+    // native handler (⌘C copy, ⌘A select-all, ⌘F find) — every single-letter
+    // branch is guarded by !mod. (metaKey+ctrlKey both set so `mod` is true on
+    // either platform's IS_MAC branch.)
+    for (const key of ['c', 'a', 'f']) {
+      const modified = createEvent.keyDown(window, { key, ctrlKey: true, metaKey: true });
+      fireEvent(window, modified);
+      expect(modified.defaultPrevented).toBe(false);
+    }
 
-    // Bare `c` is still the "focus the comment box" shortcut — preventDefault'd.
-    const bare = createEvent.keyDown(window, { key: 'c' });
-    fireEvent(window, bare);
-    expect(bare.defaultPrevented).toBe(true);
+    // Bare `c` (focus comment) and `a` (focus ask) still act — preventDefault'd.
+    for (const key of ['c', 'a']) {
+      const bare = createEvent.keyDown(window, { key });
+      fireEvent(window, bare);
+      expect(bare.defaultPrevented).toBe(true);
+    }
   });
 });
 
