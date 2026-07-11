@@ -1,7 +1,7 @@
 ---
 plan: plan-keyboard-mod-guard-fix-2026-07-11.md
 generated: 2026-07-11
-status: in-progress
+status: completed
 ---
 
 # Tasks
@@ -20,7 +20,7 @@ status: in-progress
   (and don't flag/focus-ask), while bare `f`/`a` still act.
   (feedback: feedback-keyboard-mod-guard-f-and-a-sho F001)
 
-- [ ] T002 [artifacts: ui] Update `ui.md`'s Keyboard Model to state that the
+- [x] T002 [artifacts: ui] Update `ui.md`'s Keyboard Model to state that the
   single-letter shortcuts (`f`/`c`/`a`/`n`/`p`/`j`/`k`) fire only without a
   modifier, so browser `⌘`/`Ctrl` combos pass through — generalizing the
   existing `c`-only note. Documentation only; stamp `last_updated` to today.

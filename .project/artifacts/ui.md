@@ -271,9 +271,12 @@ is in `README.md` and mirrored in `HelpOverlay.tsx`; notably `→`/`←` (or
 `j`/`k`/`n`/`p`) navigate without side effects, `⌘→`/`⌘←` (Ctrl on
 Win/Linux) skip to the next/previous *unviewed* chunk, and `↵` both marks
 viewed and advances (the only navigation key with a persistence side
-effect). The bare `c` "focus comment box" shortcut is guarded on *no
-modifier* (`!mod`), so `⌘C`/`Ctrl+C` falls through to the browser's native
-copy instead of being `preventDefault`'d and stealing focus.
+effect). The single-letter shortcuts (`f`/`c`/`a` and the `n`/`p`/`j`/`k`
+navigation aliases) all fire only on *no modifier* (`!mod`), so browser
+combos — `⌘C`/`Ctrl+C` (copy), `⌘F` (find), `⌘A` (select-all), `⌘N`/`⌘P`,
+etc. — fall through to their native handlers instead of being hijacked (or,
+for `c`/`a`, `preventDefault`'d). The `⌘→`/`⌘←` unviewed-jump bindings are the
+deliberate exception that *does* key off the modifier.
 
 ## Production Annotations
 
