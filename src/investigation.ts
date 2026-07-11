@@ -120,6 +120,21 @@ export async function cleanupTempClone(pr: PrRef): Promise<void> {
   await saveInvestigationConfigs(configs).catch(() => {});
 }
 
+/** Records that an investigation call just used this repo's config by bumping
+ *  `last_used` to now — the idle-clock input `pruneStaleClones()` reads for
+ *  its 30-day always-clone TTL. Without this, `last_used` would never be set
+ *  and the prune could never fire. No-op if the repo has no persisted config.
+ *  Best-effort persistence, same swallow-on-write-failure convention as
+ *  `cleanupTempClone`. */
+export async function markConfigUsed(pr: PrRef): Promise<void> {
+  const configs = await loadInvestigationConfigs();
+  const key = configKey(pr);
+  const config = configs[key];
+  if (!config) return;
+  configs[key] = { ...config, last_used: new Date().toISOString() };
+  await saveInvestigationConfigs(configs).catch(() => {});
+}
+
 const ORPHAN_TMP_MAX_AGE_MS = 24 * 60 * 60 * 1000; // 24h
 const ALWAYS_CLONE_TTL_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
 
