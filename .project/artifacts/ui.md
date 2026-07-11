@@ -1,7 +1,9 @@
 ---
 name: ui
+render_target: docs/ARCHITECTURE.md
+render_section: UI
 status: stable
-last_updated: 2026-07-10
+last_updated: 2026-07-11
 diagram_status: current
 ---
 
@@ -49,7 +51,10 @@ The `index === -1` page. Shows PR/MR title, description (rendered as
 markdown), and Jira context (linked issue(s) + epic, or a setup banner via
 `ErrorBanner` if Jira is unavailable — see `datamodel.md`'s `JiraContext`).
 Hosts the AI panel scoped to `OVERVIEW_ID` — ask Claude to summarize the
-whole PR or answer a question about it. `onBegin` jumps to chunk 0.
+whole PR or answer a question about it. `onBegin` jumps to chunk 0; its
+footer button reads "Begin review →" until any chunk has been viewed
+(`state.viewed` non-empty), then "Resume review →" — a resume affordance
+distinct from the zero-chunk empty state below.
 
 When `state.comments` contains any `displaced: true` entries (see
 `datamodel.md`'s Anchor Reconciliation), a **Displaced Comments** section
@@ -266,7 +271,9 @@ is in `README.md` and mirrored in `HelpOverlay.tsx`; notably `→`/`←` (or
 `j`/`k`/`n`/`p`) navigate without side effects, `⌘→`/`⌘←` (Ctrl on
 Win/Linux) skip to the next/previous *unviewed* chunk, and `↵` both marks
 viewed and advances (the only navigation key with a persistence side
-effect).
+effect). The bare `c` "focus comment box" shortcut is guarded on *no
+modifier* (`!mod`), so `⌘C`/`Ctrl+C` falls through to the browser's native
+copy instead of being `preventDefault`'d and stealing focus.
 
 ## Production Annotations
 

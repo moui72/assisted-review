@@ -97,6 +97,39 @@ describe('OverviewView', () => {
     expect(onBegin).toHaveBeenCalledTimes(1);
   });
 
+  it('shows "Begin review" with no viewed chunks and "Resume review" once any chunk is viewed', () => {
+    const { rerender } = render(
+      <OverviewView
+        pr={pr}
+        meta={meta}
+        jira={jira}
+        ai={ai}
+        onBegin={vi.fn()}
+        chunkCount={3}
+        hasViewed={false}
+        {...noDisplaced}
+      />,
+    );
+    expect(screen.getByRole('button', { name: 'Begin review →' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /resume review/i })).not.toBeInTheDocument();
+
+    rerender(
+      <OverviewView
+        pr={pr}
+        meta={meta}
+        jira={jira}
+        ai={ai}
+        onBegin={vi.fn()}
+        chunkCount={3}
+        hasViewed={true}
+        {...noDisplaced}
+      />,
+    );
+    expect(screen.getByRole('button', { name: 'Resume review →' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /begin review/i })).not.toBeInTheDocument();
+    expect(screen.getByText('Pick up where you left off.')).toBeInTheDocument();
+  });
+
   it('renders a displaced comment with re-anchor and delete actions, and none when there are none', () => {
     const onReanchorComment = vi.fn();
     const onDeleteComment = vi.fn();
