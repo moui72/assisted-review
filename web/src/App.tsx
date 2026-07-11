@@ -355,7 +355,10 @@ export function App() {
       else if (e.key === 'n' || e.key === 'j') go(1);
       else if (e.key === 'p' || e.key === 'k') go(-1);
       else if (e.key === 'f') toggleFlag();
-      else if (e.key === 'c') {
+      else if (e.key === 'c' && !mod) {
+        // Bare `c` focuses the comment box; guard on !mod so ⌘C/Ctrl+C
+        // falls through to the browser's native copy instead of being
+        // preventDefault'd and stealing focus.
         e.preventDefault();
         textareaRef.current?.focus();
       } else if (e.key === 'a') {

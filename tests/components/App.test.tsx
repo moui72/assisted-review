@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, fireEvent, createEvent } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { vi } from 'vitest';
 import type { Action, Review, ReviewState } from '../../web/src/api.ts';
@@ -164,6 +164,31 @@ describe('App — displaced comment re-anchoring', () => {
     // Back on Overview, the comment is gone from Displaced Comments.
     await user.click(screen.getByRole('button', { name: 'Overview' }));
     await waitFor(() => expect(screen.queryByText('Displaced comments')).not.toBeInTheDocument());
+  });
+});
+
+describe('App — Cmd/Ctrl+C copy passthrough', () => {
+  it('does not preventDefault on ⌘/Ctrl+C, but still handles bare c', async () => {
+    vi.mocked(fetchReview).mockResolvedValue(review);
+    vi.mocked(fetchState).mockResolvedValue(initialState());
+
+    render(<App />);
+    // Wait until the app has loaded onto the Overview page (the global keydown
+    // handler is only wired up once loaded).
+    await waitFor(() => expect(screen.getByText('Displaced comments')).toBeInTheDocument());
+
+    // ⌘/Ctrl+C must fall through to the browser's native copy — the global
+    // handler's bare-`c` branch is guarded by !mod, so it does not
+    // preventDefault. (metaKey+ctrlKey both set so `mod` is true on either
+    // platform's IS_MAC branch.)
+    const copy = createEvent.keyDown(window, { key: 'c', ctrlKey: true, metaKey: true });
+    fireEvent(window, copy);
+    expect(copy.defaultPrevented).toBe(false);
+
+    // Bare `c` is still the "focus the comment box" shortcut — preventDefault'd.
+    const bare = createEvent.keyDown(window, { key: 'c' });
+    fireEvent(window, bare);
+    expect(bare.defaultPrevented).toBe(true);
   });
 });
 

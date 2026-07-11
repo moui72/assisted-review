@@ -8,7 +8,7 @@ status: in-progress
 
 ## Phase 1: Overview & keyboard UX fixes
 
-- [ ] T001 [artifacts: ui] [parallel] In `web/src/App.tsx`'s global keydown
+- [x] T001 [artifacts: ui] [parallel] In `web/src/App.tsx`'s global keydown
   `useEffect`, guard the `e.key === 'c'` "focus comment box" branch with
   `!mod` (the `mod` = ⌘/Ctrl flag already computed near the top of the
   handler), mirroring how the `ArrowRight`/`ArrowLeft` branches already check
