@@ -258,11 +258,14 @@ behavior — until the reviewer explicitly opts in via the UI modal
 - **`'always-clone'`**: same clone mechanics as `temp-clone`, but into a
   stable path (`STATE_DIR/repos/<platform>-<owner>-<repo>`, not a random
   temp name) and never deleted on review close. Before each investigation
-  call, if `InvestigationConfig.last_used`'s recorded sha differs from the
-  review's current `head_sha`, runs `git fetch` + `git checkout <head_sha>`
-  (detached) in that clone directory first — otherwise reuses it as-is, so
-  a review session with many chunk investigations against the same PR only
-  pays the fetch/checkout cost once. **Pruning**: on CLI startup, any
+  call, if the clone's actual checked-out sha (`git rev-parse HEAD` in that
+  directory) differs from the review's current `head_sha`, runs `git fetch`
+  + `git checkout <head_sha>` (detached) in that clone directory first —
+  otherwise reuses it as-is, so a review session with many chunk
+  investigations against the same PR only pays the fetch/checkout cost once.
+  Each such call also bumps `InvestigationConfig.last_used` (an ISO
+  timestamp, not a sha) to now — the idle clock the pruning step below reads.
+  **Pruning**: on CLI startup, any
   `always-clone` entry whose `last_used` is older than 30 days has its
   clone directory deleted and its `InvestigationConfig` reset to `mode:
   'none'` (reviewer would need to re-opt-in) — a fixed default TTL, not
@@ -291,6 +294,17 @@ behavior — until the reviewer explicitly opts in via the UI modal
   into `{ body, suggestedAction }`. This is prompt-contract parsing, not a
   structured API response — inherently best-effort and could silently fail
   to split if Claude's phrasing drifts from the expected format.
+  Both builders also take two flags the `/api/claude` route derives from the
+  active `InvestigationConfig`: `allowRepoRead` swaps the intro sentence
+  between "answer only from the diff shown; do not use tools" (diff-only
+  modes) and an explicit invitation to use `Read`/`Grep`/`Glob` on the
+  checked-out repo (the repo-access modes — so the prompt no longer tells
+  Claude not to use tools it was actually granted); and `history` threads
+  prior notes for the same chunk/overview (excluding `kind: 'error'`) into a
+  "Prior conversation:" transcript ahead of the new question, so a follow-up
+  Ask isn't answered cold. `history` is gathered from `ReviewState.notes`
+  before the new question's own note is added, so a question is never part of
+  its own history.
 - **Cancellation**: `streamClaude()` returns a kill function. The server
   tracks one in-flight stream at a time (`currentCancel` in `server.ts`) and
   cancels it whenever a new review is opened or the SSE connection closes —

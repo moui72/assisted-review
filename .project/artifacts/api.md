@@ -88,9 +88,12 @@ see `infrastructure.md` for what each does. On success, stamps
 `state.submitted = { at, verdict, url }` and persists it. Response status:
 `200` on success, `409` if the head SHA went stale, `502` on any other
 failure. Response body is the submit adapter's `SubmitResult` (`datamodel.md`),
-transformed by this route handler before it reaches the client: `payload` is
-stripped (server-side-only, per `datamodel.md`'s note — never serialized to
-the client) and a `state: ReviewState` field is added. The frontend's
+transformed by this route handler before it reaches the client: two
+server-side-only members are stripped — `payload` (per `datamodel.md`'s note
+— never serialized to the client) and, on the GitLab path, `progress` (the
+adapter's `GitLabSubmitProgress`, surfaced to the client instead via
+`state.gitlab_submit_progress` rather than duplicated on the response) — and
+a `state: ReviewState` field is added. The frontend's
 `SubmitResponse` (`web/src/api.ts`) is `Omit<SubmitResult, 'payload'> &
 { state: ReviewState }` — sharing `SubmitResult` via `import type` rather than
 a parallel hand-declared interface, per `datamodel.md`'s
