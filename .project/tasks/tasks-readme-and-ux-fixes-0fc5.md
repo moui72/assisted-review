@@ -36,7 +36,7 @@ status: in-progress
 
 ## Phase 2: Relocate architecture diagrams off README
 
-- [ ] T004 [artifacts: datamodel, infrastructure, ui] Add
+- [x] T004 [artifacts: datamodel, infrastructure, ui] Add
   `render_target: docs/ARCHITECTURE.md` and a `render_section` (`Datamodel` /
   `Infrastructure` / `UI` respectively) to the frontmatter of
   `.project/artifacts/datamodel.md`, `infrastructure.md`, and `ui.md`, using

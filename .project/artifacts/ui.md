@@ -1,5 +1,7 @@
 ---
 name: ui
+render_target: docs/ARCHITECTURE.md
+render_section: UI
 status: stable
 last_updated: 2026-07-11
 diagram_status: current

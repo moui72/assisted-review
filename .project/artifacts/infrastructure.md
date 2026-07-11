@@ -1,5 +1,7 @@
 ---
 name: infrastructure
+render_target: docs/ARCHITECTURE.md
+render_section: Infrastructure
 status: stable
 last_updated: 2026-07-10
 diagram_status: current
