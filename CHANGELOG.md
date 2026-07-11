@@ -1,3 +1,10 @@
+## [1.11.5](https://github.com/moui72/assisted-review/compare/v1.11.4...v1.11.5) (2026-07-11)
+
+
+### Bug Fixes
+
+* **investigation:** write last_used so the always-clone TTL prune fires ([#80](https://github.com/moui72/assisted-review/issues/80)) ([8ee1f53](https://github.com/moui72/assisted-review/commit/8ee1f532433f922f4061492925a3a3c98a362bf9))
+
 ## [1.11.4](https://github.com/moui72/assisted-review/compare/v1.11.3...v1.11.4) (2026-07-10)
 
 
