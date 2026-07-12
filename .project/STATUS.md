@@ -1,10 +1,12 @@
 # assisted-review — Project Status
 
-_Updated: 2026-07-11 (analyze after `/ardd-update` → `b47f36f`; migration 0005 added `diagram_type` frontmatter; project otherwise healthy). Keep this current as artifacts are refined and open questions are resolved._
+_Updated: 2026-07-12 (`/ardd-status` — project healthy; note the installed ARDD skill set is newer (renamed) than the recorded `b47f36f`). Keep this current as artifacts are refined and open questions are resolved._
 
-ARDD update available: installed `b47f36f`, source at `b1f80c6` — run
-`/ardd-update`. (The source checkout is being actively committed to this
-session, so this line will keep reappearing against a moving tip.)
+ARDD update available: installed `b47f36f`, latest release `v0.9.0` — run
+`/ardd-update`. (The installed skills are already the renamed `v0.9.x` set —
+`ardd-status`/`ardd-defects`/`ardd-diagram`/`ardd-backlog`/`ardd-init` — so
+`ardd-version.md`'s recorded `b47f36f` is stale; a `/ardd-update` re-records
+the actual installed version.)
 
 ## Artifact Status
 
@@ -35,12 +37,12 @@ No violations.
 - infrastructure.md — current ✅ (`diagram_type: graph TD`)
 - ui.md — current ✅ (`diagram_type: graph TD`)
 
-Rendered to `docs/ARCHITECTURE.md`. Migration `0005` added the `diagram_type`
-field this run.
+Rendered to `docs/ARCHITECTURE.md`.
 
 ## Code-vs-Artifact Defects
 
-None — `DEFECTS.md` all-clear, last checked 2026-07-11.
+None — `DEFECTS.md` all-clear, last checked 2026-07-11. (Refresh with
+`/ardd-defects`, the renamed verify skill.)
 
 ## Feedback
 
@@ -53,20 +55,13 @@ None open — all feedback files are `planned` or consumed.
 
 ## In Flight
 
-Nothing merged-pending on a branch. Two clean sibling worktrees; no open
-draft PRs. **Uncommitted on `main`:** the `/ardd-update` bookkeeping —
-`.project/ardd-version.md` (→ `b47f36f`), `.ardd-applied` (migration 0005),
-and the `diagram_type` frontmatter on the 3 diagram artifacts.
-
-## Workflow note
-
-This `/ardd-update` removed the `ardd-tasks` skill — task generation is now
-folded into `/ardd-plan` (which drafts the plan and generates its task list
-in one run; `--from <plan>` re-tasks an approved plan). `ardd-featurize`,
-`ardd-kickoff`, and `ardd-setup` were also removed.
+No worktree tasks in flight and no draft PRs. Two clean sibling worktrees
+(`ardd-codify-trial`, `docs/update-readme-changelog`). **Open (non-draft) PR:**
+#85 `chore(ardd): update ARDD to b47f36f` — CI clean, ready to merge; the
+current checkout is on its branch `chore/ardd-update-b47f36f`.
 
 ## Recommended Next Step
 
-Land the `/ardd-update` bookkeeping via a branch + PR (collaborative mode —
-`main` is protected). Otherwise the project is healthy: `/ardd-plan <slug>`
-against a backlogged feature to start new work.
+Merge PR #85 and sync `main`. Then, since the installed skills are already the
+renamed `v0.9.0` set, run `/ardd-update` to re-record the accurate version.
+The project itself is healthy — no defects, no open feedback, artifacts stable.
