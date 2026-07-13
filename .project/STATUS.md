@@ -1,6 +1,6 @@
 # assisted-review — Project Status
 
-_Updated: 2026-07-13 (implemented the consolidated restyle — five-palette theming + typefaces + depth/focus polish; tasks completed, three features → implemented). Keep this current as artifacts are refined and open questions are resolved._
+_Updated: 2026-07-13 (PR #87 — the consolidated restyle: five-palette theming + typefaces + depth/focus polish — merged to `main`, release 1.12.0 cut). Keep this current as artifacts are refined and open questions are resolved._
 
 ## Artifact Status
 
@@ -54,7 +54,7 @@ None open.
 **Implemented 2026-07-13** (one consolidated plan, `plan-multi-palette-theming-2026-07-13-4693.md`;
 tasks `tasks-multi-palette-theming-3161.md` `completed`, 8/8):
 `multi-palette-theming`, `custom-typeface-set`, `ui-elevation-and-focus-polish`
-— on branch `multi-palette-theming`, not yet merged to `main`.
+— merged to `main` via PR #87 (release 1.12.0).
 
 **Re-scoped 2026-07-13 (NOT superseded)** as distinct follow-ons on top of the
 presets: `customizable-fonts-colors` (#21 — user-authored custom themes/fonts)
@@ -67,15 +67,12 @@ Installed **v0.9.0** (`7c5dcd0`, source `~/.ardd/source`) — up to date.
 
 ## In Flight
 
-- **PR #87** (`multi-palette-theming` → `main`) — the restyle, pushed and open
-  for review. The register flip to `implemented` rides this branch and lands on
-  `main` when the PR merges.
 - Two clean sibling worktrees (`ardd-codify-trial`, `docs/update-readme-changelog`)
   — `tasks=none`.
 
 ## Recommended Next Step
 
-Review and merge PR #87. Verified locally: lint, full build, 505 unit tests,
-7/7 e2e, and the real app (Blueprint default, Neon dark, persisted across
-reload). Optionally run `/ardd-diagram ui` to clear the stale UI-diagram flag
-(likely no structural change).
+Local `main` is behind `origin/main` (missing PR #87's merge commit and the
+1.12.0 release commit) — pull/rebase to catch up. Optionally run
+`/ardd-diagram ui` to clear the stale UI-diagram flag (likely no structural
+change from the restyle's prose + SettingsPanel-row edits).
