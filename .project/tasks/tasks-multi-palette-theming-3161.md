@@ -57,7 +57,7 @@ the patch's rejected green/gold hunk.
 
 ## Phase 4: Two-axis theme state (feature: multi-palette-theming)
 
-- [ ] T005 [artifacts: ui] Extend `web/src/theme.tsx` to a second axis without
+- [x] T005 [artifacts: ui] Extend `web/src/theme.tsx` to a second axis without
   breaking its public API. Add `type Palette = 'blueprint'|'paper'|'neon'|
   'mono'|'aubergine'`; expose `palette` and `setPalette` alongside the existing
   `theme` and `toggle`; persist to `localStorage` key `ar-palette` (default
