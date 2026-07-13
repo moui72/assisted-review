@@ -1,0 +1,286 @@
+diff --git a/package.json b/package.json
+index 6b95784..c1dc55f 100644
+--- a/package.json
++++ b/package.json
+@@ -41,14 +41,14 @@
+     ]
+   },
+   "dependencies": {
++    "@fontsource/figtree": "^5.2.10",
++    "@fontsource/space-mono": "^5.2.9",
++    "@fontsource/tinos": "^5.2.7",
+     "dotenv": "^17.4.2",
+     "parse-diff": "^0.12.0"
+   },
+   "devDependencies": {
+     "@eslint/js": "^9",
+-    "@fontsource/ibm-plex-mono": "^5.2.7",
+-    "@fontsource/ibm-plex-sans": "^5.2.8",
+-    "@fontsource/ibm-plex-serif": "^5.2.7",
+     "@playwright/test": "^1.61.1",
+     "@tailwindcss/vite": "^4",
+     "@testing-library/jest-dom": "^6.9.1",
+diff --git a/web/src/components/AiCommentary.tsx b/web/src/components/AiCommentary.tsx
+index a6abc3d..ad70591 100644
+--- a/web/src/components/AiCommentary.tsx
++++ b/web/src/components/AiCommentary.tsx
+@@ -101,7 +101,7 @@ export function AiCommentary({
+   const empty = notes.length === 0 && !streaming && !busy && !error;
+ 
+   return (
+-    <section className="thin-scroll max-h-[34%] shrink-0 overflow-auto border-t border-edge bg-surface/60">
++    <section className="rail-top thin-scroll relative z-10 max-h-[34%] shrink-0 overflow-auto border-t border-edge bg-surface">
+       <div className="shell py-4">
+         <div className="mb-2.5 flex items-center gap-3">
+           <span className="text-accent" aria-hidden>
+diff --git a/web/src/components/OverviewView.tsx b/web/src/components/OverviewView.tsx
+index 806b321..0e455fc 100644
+--- a/web/src/components/OverviewView.tsx
++++ b/web/src/components/OverviewView.tsx
+@@ -360,7 +360,7 @@ export function OverviewView({
+         </div>
+       </div>
+ 
+-      <footer className="shrink-0 border-t border-edge bg-surface">
++      <footer className="rail-top relative z-10 shrink-0 border-t border-edge bg-surface">
+         <div className="shell flex items-center justify-between py-3">
+           {chunkCount === 0 ? (
+             <span className="font-sans text-[12px] text-faint">
+diff --git a/web/src/components/TopNav.tsx b/web/src/components/TopNav.tsx
+index 4f49c43..b3b37b7 100644
+--- a/web/src/components/TopNav.tsx
++++ b/web/src/components/TopNav.tsx
+@@ -43,7 +43,7 @@ export function TopNav({
+   const platform = pr.platform ?? 'github';
+   const platformLabel = platform === 'gitlab' ? 'GitLab' : 'GitHub';
+   return (
+-    <header className="shrink-0 border-b border-edge bg-surface">
++    <header className="rail-bottom relative z-10 shrink-0 border-b border-edge bg-surface">
+       <div className="shell flex items-center justify-between gap-6 pt-3">
+         <div className="flex min-w-0 items-center gap-3">
+           <Logo className="h-8 w-auto shrink-0 text-fg" variant="icon" />
+diff --git a/web/src/index.css b/web/src/index.css
+index acc1c18..08df53d 100644
+--- a/web/src/index.css
++++ b/web/src/index.css
+@@ -1,72 +1,85 @@
+ @import 'tailwindcss';
+ 
+-/* ── Palette (dark, default). Light mode later overrides these vars only. ── */
++/* ── Palette (dark, default). Light mode later overrides these vars only.
++   Built from five anchors: #1f271b green-black (base), #ffffff (fg),
++   #e3b505 gold (primary accent), #044b7f navy (secondary), #95190c brick
++   (deletion / danger). ── */
+ :root {
+-  --bg: #0b0d11;
+-  --surface: #14171d;
+-  --surface-2: #1a1e26;
+-  --edge: #262b34;
+-  --edge-strong: #353c47;
+-  --fg: #e9e7e1;
+-  --muted: #8b909b;
+-  --faint: #565b66;
+-  --accent: #e3b341; /* signal gold — structure, progress, focus */
++  --bg: #151b14; /* deep green-black — the review stage */
++  --surface: #1f271b; /* the anchor green — floating rails */
++  --surface-2: #2a3327; /* lifted panel */
++  --edge: #354031;
++  --edge-strong: #4a5743;
++  --fg: #f1f4ec; /* softened white */
++  --muted: #99a48f;
++  --faint: #616d5b;
++  --accent: #e3b505; /* signal gold — structure, progress, focus */
++  --accent-soft: rgba(227, 181, 5, 0.15); /* wash for active/anchor fills */
+ 
+-  /* diff tokens (semantic, not theme utilities) */
+-  --add-bg: #10231a;
+-  --add-fg: #84e2a6;
+-  --add-gutter: #163021;
+-  --del-bg: #241519;
+-  --del-fg: #f1929e;
+-  --del-gutter: #371a20;
+-  --hunk-bg: #151a21;
++  /* Elevation: the two rails (top nav, command bar) float above the review
++     stage. Shadow color is theme-swapped so light mode stays soft. */
++  --rail-shadow: rgba(0, 0, 0, 0.55);
+ 
+-  /* syntax-highlight tokens (themeable later — see ROADMAP) */
+-  --tok-comment: #697084;
+-  --tok-keyword: #e6a4c4;
+-  --tok-string: #cdae7a;
+-  --tok-number: #d99a5b;
+-  --tok-title: #82b4e6;
+-  --tok-attr: #e3b341;
+-  --tok-type: #79cdbd;
+-  --tok-meta: #8b909b;
+-  --tok-tag: #e6a4c4;
+-  --tok-var: #d7c6e6;
++  /* diff tokens (semantic, not theme utilities). Additions stay green but
++     brighter/cooler than the base so they read as highlight; deletions take
++     the brick-red family. */
++  --add-bg: #17301e;
++  --add-fg: #74dd93;
++  --add-gutter: #204a2d;
++  --del-bg: #35150f;
++  --del-fg: #f0968a;
++  --del-gutter: #4d1d14;
++  --hunk-bg: #202a1d;
++
++  /* syntax-highlight tokens — warm/cool set drawn from the anchors:
++     brick→coral keywords, gold attrs, navy→sky titles, teal types. */
++  --tok-comment: #6f7d69;
++  --tok-keyword: #e28b6f;
++  --tok-string: #ccaa4c;
++  --tok-number: #e0925c;
++  --tok-title: #4ea3d9;
++  --tok-attr: #e3b505;
++  --tok-type: #5bbfa2;
++  --tok-meta: #99a48f;
++  --tok-tag: #e28b6f;
++  --tok-var: #8fc6ea;
+ }
+ 
+ /* ── Light mode palette. Overrides :root vars; no utility regeneration needed
+    because @theme inline resolves var() at runtime. ── */
+ [data-theme='light'] {
+-  --bg: #f5f1e6;
+-  --surface: #fdfcf8;
+-  --surface-2: #eeeade;
+-  --edge: #d8d3c7;
+-  --edge-strong: #bdb8ac;
+-  --fg: #39454f;
+-  --muted: #6a7078;
+-  --faint: #9ca2aa;
+-  --accent: #c69a33;
++  --bg: #ecf0e7; /* pale green-grey stage */
++  --surface: #ffffff; /* white rails */
++  --surface-2: #e2e8dc;
++  --edge: #d3dccb;
++  --edge-strong: #b0bca6;
++  --fg: #1f271b; /* the anchor green, as text */
++  --muted: #55604f;
++  --faint: #8a9683;
++  --accent: #96770a; /* deep antique gold — readable on white */
++  --accent-soft: rgba(150, 119, 10, 0.16);
++  --rail-shadow: rgba(31, 39, 27, 0.14);
+ 
+   /* diff tokens */
+-  --add-bg: #e6f4ec;
+-  --add-fg: #116329;
+-  --add-gutter: #ccebd6;
+-  --del-bg: #fce8ea;
+-  --del-fg: #82071e;
+-  --del-gutter: #f5c6cb;
+-  --hunk-bg: #eceade;
++  --add-bg: #e1f0e5;
++  --add-fg: #176437;
++  --add-gutter: #c8e6d1;
++  --del-bg: #fbe7e3;
++  --del-fg: #8f1a0c; /* the brick red */
++  --del-gutter: #f2c9c1;
++  --hunk-bg: #e6ece0;
+ 
+   /* syntax-highlight tokens */
+-  --tok-comment: #7c8490;
+-  --tok-keyword: #c9353d;
+-  --tok-string: #2d6a9f;
+-  --tok-number: #be5a00;
+-  --tok-title: #6741d9;
+-  --tok-attr: #be5a00;
+-  --tok-type: #0064c8;
+-  --tok-meta: #7c8490;
+-  --tok-tag: #c9353d;
+-  --tok-var: #8050b0;
++  --tok-comment: #6c7a66;
++  --tok-keyword: #a3281a;
++  --tok-string: #7a5c0a;
++  --tok-number: #a8561c;
++  --tok-title: #044b7f;
++  --tok-attr: #8a6d05;
++  --tok-type: #0b7a63;
++  --tok-meta: #6c7a66;
++  --tok-tag: #a3281a;
++  --tok-var: #235f8f;
+ }
+ 
+ /* highlight.js token classes → CSS vars. Backgrounds stay transparent so the
+@@ -121,9 +134,9 @@
+ /* `inline` makes the generated utilities resolve var() at runtime, so swapping
+    the :root vars (e.g. a future [data-theme='light']) re-themes everything. */
+ @theme inline {
+-  --font-sans: 'IBM Plex Sans', ui-sans-serif, system-ui, sans-serif;
+-  --font-mono: 'IBM Plex Mono', ui-monospace, SFMono-Regular, monospace;
+-  --font-serif: 'IBM Plex Serif', ui-serif, Georgia, serif;
++  --font-sans: 'Figtree', ui-sans-serif, system-ui, sans-serif;
++  --font-mono: 'Space Mono', ui-monospace, SFMono-Regular, monospace;
++  --font-serif: 'Tinos', ui-serif, Georgia, 'Times New Roman', serif;
+ 
+   --color-bg: var(--bg);
+   --color-surface: var(--surface);
+@@ -145,6 +158,16 @@
+   padding-inline: 1.5rem;
+ }
+ 
++/* Cockpit framing: the top nav and command bar are rails that float above the
++   central review stage. A one-directional shadow gives each rail a lifted edge
++   without a heavy line — the stage reads as the deeper plane between them. */
++@utility rail-top {
++  box-shadow: 0 -14px 30px -22px var(--rail-shadow);
++}
++@utility rail-bottom {
++  box-shadow: 0 14px 30px -22px var(--rail-shadow);
++}
++
+ html,
+ body,
+ #root {
+@@ -166,6 +189,27 @@ button:not(:disabled) {
+   cursor: pointer;
+ }
+ 
++/* Gold selection wash — ties text selection to the accent instead of the
++   browser default blue. */
++::selection {
++  background: var(--accent-soft);
++}
++
++/* A single, consistent keyboard focus ring across every interactive control.
++   Mouse clicks don't trigger :focus-visible, so this only shows for keyboard
++   users — the accessibility floor, made to match the accent. */
++:focus-visible {
++  outline: 2px solid var(--accent);
++  outline-offset: 2px;
++  border-radius: 3px;
++}
++/* Inputs/textareas manage their own accent border on focus, so suppress the
++   ring there to avoid a doubled outline. */
++input:focus-visible,
++textarea:focus-visible {
++  outline: none;
++}
++
+ /* Rendered markdown (PR description, AI summary). Tailwind's preflight strips
+    list styling and margins, so restore what we want here. */
+ .md {
+diff --git a/web/src/main.tsx b/web/src/main.tsx
+index 2e449e3..5f99b9e 100644
+--- a/web/src/main.tsx
++++ b/web/src/main.tsx
+@@ -1,10 +1,10 @@
+-import '@fontsource/ibm-plex-sans/400.css';
+-import '@fontsource/ibm-plex-sans/500.css';
+-import '@fontsource/ibm-plex-sans/600.css';
+-import '@fontsource/ibm-plex-mono/400.css';
+-import '@fontsource/ibm-plex-mono/500.css';
+-import '@fontsource/ibm-plex-serif/400.css';
+-import '@fontsource/ibm-plex-serif/400-italic.css';
++import '@fontsource/figtree/400.css';
++import '@fontsource/figtree/500.css';
++import '@fontsource/figtree/600.css';
++import '@fontsource/space-mono/400.css';
++import '@fontsource/space-mono/700.css';
++import '@fontsource/tinos/400.css';
++import '@fontsource/tinos/400-italic.css';
+ import { StrictMode } from 'react';
+ import { createRoot } from 'react-dom/client';
+ import { App } from './App.tsx';

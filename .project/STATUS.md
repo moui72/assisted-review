@@ -1,6 +1,6 @@
 # assisted-review — Project Status
 
-_Updated: 2026-07-12 (full ARDD v0.9.0 upgrade — migrations 0001-0008 applied, skills renamed, `critique.md → audit.md`; project healthy). Keep this current as artifacts are refined and open questions are resolved._
+_Updated: 2026-07-13 (planned + tasked the consolidated restyle; `ui.md` refined; re-scoped #21/#22 as distinct follow-ons, not superseded). Keep this current as artifacts are refined and open questions are resolved._
 
 ## Artifact Status
 
@@ -10,58 +10,76 @@ _Updated: 2026-07-12 (full ARDD v0.9.0 upgrade — migrations 0001-0008 applied,
 | datamodel.md | stable ✅ | — |
 | infrastructure.md | stable ✅ | — |
 | api.md | stable ✅ | — |
-| ui.md | stable ✅ | — |
+| ui.md | stable ✅ (updated 2026-07-13: two-axis appearance) | — |
 | features.md | register (per-feature files, no status field on index) | — |
 
 ## Open Questions
 
-None within any single artifact.
+None within any single artifact. (The active plan carries two non-blocking
+implementation open questions — picker affordance for five options, and the
+always-write-both-attributes choice — see the plan file.)
 
 ## Cross-Artifact Issues
 
-None found this pass.
+None. The theming work is client-only (`localStorage` `ar-palette`/`ar-theme`,
+root `data-*` attributes) — no new datamodel/api/infrastructure entities.
 
 ## Constitution Compliance
 
-No violations.
+No violations. No new production shortcuts.
 
 ## Diagrams
 
 - datamodel.md — current ✅ (`diagram_type: erDiagram`)
 - infrastructure.md — current ✅ (`diagram_type: graph TD`)
-- ui.md — current ✅ (`diagram_type: graph TD`)
+- ui.md — **stale ⚠️** (marked at the 2026-07-13 edit; likely no structural
+  change — the edits are prose + a SettingsPanel row, not new nodes/edges —
+  but re-render to confirm: `/ardd-diagram ui`)
 
-Rendered to `docs/ARCHITECTURE.md`. Refresh with `/ardd-diagram <name>`.
+Rendered to `docs/ARCHITECTURE.md`.
 
 ## Code-vs-Artifact Defects
 
 None — `DEFECTS.md` all-clear, last checked 2026-07-11. Refresh with
-`/ardd-defects` (the renamed verify skill).
+`/ardd-defects`.
 
 ## Feedback
 
-None open — all feedback files are `planned` or consumed.
+None open.
 
 ## Feature Backlog
 
-13 backlogged · 0 planned · 0 tasked · 6 implemented — see
-`.project/features/`. Target a backlogged slug with `/ardd-plan <slug>`.
+13 backlogged · 0 planned · 3 tasked · 6 implemented — see `.project/features/`.
+
+**Tasked** (one consolidated plan/PR, `plan-multi-palette-theming-2026-07-13-4693.md`):
+`multi-palette-theming`, `custom-typeface-set`, `ui-elevation-and-focus-polish`
+— tasks at `tasks-multi-palette-theming-3161.md` (`ready`, 0/8).
+
+**Re-scoped 2026-07-13 (NOT superseded)** as distinct follow-ons on top of the
+presets: `customizable-fonts-colors` (#21 — user-authored custom themes/fonts)
+and `customizable-syntax-themes` (#22 — syntax colors decoupled from the UI
+palette, VS Code-style; very low priority / possibly won't-do).
 
 ## ARDD Toolchain
 
 Installed **v0.9.0** (`7c5dcd0`, source `~/.ardd/source`) — up to date.
-Skills renamed this upgrade: `analyze→status`, `verify→defects`,
-`render→diagram`, `critique→audit`, `sync→tracker`, plus `ardd-init`,
-`ardd-backlog`. `ardd-tasks` is gone — `/ardd-plan` now drafts the plan and
-generates its task list in one run.
 
 ## In Flight
 
-This branch `chore/ardd-v0.9.0-upgrade` carries the full v0.9.0 upgrade,
-awaiting a PR to `main`. It supersedes the partial PR #85 (b47f36f-level).
-Two clean sibling worktrees; no draft PRs.
+- **This branch `multi-palette-theming`** carries the restyle plan, its `ready`
+  tasks file (0/8), the `ui.md` update, and the reference scratch at
+  `.project/scratch/restyle-2026-07-13/`. **Not yet committed/pushed.** In
+  collaborative mode a delegated `/ardd-implement` worktree branches from
+  `origin/main` and can only see files that reached the remote — so if
+  implementation is delegated to a worktree, this branch's plan + tasks +
+  scratch must be pushed/merged to `origin/main` first. Inline implementation
+  on this branch needs nothing extra.
+- Two clean sibling worktrees (`ardd-codify-trial`, `docs/update-readme-changelog`)
+  — `tasks=none`. No draft PRs.
 
 ## Recommended Next Step
 
-Merge the v0.9.0 upgrade PR, then close the now-superseded #85. The project
-itself is healthy — no defects, no open feedback, artifacts stable.
+`/ardd-implement` the ready tasks file. Reuse `.project/scratch/restyle-2026-07-13/`
+for the font + depth hunks; take palette tokens from the previewer artifact.
+If delegating to a worktree, commit + push this branch (plan/tasks/scratch)
+first so the worktree can see them.
