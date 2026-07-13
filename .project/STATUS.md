@@ -1,6 +1,6 @@
 # assisted-review — Project Status
 
-_Updated: 2026-07-13 (planned + tasked the GitLab auth-precedence fix from feedback F001; ARDD toolchain updated 7c5dcd0 → a7165c4 / v0.10.0, both committed on branch `gitlab-auth-precedence`). Keep this current as artifacts are refined and open questions are resolved._
+_Updated: 2026-07-13 (implemented the GitLab auth-precedence fix from feedback F001 — shouldUseGlab(), 7/7 tasks — on branch `gitlab-auth-precedence`, not yet merged). Keep this current as artifacts are refined and open questions are resolved._
 
 ## Artifact Status
 
@@ -8,8 +8,8 @@ _Updated: 2026-07-13 (planned + tasked the GitLab auth-precedence fix from feedb
 |---|---|---|
 | constitution.md | stable ✅ (v3.2.0) | — |
 | datamodel.md | stable ✅ | — |
-| infrastructure.md | stable ✅ | — |
-| api.md | stable ✅ | — |
+| infrastructure.md | stable ✅ (updated 2026-07-13: transport-selection precedence) | — |
+| api.md | stable ✅ (updated 2026-07-13: Auth section precedence) | — |
 | ui.md | stable ✅ | — |
 | features.md | register (per-feature files, no status field on index) | — |
 
@@ -28,7 +28,8 @@ No violations. No new production shortcuts.
 ## Diagrams
 
 - datamodel.md — current ✅ (`diagram_type: erDiagram`)
-- infrastructure.md — current ✅ (`diagram_type: graph TD`)
+- infrastructure.md — current ✅ (`diagram_type: graph TD`; transport-selection
+  prose change didn't touch diagram nodes/edges)
 - ui.md — **stale ⚠️** (re-render to confirm: `/ardd-diagram ui`)
 
 Rendered to `docs/ARCHITECTURE.md`.
@@ -50,13 +51,15 @@ No migrations pending.
 ## In Flight
 
 - Branch `gitlab-auth-precedence` — `tasks-gitlab-auth-precedence-b659.md`
-  `ready`, 0/7. Plan `plan-gitlab-auth-precedence-2026-07-13-e7a6.md`
-  approved. Not yet pushed; a delegated worktree can't see it until it
-  reaches `origin/main` (collaborative mode).
+  `completed` (7/7). Plan `plan-gitlab-auth-precedence-2026-07-13-e7a6.md`
+  approved, `features: []` (no register flip applicable). Not yet pushed —
+  code + tests + artifact/README updates for `shouldUseGlab()` (browser
+  token now outranks `glab` CLI in GitLab transport selection).
 - Two clean sibling worktrees (`ardd-codify-trial`, `docs/update-readme-changelog`)
   — `tasks=none`.
 
 ## Recommended Next Step
 
-Run `/ardd-implement` on `tasks-gitlab-auth-precedence-b659.md` to execute
-the 7 tasks (transport-selection logic + artifact/README updates).
+Push `gitlab-auth-precedence` and open a PR to land the auth-precedence fix
+on `main`. Optionally run `/ardd-diagram ui` to clear the stale UI-diagram
+flag (unrelated, carried over from the docs-rewrite PR).
