@@ -77,7 +77,7 @@ the patch's rejected green/gold hunk.
 
 ## Phase 6: Tests + verify
 
-- [ ] T007 Extend `tests/components/SettingsPanel.test.tsx`: assert the five
+- [x] T007 Extend `tests/components/SettingsPanel.test.tsx`: assert the five
   palette controls render, and that selecting a non-active palette sets
   `document.documentElement.dataset.palette` and persists `ar-palette` (mirror
   the existing dark/light theme-toggle test). Keep that theme test green and
