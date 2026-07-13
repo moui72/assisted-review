@@ -1,7 +1,7 @@
 ---
 plan: plan-gitlab-auth-precedence-2026-07-13-e7a6.md
 generated: 2026-07-13
-status: ready
+status: in-progress
 ---
 
 # Tasks
