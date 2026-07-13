@@ -1,7 +1,7 @@
 ---
 name: api
 status: stable
-last_updated: 2026-07-10
+last_updated: 2026-07-13
 ---
 
 # API
@@ -249,13 +249,16 @@ GitHub, entirely to `gh auth`; for Jira, to the configured env vars; for
 GitLab, primarily to `glab auth`/`GITLAB_TOKEN`, but **not exclusively** —
 a GitLab token can also be entered through the browser UI
 (`GitLabAuthModal`, `ui.md`) and persisted server-side at
-`STATE_DIR/gitlab-token` (`infrastructure.md`), taking priority over
-`GITLAB_TOKEN` when both are present. This is the one place this server
-manages a credential itself rather than fully deferring to the local
-environment — a deliberate exception (GitLab has no CLI-auth equivalent as
-frictionless as `gh auth login` for a quick one-off review), not an
-oversight, but worth being precise about rather than folding it into "fully
-delegated to the local environment."
+`STATE_DIR/gitlab-token` (`infrastructure.md`), taking priority over both
+`glab auth` and `GITLAB_TOKEN` when present (`shouldUseGlab()`,
+`infrastructure.md`) — an active browser-entered token is an explicit
+reviewer choice, so it wins even when `glab` is installed and
+authenticated. This is the one place this server manages a credential
+itself rather than fully deferring to the local environment — a deliberate
+exception (GitLab has no CLI-auth equivalent as frictionless as `gh auth
+login` for a quick one-off review), not an oversight, but worth being
+precise about rather than folding it into "fully delegated to the local
+environment."
 
 A future hosted/multi-user direction would need a session/auth layer here
 plus per-user scoping of the single global `AppContext` (see

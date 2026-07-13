@@ -3,7 +3,7 @@ name: infrastructure
 render_target: docs/ARCHITECTURE.md
 render_section: Infrastructure
 status: stable
-last_updated: 2026-07-10
+last_updated: 2026-07-13
 diagram_type: graph TD
 diagram_status: current
 ---
@@ -66,27 +66,34 @@ drift out of sync with each other.
 
 ### GitLab (`glab` CLI, REST fallback) — `src/gitlab-rest.ts`, `src/fetch.ts`, `src/submit.ts`
 
-- **Transport selection**: `glabAvailable()` probes `glab --version` once per
-  process (cached; `_setGlabAvailable()` overrides it in tests). If present,
-  every GitLab call shells out to `glab api <path>` (or `glab mr diff` /
-  `glab mr view --output json`). If absent, falls back to the GitLab REST API
-  v4 directly via `fetch()`, authenticated with `GITLAB_TOKEN` and pointed at
+- **Transport selection**: `shouldUseGlab()` (`src/gitlab-rest.ts`) decides
+  `glab` CLI vs. REST fallback, in this priority order: (1) a
+  browser-entered token, if one is active (`gitLabTokenSource() ===
+  'browser'`) — always uses the REST path, even if `glab` is installed and
+  authenticated, since that token represents an explicit, deliberate
+  reviewer choice; (2) otherwise, `glabAvailable()` — probes `glab
+  --version` once per process (cached; `_setGlabAvailable()` overrides it
+  in tests) and, if present, shells out to `glab api <path>` (or `glab mr
+  diff` / `glab mr view --output json`); (3) otherwise, the REST API v4
+  directly via `fetch()`, authenticated with `GITLAB_TOKEN` and pointed at
   `GITLAB_HOST` (default `gitlab.com`; supports `http://` for self-hosted).
-- **Browser-entered token** (`src/gitlab-token.ts`) — a second, higher-priority
-  credential source for the REST-fallback path specifically (the `glab` CLI
-  path always uses `glab`'s own auth, never this). `getGitLabToken()`
-  resolves browser-stored token first, then `GITLAB_TOKEN`, matching this
-  module's own doc comment: "Resolution order: browser-stored token →
-  `GITLAB_TOKEN` env var → `GitLabAuthError`." The browser token is entered
-  via `GitLabAuthModal` (`ui.md`), submitted through `POST
-  /api/auth/gitlab` (`api.md`), held in memory (`_browserToken`) and
-  persisted to `STATE_DIR/gitlab-token` (mode `0o600`, atomic
-  tmp-then-`rename()` write, same convention as every other file in this
-  section) so it survives a server restart — loaded back into memory once,
+- **Browser-entered token** (`src/gitlab-token.ts`) — no longer scoped to
+  the REST-fallback path only; it now decides whether the REST path is
+  used at all (see `shouldUseGlab()` above), not just which credential the
+  REST path uses once selected. `getGitLabToken()` resolves browser-stored
+  token first, then `GITLAB_TOKEN`, matching this module's own doc
+  comment: "Resolution order: browser-stored token → `GITLAB_TOKEN` env
+  var → `GitLabAuthError`." The browser token is entered via
+  `GitLabAuthModal` (`ui.md`), submitted through `POST /api/auth/gitlab`
+  (`api.md`), held in memory (`_browserToken`) and persisted to
+  `STATE_DIR/gitlab-token` (mode `0o600`, atomic tmp-then-`rename()`
+  write, same convention as every other file in this section) so it
+  survives a server restart — loaded back into memory once,
   fire-and-forget, at server startup (`loadGitLabToken()`, called from
   `startServer()` in `src/server.ts`). `DELETE /api/auth/gitlab` clears
   both the in-memory and on-disk copy, falling back to `GITLAB_TOKEN` (if
-  set). `GitLabAuthError` (thrown when neither source has a token) is what
+  set) and re-enabling `glab` transport selection if `glab` is available.
+  `GitLabAuthError` (thrown when neither source has a token) is what
   `POST /api/reviews/open` catches to return `401 { auth_required: 'gitlab'
   }` (`api.md`) rather than the generic `502`.
 - **Pagination**: `glabApiPaginatedJson` — `glab api --paginate` on the CLI
