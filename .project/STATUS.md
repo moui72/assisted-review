@@ -1,9 +1,6 @@
 # assisted-review — Project Status
 
-_Updated: 2026-07-11 (analyze after `/ardd-implement` — both tasks of `tasks-keyboard-mod-guard-fix` complete on branch `keyboard-mod-guard-fix`, awaiting a PR to `main`). Keep this current as artifacts are refined and open questions are resolved._
-
-ARDD update available: installed `f68208f`, source at `7883e7c` — run
-`/ardd-update` (the source checkout is actively advancing).
+_Updated: 2026-07-12 (full ARDD v0.9.0 upgrade — migrations 0001-0008 applied, skills renamed, `critique.md → audit.md`; project healthy). Keep this current as artifacts are refined and open questions are resolved._
 
 ## Artifact Status
 
@@ -30,15 +27,16 @@ No violations.
 
 ## Diagrams
 
-- datamodel.md — current ✅
-- infrastructure.md — current ✅
-- ui.md — current ✅
+- datamodel.md — current ✅ (`diagram_type: erDiagram`)
+- infrastructure.md — current ✅ (`diagram_type: graph TD`)
+- ui.md — current ✅ (`diagram_type: graph TD`)
 
-All render to `docs/ARCHITECTURE.md` (via `render_target`).
+Rendered to `docs/ARCHITECTURE.md`. Refresh with `/ardd-diagram <name>`.
 
 ## Code-vs-Artifact Defects
 
-None — `DEFECTS.md` all-clear, last checked 2026-07-11.
+None — `DEFECTS.md` all-clear, last checked 2026-07-11. Refresh with
+`/ardd-defects` (the renamed verify skill).
 
 ## Feedback
 
@@ -49,20 +47,21 @@ None open — all feedback files are `planned` or consumed.
 13 backlogged · 0 planned · 0 tasked · 6 implemented — see
 `.project/features/`. Target a backlogged slug with `/ardd-plan <slug>`.
 
-## Active Plans
+## ARDD Toolchain
 
-- `plan-keyboard-mod-guard-fix-2026-07-11.md` — **approved**, tasks
-  `tasks-keyboard-mod-guard-fix-22b8.md` **completed (2/2)** on branch
-  `keyboard-mod-guard-fix`. Delivered: `f`/`a`/`n`/`p`/`j`/`k` shortcuts
-  guarded with `!mod` (+ test), `ui.md` note generalized. Not yet merged.
+Installed **v0.9.0** (`7c5dcd0`, source `~/.ardd/source`) — up to date.
+Skills renamed this upgrade: `analyze→status`, `verify→defects`,
+`render→diagram`, `critique→audit`, `sync→tracker`, plus `ardd-init`,
+`ardd-backlog`. `ardd-tasks` is gone — `/ardd-plan` now drafts the plan and
+generates its task list in one run.
 
 ## In Flight
 
-Completed work on branch `keyboard-mod-guard-fix` (3 commits, tests green),
-not yet pushed/PR'd — lands via a PR to `main`. Two clean sibling worktrees;
-no open draft PRs.
+This branch `chore/ardd-v0.9.0-upgrade` carries the full v0.9.0 upgrade,
+awaiting a PR to `main`. It supersedes the partial PR #85 (b47f36f-level).
+Two clean sibling worktrees; no draft PRs.
 
 ## Recommended Next Step
 
-Push `keyboard-mod-guard-fix` and open a PR to `main`. After it merges, the
-keyboard-shortcut bug class (started with `c` in #83) is fully closed.
+Merge the v0.9.0 upgrade PR, then close the now-superseded #85. The project
+itself is healthy — no defects, no open feedback, artifacts stable.
