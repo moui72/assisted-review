@@ -360,7 +360,7 @@ export function OverviewView({
         </div>
       </div>
 
-      <footer className="shrink-0 border-t border-edge bg-surface">
+      <footer className="rail-top relative z-10 shrink-0 border-t border-edge bg-surface">
         <div className="shell flex items-center justify-between py-3">
           {chunkCount === 0 ? (
             <span className="font-sans text-[12px] text-faint">

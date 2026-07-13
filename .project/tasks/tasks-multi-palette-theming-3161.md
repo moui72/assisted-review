@@ -32,13 +32,13 @@ the patch's rejected green/gold hunk.
 
 ## Phase 2: Depth + focus polish (feature: ui-elevation-and-focus-polish)
 
-- [ ] T002 In `web/src/index.css` add: a `--rail-shadow` token (a per-palette
+- [x] T002 In `web/src/index.css` add: a `--rail-shadow` token (a per-palette
   value follows in Phase 3 — for now define it once), `@utility rail-top` and
   `@utility rail-bottom` (one-directional box-shadow lifting a rail off the
   stage), a global `:focus-visible` accent outline ring with `input` and
   `textarea` opted out (they keep their own accent border), and an accent
   `::selection` wash. These hunks are reusable from the scratch patch.
-- [ ] T003 Apply the rails: `rail-bottom` on `TopNav`'s `<header>`, `rail-top`
+- [x] T003 Apply the rails: `rail-bottom` on `TopNav`'s `<header>`, `rail-top`
   on `AiCommentary`'s `<section>` and `OverviewView`'s `<footer>`, so top nav /
   review stage / command bar read as three distinct planes. Purely
   presentational — no behavior or prop changes. Confirm the existing 77

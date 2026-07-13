@@ -11,6 +11,8 @@
   --muted: #8b909b;
   --faint: #565b66;
   --accent: #e3b341; /* signal gold — structure, progress, focus */
+  --accent-soft: rgba(227, 179, 65, 0.14); /* wash for active/anchor fills */
+  --rail-shadow: rgba(0, 0, 0, 0.55); /* elevation cast by the nav/command rails */
 
   /* diff tokens (semantic, not theme utilities) */
   --add-bg: #10231a;
@@ -46,6 +48,8 @@
   --muted: #6a7078;
   --faint: #9ca2aa;
   --accent: #c69a33;
+  --accent-soft: rgba(198, 154, 51, 0.16);
+  --rail-shadow: rgba(90, 78, 46, 0.16);
 
   /* diff tokens */
   --add-bg: #e6f4ec;
@@ -145,6 +149,16 @@
   padding-inline: 1.5rem;
 }
 
+/* Cockpit framing: the top nav and command bar are rails that float above the
+   central review stage. A one-directional shadow gives each rail a lifted edge
+   without a heavy line — the stage reads as the deeper plane between them. */
+@utility rail-top {
+  box-shadow: 0 -14px 30px -22px var(--rail-shadow);
+}
+@utility rail-bottom {
+  box-shadow: 0 14px 30px -22px var(--rail-shadow);
+}
+
 html,
 body,
 #root {
@@ -164,6 +178,25 @@ body {
    show a pointer (disabled ones keep the default arrow). */
 button:not(:disabled) {
   cursor: pointer;
+}
+
+/* Accent-tinted text selection, tying it to the active palette. */
+::selection {
+  background: var(--accent-soft);
+}
+
+/* A single, consistent keyboard focus ring across every interactive control.
+   Mouse clicks don't trigger :focus-visible, so this only shows for keyboard
+   users. Inputs/textareas manage their own accent border on focus, so they're
+   opted out to avoid a doubled outline. */
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: 3px;
+}
+input:focus-visible,
+textarea:focus-visible {
+  outline: none;
 }
 
 /* Rendered markdown (PR description, AI summary). Tailwind's preflight strips
