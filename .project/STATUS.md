@@ -67,17 +67,15 @@ Installed **v0.9.0** (`7c5dcd0`, source `~/.ardd/source`) — up to date.
 
 ## In Flight
 
-- **Branch `multi-palette-theming`** — 8 commits implementing the restyle
-  (T001–T008), committed locally, **not yet pushed or merged to `main`**. In
-  collaborative mode the merge happens through a PR; the register flip to
-  `implemented` rides this branch and lands when it merges.
+- **PR #87** (`multi-palette-theming` → `main`) — the restyle, pushed and open
+  for review. The register flip to `implemented` rides this branch and lands on
+  `main` when the PR merges.
 - Two clean sibling worktrees (`ardd-codify-trial`, `docs/update-readme-changelog`)
-  — `tasks=none`. No draft PR opened yet for this branch.
+  — `tasks=none`.
 
 ## Recommended Next Step
 
-Push branch `multi-palette-theming` and open a PR (collaborative mode's merge
-path). Verified locally: lint, full build, 505 unit tests, 7/7 e2e, and the
-real app (Blueprint default, Neon dark, persisted across reload). Optionally
-run `/ardd-diagram ui` to clear the stale UI-diagram flag (likely no
-structural change).
+Review and merge PR #87. Verified locally: lint, full build, 505 unit tests,
+7/7 e2e, and the real app (Blueprint default, Neon dark, persisted across
+reload). Optionally run `/ardd-diagram ui` to clear the stale UI-diagram flag
+(likely no structural change).
