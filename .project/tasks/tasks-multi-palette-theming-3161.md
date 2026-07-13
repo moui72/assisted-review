@@ -1,7 +1,7 @@
 ---
 plan: plan-multi-palette-theming-2026-07-13-4693.md
 generated: 2026-07-13
-status: in-progress
+status: completed
 ---
 
 # Tasks
@@ -82,7 +82,7 @@ the patch's rejected green/gold hunk.
   `document.documentElement.dataset.palette` and persists `ar-palette` (mirror
   the existing dark/light theme-toggle test). Keep that theme test green and
   confirm `Logo.tsx` behavior is unaffected (mode axis only).
-- [ ] T008 Full verification: `pnpm lint`, `pnpm build`, `npx vitest run`
+- [x] T008 Full verification: `pnpm lint`, `pnpm build`, `npx vitest run`
   (backend coverage stays >90%), and the Playwright e2e smoke
   (`pnpm test:e2e`). Then drive the real app (the mock-stub server:
   `PATH="$(pwd)/tests/e2e/stubs:$PATH" node build/cli.js --mock-ai`, open

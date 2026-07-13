@@ -1,6 +1,6 @@
 ---
 slug: custom-typeface-set
-status: tasked
+status: implemented
 logged: 2026-07-13
 plan: plan-multi-palette-theming-2026-07-13-4693.md
 tasks: tasks-multi-palette-theming-3161.md
