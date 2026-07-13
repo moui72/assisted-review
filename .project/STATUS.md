@@ -1,6 +1,6 @@
 # assisted-review — Project Status
 
-_Updated: 2026-07-13 (planned + tasked the consolidated restyle; `ui.md` refined; re-scoped #21/#22 as distinct follow-ons, not superseded). Keep this current as artifacts are refined and open questions are resolved._
+_Updated: 2026-07-13 (implemented the consolidated restyle — five-palette theming + typefaces + depth/focus polish; tasks completed, three features → implemented). Keep this current as artifacts are refined and open questions are resolved._
 
 ## Artifact Status
 
@@ -49,11 +49,12 @@ None open.
 
 ## Feature Backlog
 
-13 backlogged · 0 planned · 3 tasked · 6 implemented — see `.project/features/`.
+13 backlogged · 0 planned · 0 tasked · 9 implemented — see `.project/features/`.
 
-**Tasked** (one consolidated plan/PR, `plan-multi-palette-theming-2026-07-13-4693.md`):
+**Implemented 2026-07-13** (one consolidated plan, `plan-multi-palette-theming-2026-07-13-4693.md`;
+tasks `tasks-multi-palette-theming-3161.md` `completed`, 8/8):
 `multi-palette-theming`, `custom-typeface-set`, `ui-elevation-and-focus-polish`
-— tasks at `tasks-multi-palette-theming-3161.md` (`ready`, 0/8).
+— on branch `multi-palette-theming`, not yet merged to `main`.
 
 **Re-scoped 2026-07-13 (NOT superseded)** as distinct follow-ons on top of the
 presets: `customizable-fonts-colors` (#21 — user-authored custom themes/fonts)
@@ -66,20 +67,17 @@ Installed **v0.9.0** (`7c5dcd0`, source `~/.ardd/source`) — up to date.
 
 ## In Flight
 
-- **This branch `multi-palette-theming`** carries the restyle plan, its `ready`
-  tasks file (0/8), the `ui.md` update, and the reference scratch at
-  `.project/scratch/restyle-2026-07-13/`. **Not yet committed/pushed.** In
-  collaborative mode a delegated `/ardd-implement` worktree branches from
-  `origin/main` and can only see files that reached the remote — so if
-  implementation is delegated to a worktree, this branch's plan + tasks +
-  scratch must be pushed/merged to `origin/main` first. Inline implementation
-  on this branch needs nothing extra.
+- **Branch `multi-palette-theming`** — 8 commits implementing the restyle
+  (T001–T008), committed locally, **not yet pushed or merged to `main`**. In
+  collaborative mode the merge happens through a PR; the register flip to
+  `implemented` rides this branch and lands when it merges.
 - Two clean sibling worktrees (`ardd-codify-trial`, `docs/update-readme-changelog`)
-  — `tasks=none`. No draft PRs.
+  — `tasks=none`. No draft PR opened yet for this branch.
 
 ## Recommended Next Step
 
-`/ardd-implement` the ready tasks file. Reuse `.project/scratch/restyle-2026-07-13/`
-for the font + depth hunks; take palette tokens from the previewer artifact.
-If delegating to a worktree, commit + push this branch (plan/tasks/scratch)
-first so the worktree can see them.
+Push branch `multi-palette-theming` and open a PR (collaborative mode's merge
+path). Verified locally: lint, full build, 505 unit tests, 7/7 e2e, and the
+real app (Blueprint default, Neon dark, persisted across reload). Optionally
+run `/ardd-diagram ui` to clear the stale UI-diagram flag (likely no
+structural change).
