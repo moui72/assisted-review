@@ -9,7 +9,7 @@
 
 import { spawn } from 'node:child_process';
 import type { PrRef } from './types.js';
-import { getGitLabToken, GitLabAuthError } from './gitlab-token.js';
+import { getGitLabToken, gitLabTokenSource, GitLabAuthError } from './gitlab-token.js';
 
 let _glabAvailable: boolean | undefined;
 
@@ -27,6 +27,16 @@ export async function glabAvailable(): Promise<boolean> {
     _glabAvailable = (err as NodeJS.ErrnoException).code !== 'ENOENT';
   }
   return _glabAvailable;
+}
+
+/**
+ * Whether to use the `glab` CLI transport for this call. A browser-entered
+ * token (an explicit, deliberate reviewer choice) outranks `glab` even when
+ * it's installed and authenticated — otherwise falls back to glabAvailable().
+ */
+export async function shouldUseGlab(): Promise<boolean> {
+  if (gitLabTokenSource() === 'browser') return false;
+  return glabAvailable();
 }
 
 /** Full base URL for the GitLab API. Supports http:// when GITLAB_HOST starts with http://. */
@@ -156,7 +166,7 @@ export async function glabApiJson<T>(
   path: string,
   options?: { method?: 'POST'; body?: unknown },
 ): Promise<T> {
-  if (await glabAvailable()) {
+  if (await shouldUseGlab()) {
     const args: string[] = ['api', path];
     if (options?.method) args.push('-X', options.method);
     if (options?.body !== undefined) args.push('--input', '-');
@@ -183,7 +193,7 @@ export async function glabApiJson<T>(
  * glab path: uses --paginate flag. REST path: follows x-next-page header.
  */
 export async function glabApiPaginatedJson<T>(path: string): Promise<T[]> {
-  if (await glabAvailable()) {
+  if (await shouldUseGlab()) {
     const { code, stdout, stderr } = await spawnGlab(['api', '--paginate', path]);
     if (code !== 0) {
       throw new Error(`glab api ${path}: ${stderr.trim() || `exit code ${code}`}`);
