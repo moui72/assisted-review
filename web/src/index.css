@@ -1,72 +1,362 @@
 @import 'tailwindcss';
 
-/* ── Palette (dark, default). Light mode later overrides these vars only. ── */
+/* ── Palettes. Two axes on the root element drive every token:
+   data-palette (blueprint|paper|neon|mono|aubergine) × data-theme (light|dark).
+   theme.tsx always writes both attributes, so each of the 10 combinations is an
+   explicit [data-palette][data-theme] block (specificity 0,2,0 — no source-order
+   ambiguity). :root repeats Blueprint/dark as the pre-JS fallback. Token values
+   are transcribed from the palette previewer artifact; --tok-tag mirrors
+   --tok-keyword. @theme inline resolves these var()s at runtime, so swapping the
+   root attributes re-themes everything with no utility regeneration. ── */
 :root {
-  --bg: #0b0d11;
-  --surface: #14171d;
-  --surface-2: #1a1e26;
-  --edge: #262b34;
-  --edge-strong: #353c47;
-  --fg: #e9e7e1;
-  --muted: #8b909b;
-  --faint: #565b66;
-  --accent: #e3b341; /* signal gold — structure, progress, focus */
-
-  /* diff tokens (semantic, not theme utilities) */
-  --add-bg: #10231a;
-  --add-fg: #84e2a6;
-  --add-gutter: #163021;
-  --del-bg: #241519;
-  --del-fg: #f1929e;
-  --del-gutter: #371a20;
-  --hunk-bg: #151a21;
-
-  /* syntax-highlight tokens (themeable later — see ROADMAP) */
-  --tok-comment: #697084;
-  --tok-keyword: #e6a4c4;
-  --tok-string: #cdae7a;
-  --tok-number: #d99a5b;
-  --tok-title: #82b4e6;
-  --tok-attr: #e3b341;
-  --tok-type: #79cdbd;
-  --tok-meta: #8b909b;
-  --tok-tag: #e6a4c4;
-  --tok-var: #d7c6e6;
+  --bg: #0a1826;
+  --surface: #10263a;
+  --surface-2: #163149;
+  --edge: #1f3d57;
+  --edge-strong: #2d5171;
+  --fg: #dce9f5;
+  --muted: #8ba6c2;
+  --faint: #56728f;
+  --accent: #2fd0e6;
+  --accent-soft: rgba(47,208,230,0.16);
+  --add-bg: #0e3330;
+  --add-fg: #46d9b0;
+  --add-gutter: #14544a;
+  --del-bg: #3a1622;
+  --del-fg: #ff7d99;
+  --del-gutter: #55202f;
+  --hunk-bg: #10283c;
+  --rail-shadow: rgba(0,0,0,0.5);
+  --tok-comment: #5f7d99;
+  --tok-keyword: #7aa8ff;
+  --tok-string: #48c6b0;
+  --tok-number: #f0a35e;
+  --tok-title: #a9d8ff;
+  --tok-type: #2fd0e6;
+  --tok-attr: #7dd3ff;
+  --tok-var: #b8d4f0;
+  --tok-meta: #8ba6c2;
+  --tok-tag: #7aa8ff;
 }
 
-/* ── Light mode palette. Overrides :root vars; no utility regeneration needed
-   because @theme inline resolves var() at runtime. ── */
-[data-theme='light'] {
-  --bg: #f5f1e6;
-  --surface: #fdfcf8;
-  --surface-2: #eeeade;
-  --edge: #d8d3c7;
-  --edge-strong: #bdb8ac;
-  --fg: #39454f;
-  --muted: #6a7078;
-  --faint: #9ca2aa;
-  --accent: #c69a33;
+/* Blueprint — dark */
+:root[data-palette='blueprint'][data-theme='dark'] {
+  --bg: #0a1826;
+  --surface: #10263a;
+  --surface-2: #163149;
+  --edge: #1f3d57;
+  --edge-strong: #2d5171;
+  --fg: #dce9f5;
+  --muted: #8ba6c2;
+  --faint: #56728f;
+  --accent: #2fd0e6;
+  --accent-soft: rgba(47,208,230,0.16);
+  --add-bg: #0e3330;
+  --add-fg: #46d9b0;
+  --add-gutter: #14544a;
+  --del-bg: #3a1622;
+  --del-fg: #ff7d99;
+  --del-gutter: #55202f;
+  --hunk-bg: #10283c;
+  --rail-shadow: rgba(0,0,0,0.5);
+  --tok-comment: #5f7d99;
+  --tok-keyword: #7aa8ff;
+  --tok-string: #48c6b0;
+  --tok-number: #f0a35e;
+  --tok-title: #a9d8ff;
+  --tok-type: #2fd0e6;
+  --tok-attr: #7dd3ff;
+  --tok-var: #b8d4f0;
+  --tok-meta: #8ba6c2;
+  --tok-tag: #7aa8ff;
+}
 
-  /* diff tokens */
-  --add-bg: #e6f4ec;
-  --add-fg: #116329;
-  --add-gutter: #ccebd6;
-  --del-bg: #fce8ea;
-  --del-fg: #82071e;
-  --del-gutter: #f5c6cb;
-  --hunk-bg: #eceade;
+/* Blueprint — light */
+:root[data-palette='blueprint'][data-theme='light'] {
+  --bg: #eef4fb;
+  --surface: #ffffff;
+  --surface-2: #dfeaf6;
+  --edge: #cbdcee;
+  --edge-strong: #a7c2df;
+  --fg: #0d2439;
+  --muted: #4a6580;
+  --faint: #8aa3bd;
+  --accent: #0a7ea4;
+  --accent-soft: rgba(10,126,164,0.14);
+  --add-bg: #e0f2ee;
+  --add-fg: #10715a;
+  --add-gutter: #c4e7de;
+  --del-bg: #fce6ec;
+  --del-fg: #b0284a;
+  --del-gutter: #f4c6d3;
+  --hunk-bg: #e6eef7;
+  --rail-shadow: rgba(13,36,57,0.14);
+  --tok-comment: #6d8299;
+  --tok-keyword: #1d5fb0;
+  --tok-string: #0f7a68;
+  --tok-number: #b0601e;
+  --tok-title: #0a4d80;
+  --tok-type: #0a7ea4;
+  --tok-attr: #1d6fb0;
+  --tok-var: #3a5f80;
+  --tok-meta: #6d8299;
+  --tok-tag: #1d5fb0;
+}
 
-  /* syntax-highlight tokens */
-  --tok-comment: #7c8490;
-  --tok-keyword: #c9353d;
-  --tok-string: #2d6a9f;
-  --tok-number: #be5a00;
-  --tok-title: #6741d9;
-  --tok-attr: #be5a00;
-  --tok-type: #0064c8;
-  --tok-meta: #7c8490;
-  --tok-tag: #c9353d;
-  --tok-var: #8050b0;
+/* Paper & Ink — dark */
+:root[data-palette='paper'][data-theme='dark'] {
+  --bg: #16130f;
+  --surface: #1e1a15;
+  --surface-2: #272117;
+  --edge: #38312a;
+  --edge-strong: #4e463c;
+  --fg: #f2ece0;
+  --muted: #a89a86;
+  --faint: #6b6151;
+  --accent: #e8542f;
+  --accent-soft: rgba(232,84,47,0.16);
+  --add-bg: #14281c;
+  --add-fg: #6fd08a;
+  --add-gutter: #1d3d2a;
+  --del-bg: #33150f;
+  --del-fg: #f0897a;
+  --del-gutter: #4a1d14;
+  --hunk-bg: #211c15;
+  --rail-shadow: rgba(0,0,0,0.5);
+  --tok-comment: #7a6f5e;
+  --tok-keyword: #e07a52;
+  --tok-string: #c9a24a;
+  --tok-number: #d98a4a;
+  --tok-title: #6ea9c9;
+  --tok-type: #5bb89a;
+  --tok-attr: #e8542f;
+  --tok-var: #cbb28f;
+  --tok-meta: #a89a86;
+  --tok-tag: #e07a52;
+}
+
+/* Paper & Ink — light */
+:root[data-palette='paper'][data-theme='light'] {
+  --bg: #f3efe4;
+  --surface: #ffffff;
+  --surface-2: #eae3d4;
+  --edge: #ddd5c4;
+  --edge-strong: #bcb3a0;
+  --fg: #1f1a13;
+  --muted: #6a6152;
+  --faint: #9a9182;
+  --accent: #d63a1e;
+  --accent-soft: rgba(214,58,30,0.14);
+  --add-bg: #e3f1e6;
+  --add-fg: #1c7a43;
+  --add-gutter: #c9e6d0;
+  --del-bg: #fbe6e1;
+  --del-fg: #b23120;
+  --del-gutter: #f2c9bf;
+  --hunk-bg: #ece5d6;
+  --rail-shadow: rgba(31,26,19,0.14);
+  --tok-comment: #8a8172;
+  --tok-keyword: #c0392b;
+  --tok-string: #9a6a1e;
+  --tok-number: #b06a1e;
+  --tok-title: #1b5a8f;
+  --tok-type: #0b7a5e;
+  --tok-attr: #b23a1e;
+  --tok-var: #5a5142;
+  --tok-meta: #8a8172;
+  --tok-tag: #c0392b;
+}
+
+/* Neon Noir — dark */
+:root[data-palette='neon'][data-theme='dark'] {
+  --bg: #08080b;
+  --surface: #131318;
+  --surface-2: #1c1c24;
+  --edge: #2a2a33;
+  --edge-strong: #3d3d49;
+  --fg: #f4f4f8;
+  --muted: #9a9aac;
+  --faint: #5e5e70;
+  --accent: #ff2e88;
+  --accent-soft: rgba(255,46,136,0.16);
+  --add-bg: #0d2a20;
+  --add-fg: #2bd97a;
+  --add-gutter: #144733;
+  --del-bg: #2e0f1c;
+  --del-fg: #ff3b6b;
+  --del-gutter: #4a1830;
+  --hunk-bg: #15151c;
+  --rail-shadow: rgba(0,0,0,0.55);
+  --tok-comment: #6a6a80;
+  --tok-keyword: #ff2e88;
+  --tok-string: #24e3d4;
+  --tok-number: #ffb454;
+  --tok-title: #24e3d4;
+  --tok-type: #7af5e8;
+  --tok-attr: #ff7bb0;
+  --tok-var: #c9a0ff;
+  --tok-meta: #9a9aac;
+  --tok-tag: #ff2e88;
+}
+
+/* Neon Noir — light */
+:root[data-palette='neon'][data-theme='light'] {
+  --bg: #f7f5f8;
+  --surface: #ffffff;
+  --surface-2: #eee9ef;
+  --edge: #ddd6e0;
+  --edge-strong: #bdb2c3;
+  --fg: #16121a;
+  --muted: #6a6274;
+  --faint: #9a90a4;
+  --accent: #e01173;
+  --accent-soft: rgba(224,17,115,0.14);
+  --add-bg: #e2f2e8;
+  --add-fg: #128a4e;
+  --add-gutter: #c6e8d3;
+  --del-bg: #fde4ec;
+  --del-fg: #c81e5a;
+  --del-gutter: #f5c4d6;
+  --hunk-bg: #efe9f0;
+  --rail-shadow: rgba(22,18,26,0.13);
+  --tok-comment: #8a8299;
+  --tok-keyword: #d01070;
+  --tok-string: #0a8f86;
+  --tok-number: #b0601e;
+  --tok-title: #0a8f86;
+  --tok-type: #0f7a99;
+  --tok-attr: #c01a78;
+  --tok-var: #7a4fd0;
+  --tok-meta: #8a8299;
+  --tok-tag: #d01070;
+}
+
+/* Mono Brutalist — dark */
+:root[data-palette='mono'][data-theme='dark'] {
+  --bg: #000000;
+  --surface: #0e0e10;
+  --surface-2: #16161a;
+  --edge: #2a2a2e;
+  --edge-strong: #444448;
+  --fg: #ffffff;
+  --muted: #9a9a9e;
+  --faint: #5c5c60;
+  --accent: #c6ff00;
+  --accent-soft: rgba(198,255,0,0.15);
+  --add-bg: #17250a;
+  --add-fg: #9be356;
+  --add-gutter: #223a10;
+  --del-bg: #2a0f0f;
+  --del-fg: #ff5a5a;
+  --del-gutter: #431616;
+  --hunk-bg: #141416;
+  --rail-shadow: rgba(0,0,0,0.6);
+  --tok-comment: #6a6a6e;
+  --tok-keyword: #c6ff00;
+  --tok-string: #b5b5b5;
+  --tok-number: #e0ff8a;
+  --tok-title: #ffffff;
+  --tok-type: #9be356;
+  --tok-attr: #c6ff00;
+  --tok-var: #d0d0d0;
+  --tok-meta: #9a9a9e;
+  --tok-tag: #c6ff00;
+}
+
+/* Mono Brutalist — light */
+:root[data-palette='mono'][data-theme='light'] {
+  --bg: #ffffff;
+  --surface: #f4f4f2;
+  --surface-2: #eaeae7;
+  --edge: #d8d8d4;
+  --edge-strong: #b0b0ab;
+  --fg: #000000;
+  --muted: #5c5c5c;
+  --faint: #9a9a9a;
+  --accent: #5f8000;
+  --accent-soft: rgba(95,128,0,0.16);
+  --add-bg: #eef6e2;
+  --add-fg: #3a6b00;
+  --add-gutter: #d8ecbe;
+  --del-bg: #fbe4e4;
+  --del-fg: #c02020;
+  --del-gutter: #f2c6c6;
+  --hunk-bg: #efefec;
+  --rail-shadow: rgba(0,0,0,0.1);
+  --tok-comment: #808080;
+  --tok-keyword: #1a1a1a;
+  --tok-string: #555555;
+  --tok-number: #5f8000;
+  --tok-title: #000000;
+  --tok-type: #4e6b00;
+  --tok-attr: #5f8000;
+  --tok-var: #444444;
+  --tok-meta: #808080;
+  --tok-tag: #1a1a1a;
+}
+
+/* Aubergine — dark */
+:root[data-palette='aubergine'][data-theme='dark'] {
+  --bg: #15101f;
+  --surface: #1e1730;
+  --surface-2: #281f3f;
+  --edge: #362a4f;
+  --edge-strong: #4a3a68;
+  --fg: #efeaf5;
+  --muted: #a89bc0;
+  --faint: #6a5f85;
+  --accent: #ff9e5e;
+  --accent-soft: rgba(255,158,94,0.15);
+  --add-bg: #182b1f;
+  --add-fg: #74d492;
+  --add-gutter: #22482f;
+  --del-bg: #2f1526;
+  --del-fg: #ff6f9a;
+  --del-gutter: #47203a;
+  --hunk-bg: #1b1530;
+  --rail-shadow: rgba(0,0,0,0.5);
+  --tok-comment: #6f6488;
+  --tok-keyword: #c98bff;
+  --tok-string: #66d0b0;
+  --tok-number: #ff9e5e;
+  --tok-title: #7ab7ff;
+  --tok-type: #66d0b0;
+  --tok-attr: #ffb37a;
+  --tok-var: #b59cff;
+  --tok-meta: #a89bc0;
+  --tok-tag: #c98bff;
+}
+
+/* Aubergine — light */
+:root[data-palette='aubergine'][data-theme='light'] {
+  --bg: #f3eff8;
+  --surface: #ffffff;
+  --surface-2: #e9e2f2;
+  --edge: #dbd2ea;
+  --edge-strong: #b8abd0;
+  --fg: #211a30;
+  --muted: #5f5473;
+  --faint: #928aa6;
+  --accent: #c05a1e;
+  --accent-soft: rgba(192,90,30,0.14);
+  --add-bg: #e4f1e7;
+  --add-fg: #1c7a45;
+  --add-gutter: #cae7d1;
+  --del-bg: #fbe4ee;
+  --del-fg: #b02a5e;
+  --del-gutter: #f3c6db;
+  --hunk-bg: #ebe4f4;
+  --rail-shadow: rgba(33,26,48,0.13);
+  --tok-comment: #7a7090;
+  --tok-keyword: #7b3fb0;
+  --tok-string: #0f7a68;
+  --tok-number: #b0601e;
+  --tok-title: #1d5fb0;
+  --tok-type: #0b7a5e;
+  --tok-attr: #b0601e;
+  --tok-var: #6a4fb0;
+  --tok-meta: #7a7090;
+  --tok-tag: #7b3fb0;
 }
 
 /* highlight.js token classes → CSS vars. Backgrounds stay transparent so the
@@ -121,9 +411,9 @@
 /* `inline` makes the generated utilities resolve var() at runtime, so swapping
    the :root vars (e.g. a future [data-theme='light']) re-themes everything. */
 @theme inline {
-  --font-sans: 'IBM Plex Sans', ui-sans-serif, system-ui, sans-serif;
-  --font-mono: 'IBM Plex Mono', ui-monospace, SFMono-Regular, monospace;
-  --font-serif: 'IBM Plex Serif', ui-serif, Georgia, serif;
+  --font-sans: 'Figtree', ui-sans-serif, system-ui, sans-serif;
+  --font-mono: 'Space Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+  --font-serif: 'Tinos', ui-serif, Georgia, 'Times New Roman', serif;
 
   --color-bg: var(--bg);
   --color-surface: var(--surface);
@@ -145,6 +435,16 @@
   padding-inline: 1.5rem;
 }
 
+/* Cockpit framing: the top nav and command bar are rails that float above the
+   central review stage. A one-directional shadow gives each rail a lifted edge
+   without a heavy line — the stage reads as the deeper plane between them. */
+@utility rail-top {
+  box-shadow: 0 -14px 30px -22px var(--rail-shadow);
+}
+@utility rail-bottom {
+  box-shadow: 0 14px 30px -22px var(--rail-shadow);
+}
+
 html,
 body,
 #root {
@@ -164,6 +464,25 @@ body {
    show a pointer (disabled ones keep the default arrow). */
 button:not(:disabled) {
   cursor: pointer;
+}
+
+/* Accent-tinted text selection, tying it to the active palette. */
+::selection {
+  background: var(--accent-soft);
+}
+
+/* A single, consistent keyboard focus ring across every interactive control.
+   Mouse clicks don't trigger :focus-visible, so this only shows for keyboard
+   users. Inputs/textareas manage their own accent border on focus, so they're
+   opted out to avoid a doubled outline. */
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: 3px;
+}
+input:focus-visible,
+textarea:focus-visible {
+  outline: none;
 }
 
 /* Rendered markdown (PR description, AI summary). Tailwind's preflight strips

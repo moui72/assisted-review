@@ -1,5 +1,15 @@
-import { useTheme } from '../theme.tsx';
+import { useTheme, type Palette } from '../theme.tsx';
 import type { InvestigationConfig, PreloadConfig } from '../api.ts';
+
+// The five curated palettes, with a representative accent swatch (each
+// palette's dark-mode accent) so the picker previews the identity at a glance.
+const PALETTE_OPTIONS: { slug: Palette; label: string; swatch: string }[] = [
+  { slug: 'blueprint', label: 'Blueprint', swatch: '#2fd0e6' },
+  { slug: 'paper', label: 'Paper', swatch: '#e8542f' },
+  { slug: 'neon', label: 'Neon', swatch: '#ff2e88' },
+  { slug: 'mono', label: 'Mono', swatch: '#c6ff00' },
+  { slug: 'aubergine', label: 'Aubergine', swatch: '#ff9e5e' },
+];
 
 const MODE_LABEL: Record<InvestigationConfig['mode'], string> = {
   none: 'Diff only',
@@ -71,7 +81,7 @@ export function SettingsPanel({
   investigationMode?: InvestigationConfig['mode'];
   onOpenInvestigation: () => void;
 }) {
-  const { theme, toggle } = useTheme();
+  const { theme, toggle, palette, setPalette } = useTheme();
 
   if (!open) return null;
 
@@ -103,6 +113,30 @@ export function SettingsPanel({
               onChange={() => toggle()}
             />
           </Row>
+          <div className="py-2">
+            <div className="mb-2 text-[13px] text-fg/85">Palette</div>
+            <div className="flex flex-wrap gap-1">
+              {PALETTE_OPTIONS.map((o) => (
+                <button
+                  key={o.slug}
+                  onClick={() => { if (o.slug !== palette) setPalette(o.slug); }}
+                  aria-pressed={o.slug === palette}
+                  className={`flex items-center gap-1.5 rounded border px-2 py-0.5 font-mono text-[11px] transition ${
+                    o.slug === palette
+                      ? 'border-accent bg-accent/10 text-accent'
+                      : 'border-edge-strong text-muted hover:border-fg/40 hover:text-fg'
+                  }`}
+                >
+                  <span
+                    className="inline-block h-2 w-2 rounded-full"
+                    style={{ background: o.swatch }}
+                    aria-hidden
+                  />
+                  {o.label}
+                </button>
+              ))}
+            </div>
+          </div>
         </div>
 
         <SectionTitle>Preloading</SectionTitle>

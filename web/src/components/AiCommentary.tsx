@@ -101,7 +101,7 @@ export function AiCommentary({
   const empty = notes.length === 0 && !streaming && !busy && !error;
 
   return (
-    <section className="thin-scroll max-h-[34%] shrink-0 overflow-auto border-t border-edge bg-surface/60">
+    <section className="rail-top thin-scroll relative z-10 max-h-[34%] shrink-0 overflow-auto border-t border-edge bg-surface">
       <div className="shell py-4">
         <div className="mb-2.5 flex items-center gap-3">
           <span className="text-accent" aria-hidden>

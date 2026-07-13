@@ -101,6 +101,29 @@ describe('SettingsPanel', () => {
       await userEvent.click(screen.getByRole('button', { name: 'light' }));
       expect(document.documentElement.dataset.theme).toBe('light');
     });
+
+    describe('palette', () => {
+      beforeEach(() => localStorage.clear());
+
+      it('renders all five palette chips', () => {
+        renderPanel();
+        for (const name of ['Blueprint', 'Paper', 'Neon', 'Mono', 'Aubergine']) {
+          expect(screen.getByRole('button', { name })).toBeInTheDocument();
+        }
+      });
+
+      it('marks Blueprint active by default', () => {
+        renderPanel();
+        expect(screen.getByRole('button', { name: 'Blueprint' })).toHaveClass('border-accent');
+      });
+
+      it('selecting a palette sets data-palette and persists ar-palette', async () => {
+        renderPanel();
+        await userEvent.click(screen.getByRole('button', { name: 'Neon' }));
+        expect(document.documentElement.dataset.palette).toBe('neon');
+        expect(localStorage.getItem('ar-palette')).toBe('neon');
+      });
+    });
   });
 
   describe('version display', () => {

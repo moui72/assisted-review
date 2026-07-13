@@ -43,7 +43,7 @@ export function TopNav({
   const platform = pr.platform ?? 'github';
   const platformLabel = platform === 'gitlab' ? 'GitLab' : 'GitHub';
   return (
-    <header className="shrink-0 border-b border-edge bg-surface">
+    <header className="rail-bottom relative z-10 shrink-0 border-b border-edge bg-surface">
       <div className="shell flex items-center justify-between gap-6 pt-3">
         <div className="flex min-w-0 items-center gap-3">
           <Logo className="h-8 w-auto shrink-0 text-fg" variant="icon" />

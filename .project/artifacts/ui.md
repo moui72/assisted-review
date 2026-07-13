@@ -3,9 +3,9 @@ name: ui
 render_target: docs/ARCHITECTURE.md
 render_section: UI
 status: stable
-last_updated: 2026-07-11
+last_updated: 2026-07-13
 diagram_type: graph TD
-diagram_status: current
+diagram_status: stale
 ---
 
 # UI
@@ -17,10 +17,37 @@ review at a time, paginated one chunk (or the overview) per screen with
 slide transitions (`motion`/framer-motion-style `AnimatePresence`). Target
 user: a single reviewer working through one PR/MR end-to-end, primarily via
 keyboard, with the mouse/trackpad as a secondary input for text entry and
-menus. Dark/light theme is a first-class, persisted user preference, not an
-afterthought — theming runs entirely through CSS custom properties (no
+menus.
+
+Appearance is a first-class, persisted user preference along **two
+independent axes**, both driven entirely through CSS custom properties (no
 `tailwind.config.js`; utilities map to the variables via `@theme inline` —
-see `CLAUDE.md`).
+see `CLAUDE.md`):
+
+- **Palette** — a curated set (`blueprint` (default), `paper`, `neon`,
+  `mono`, `aubergine`), each a full token set (surfaces, edges, foreground,
+  accent, diff add/del, and the `--tok-*` syntax colors). Selected via a
+  `data-palette` attribute on the root element, persisted to `localStorage`
+  under `ar-palette`.
+- **Mode** — light/dark, selected via a `data-theme` attribute on the root,
+  persisted under `ar-theme`. Every palette defines a complete token set for
+  both modes, so palette × mode composes freely.
+
+`web/src/theme.tsx` owns both axes (`palette`/`setPalette` alongside the
+existing `theme`/`toggle`) and writes both attributes synchronously on load
+to avoid a flash. Each palette bundles its own syntax-highlight colors, so
+syntax re-themes with the palette; decoupling that layer is a separate,
+deferred backlog item (`customizable-syntax-themes`), and user-authored
+custom palettes/fonts beyond the presets are another (`customizable-fonts-colors`).
+
+The visual identity uses a self-hosted typeface set (`@fontsource`): Figtree
+(sans / UI), Tinos (serif — Claude's voice in `AiCommentary`), and Space Mono
+(mono — diff, code, and meta), wired through the `--font-sans`/`--font-serif`/
+`--font-mono` custom properties. The three primary regions — top nav (`TopNav`),
+the scrolling review stage, and the command bar (`ResponseBar`) — read as
+distinct planes via one-directional "rail" shadows; a single accent
+`:focus-visible` ring applies to all controls (keyboard-only) and text
+selection uses an accent tint.
 
 The app is a thin client over the API in `api.md` — almost all state (`state:
 ReviewState`) is server-authoritative and re-fetched/re-set after every
@@ -161,7 +188,9 @@ Shared across views, listed by concern:
   whatever ref triggered the `401`. Not tied to any specific PR/MR — it's
   purely "give the server a GitLab token," reusable from any auth-required
   moment.
-- **`SettingsPanel.tsx`** — theme toggle (delegates to `useTheme()`),
+- **`SettingsPanel.tsx`** — appearance controls (delegating to `useTheme()`):
+  a **Palette** picker (the curated set — see Overview) and a light/dark
+  **Theme** toggle, the two Appearance axes; plus
   preload behavior (`preload_chunks` count, `preload_overview` on/off,
   persisted to `localStorage` (`ar-preload-chunks`, `ar-preload-overview`)
   layered over the server default from `GET /api/config`), and an
@@ -188,8 +217,9 @@ Shared across views, listed by concern:
 - **`Markdown.tsx`** — thin `react-markdown` + `remark-gfm` wrapper; all
   element styling lives in a single `.md` CSS class so markdown content
   themes with the rest of the app rather than carrying its own styles.
-- **`Logo.tsx`** — theme-aware logo/icon swap (separate light/dark SVG
-  assets in `web/public/`).
+- **`Logo.tsx`** — mode-aware logo/icon swap (separate light/dark SVG
+  assets in `web/public/`), keyed off the light/dark axis only — palette
+  choice does not change the logo asset.
 
 ## States
 
