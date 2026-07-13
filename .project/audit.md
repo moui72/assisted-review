@@ -1,4 +1,4 @@
-# Critique
+# Audit
 _Updated: 2026-07-02_
 
 ## datamodel.md
