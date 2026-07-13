@@ -19,7 +19,7 @@ the patch's rejected green/gold hunk.
 
 ## Phase 1: Typefaces (feature: custom-typeface-set)
 
-- [ ] T001 Swap the app's typefaces to a self-hosted set. `pnpm add
+- [x] T001 Swap the app's typefaces to a self-hosted set. `pnpm add
   @fontsource/figtree @fontsource/tinos @fontsource/space-mono`; `pnpm remove
   @fontsource/ibm-plex-sans @fontsource/ibm-plex-mono @fontsource/ibm-plex-serif`.
   In `web/src/main.tsx` replace the IBM Plex CSS imports with Figtree

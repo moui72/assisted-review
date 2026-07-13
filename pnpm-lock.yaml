@@ -8,6 +8,15 @@ importers:
 
   .:
     dependencies:
+      '@fontsource/figtree':
+        specifier: ^5.2.10
+        version: 5.2.10
+      '@fontsource/space-mono':
+        specifier: ^5.2.9
+        version: 5.2.9
+      '@fontsource/tinos':
+        specifier: ^5.2.7
+        version: 5.2.7
       dotenv:
         specifier: ^17.4.2
         version: 17.4.2
@@ -18,15 +27,6 @@ importers:
       '@eslint/js':
         specifier: ^9
         version: 9.39.4
-      '@fontsource/ibm-plex-mono':
-        specifier: ^5.2.7
-        version: 5.2.7
-      '@fontsource/ibm-plex-sans':
-        specifier: ^5.2.8
-        version: 5.2.8
-      '@fontsource/ibm-plex-serif':
-        specifier: ^5.2.7
-        version: 5.2.7
       '@playwright/test':
         specifier: ^1.61.1
         version: 1.61.1
@@ -625,14 +625,14 @@ packages:
       '@noble/hashes':
         optional: true
 
-  '@fontsource/ibm-plex-mono@5.2.7':
-    resolution: {integrity: sha512-MKAb8qV+CaiMQn2B0dIi1OV3565NYzp3WN5b4oT6LTkk+F0jR6j0ZN+5BKJiIhffDC3rtBULsYZE65+0018z9w==}
+  '@fontsource/figtree@5.2.10':
+    resolution: {integrity: sha512-nlO06N1qad88ySqzi/a2xwDBkamfZ4MFilP8la5dDyRY36ED0UYTs2hhtwJf8fM52+Nn7dQO2r27reKaXOyOIg==}
 
-  '@fontsource/ibm-plex-sans@5.2.8':
-    resolution: {integrity: sha512-eztSXjDhPhcpxNIiGTgMebdLP9qS4rWkysuE1V7c+DjOR0qiezaiDaTwQE7bTnG5HxAY/8M43XKDvs3cYq6ZYQ==}
+  '@fontsource/space-mono@5.2.9':
+    resolution: {integrity: sha512-b61faFOHEISQ/pD25G+cfGY9o/WW6lRv6hBQQfpWvEJ4y1V+S4gmth95EVyBE2VL3qDYHeVQ8nBzrplzdXTDDg==}
 
-  '@fontsource/ibm-plex-serif@5.2.7':
-    resolution: {integrity: sha512-04owmc2OQQ/DAMjXjEMJc+7V4dBVmR01aIFOg4cuqS8pQ4HbvtlYs/u6+O0vCt21EMx5M/azIbgx43iKyisEOA==}
+  '@fontsource/tinos@5.2.7':
+    resolution: {integrity: sha512-F+rSTz0CNDZ/nx3BlmVA+wlbfCR1gwXeJTkGxb6pwu5KjeWVyaZ6ioInm533pw2Ha7472Lwb4vLjzo1zT0RXmA==}
 
   '@humanfs/core@0.19.2':
     resolution: {integrity: sha512-UhXNm+CFMWcbChXywFwkmhqjs3PRCmcSa/hfBgLIb7oQ5HNb1wS0icWsGtSAUNgefHeI+eBrA8I1fxmbHsGdvA==}
@@ -2760,11 +2760,11 @@ snapshots:
 
   '@exodus/bytes@1.15.1': {}
 
-  '@fontsource/ibm-plex-mono@5.2.7': {}
+  '@fontsource/figtree@5.2.10': {}
 
-  '@fontsource/ibm-plex-sans@5.2.8': {}
+  '@fontsource/space-mono@5.2.9': {}
 
-  '@fontsource/ibm-plex-serif@5.2.7': {}
+  '@fontsource/tinos@5.2.7': {}
 
   '@humanfs/core@0.19.2':
     dependencies:
