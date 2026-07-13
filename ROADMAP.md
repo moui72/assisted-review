@@ -10,9 +10,10 @@ Ideas are tracked in the per-feature register at
 to GitHub issues) and move through statuses: `backlogged` → `planned` →
 `tasked` → `implemented`.
 
-## Planned
+## Backlogged
 
-Accepted onto the roadmap, not yet scheduled or committed to.
+Accepted onto the roadmap (register status `backlogged`), not yet scheduled
+or committed to a plan.
 
 ### Review workflow
 

@@ -197,11 +197,13 @@ one-off run: `GITLAB_TOKEN=<token> assisted-review namespace/repo!123`.
 GitHub PRs work out of the box via `gh`. For GitLab MRs, any one of these
 works, in priority order:
 
-1. A token entered in the browser — when a GitLab ref needs auth, the UI
-   prompts for a personal access token and persists it (mode `0600`) in the
-   state directory
-2. `glab` authenticated (`glab auth status`)
-3. `GITLAB_TOKEN` in the environment
+1. `glab` authenticated (`glab auth status`) — if installed, every GitLab
+   call goes through it and takes precedence over a stored token
+2. A token entered in the browser — when a GitLab ref needs auth and `glab`
+   isn't available, the UI prompts for a personal access token and persists
+   it (mode `0600`) in the state directory
+3. `GITLAB_TOKEN` in the environment — used by the REST fallback when
+   neither of the above is available
 
 | Variable | Description |
 |---|---|
@@ -286,6 +288,7 @@ Open `http://localhost:5173` for the live-reloading UI. Set a default PR with
 | Script | What it does |
 |---|---|
 | `dev` | Starts the API server and Vite HMR server concurrently |
+| `dev:web` | Starts only the Vite HMR server — pair with `--api-only` (below) |
 | `build` | Compiles TypeScript (server → `build/`) and bundles the UI (→ `dist/`) |
 | `build:web` | Builds only the React UI with Vite |
 | `test` | Runs Vitest unit tests |

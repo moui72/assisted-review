@@ -65,8 +65,10 @@ src/         TypeScript backend (strict, ESM, compiled to build/)
   mock-ai.ts    --mock-ai placeholder notes (offline / e2e)
   jira.ts       Jira REST fetch, ADF-to-text flattening, degrade-to-banner
   resolve-token.ts  JIRA_TOKEN indirection: op:// / env: / cmd: references
+  setup-jira.ts interactive `assisted-review configure` wizard for Jira env vars
   submit.ts     publish drafted comments as a real PR/MR review
   update-check.ts   background npm-registry version check (24h cache)
+  pkg-info.ts   reads this package's own name/version (update-check, CLI banner)
   types.ts      the shared type model (re-exported to the frontend)
 web/         Vite + React 19 + Tailwind v4 UI → builds into dist/
 ```
