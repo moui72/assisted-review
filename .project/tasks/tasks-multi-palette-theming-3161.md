@@ -46,7 +46,7 @@ the patch's rejected green/gold hunk.
 
 ## Phase 3: Palette token system (feature: multi-palette-theming)
 
-- [ ] T004 [artifacts: ui] Restructure the palette blocks in
+- [x] T004 [artifacts: ui] Restructure the palette blocks in
   `web/src/index.css`. Keep `:root` as the `blueprint` **dark** fallback, then
   add ten explicit `:root[data-palette='<p>'][data-theme='<m>']` blocks for
   blueprint/paper/neon/mono/aubergine × dark/light, transcribing the artifact
