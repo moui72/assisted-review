@@ -68,7 +68,7 @@ the patch's rejected green/gold hunk.
 
 ## Phase 5: Palette picker UI (feature: multi-palette-theming)
 
-- [ ] T006 [artifacts: ui] In `web/src/components/SettingsPanel.tsx` add a
+- [x] T006 [artifacts: ui] In `web/src/components/SettingsPanel.tsx` add a
   **Palette** row to the Appearance section, beside the existing Theme toggle,
   offering the five palettes and wired to `useTheme().setPalette`. Reuse the
   `ChipGroup` pattern, or a small labeled `<select>`/radio list if five chips
