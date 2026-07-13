@@ -1,3 +1,10 @@
+# [1.12.0](https://github.com/moui72/assisted-review/compare/v1.11.6...v1.12.0) (2026-07-13)
+
+
+### Features
+
+* **theming:** five-palette theming, custom typefaces, and depth/focus polish ([#87](https://github.com/moui72/assisted-review/issues/87)) ([d3ee25d](https://github.com/moui72/assisted-review/commit/d3ee25da2dc1ad34a7bc1378c4c5dcc78555c8e9))
+
 ## [1.11.6](https://github.com/moui72/assisted-review/compare/v1.11.5...v1.11.6) (2026-07-11)
 
 
