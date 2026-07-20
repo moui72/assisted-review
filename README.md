@@ -25,8 +25,9 @@
     </picture>
   </a>
   <!-- ardd-badge-start -->
-  <a href="https://github.com/moui72/artifact-driven-dev"><img alt="built with ARDD" src="https://shieldcn.dev/badge/built%20with-ARDD-blue.svg?variant=branded" /></a>
+  <a href="https://github.com/moui72/artifact-driven-dev"><img alt="built with ARDD" src="https://shieldcn.dev/badge/built%20with-ARDD%20v0.10.2-blue.svg?variant=branded" /></a>
   <!-- ardd-badge-end -->
+  <a href="https://github.com/sponsors/moui72"><img alt="sponsor" src="https://shieldcn.dev/badge/sponsor-%E2%9D%A4-ea4aaa.svg?variant=secondary&theme=pink" /></a>
 </p>
 
 ## What is assisted-review?
