@@ -198,11 +198,15 @@ one-off run: `GITLAB_TOKEN=<token> assisted-review namespace/repo!123`.
 GitHub PRs work out of the box via `gh`. For GitLab MRs, any one of these
 works, in priority order:
 
-1. `glab` authenticated (`glab auth status`) — if installed, every GitLab
-   call goes through it and takes precedence over a stored token
-2. A token entered in the browser — when a GitLab ref needs auth and `glab`
-   isn't available, the UI prompts for a personal access token and persists
-   it (mode `0600`) in the state directory
+1. A token entered in the browser — when a GitLab ref needs auth, the UI
+   prompts for a personal access token and persists it (mode `0600`) in the
+   state directory. Since this is an explicit, deliberate choice, it takes
+   precedence even if `glab` is also installed and authenticated
+2. `glab` **installed** — used when no browser token is set; if the binary is
+   present, every GitLab call goes through it. Note this is a presence check
+   (`glab --version`), not an auth check: an installed-but-unauthenticated
+   `glab` is still selected, so `GITLAB_TOKEN` below is not reached as a
+   fallback in that case. Enter a browser token to override
 3. `GITLAB_TOKEN` in the environment — used by the REST fallback when
    neither of the above is available
 

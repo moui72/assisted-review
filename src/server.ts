@@ -139,7 +139,7 @@ export interface StartOptions {
   appVersion?: string;
 }
 
-export function startServer(
+export async function startServer(
   ctx: AppContext,
   {
     port = 4319,
@@ -151,7 +151,10 @@ export function startServer(
     appVersion = '',
   }: StartOptions = {},
 ): Promise<{ url: string }> {
-  void loadGitLabToken();
+  // Awaited, not fire-and-forget: shouldUseGlab() reads gitLabTokenSource(),
+  // so a request arriving before the persisted token lands in memory would see
+  // `null` and route through glab — exactly the precedence this is meant to fix.
+  await loadGitLabToken();
 
   // Track the active Claude SSE stream cancel fn — called before switching reviews
   // to prevent a finishing stream from writing notes into the wrong review's state.
