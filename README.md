@@ -25,7 +25,8 @@
     </picture>
   </a>
   <!-- ardd-badge-start -->
-  <a href="https://github.com/moui72/artifact-driven-dev"><img alt="built with ARDD" src="https://shieldcn.dev/badge/built%20with-ARDD%20v0.10.2-blue.svg?variant=branded" /></a>
+  <a href="https://github.com/moui72/artifact-driven-dev"><img alt="built with ArDD" src="https://shieldcn.dev/badge/built%20with-ArDD-blue.svg?variant=branded" /></a>
+  <a href="https://github.com/moui72/artifact-driven-dev"><img alt="ArDD version" src="https://shieldcn.dev/badge/dynamic/json.svg?url=https%3A%2F%2Fraw.githubusercontent.com%2Fmoui72%2Fassisted-review%2Fmain%2F.github%2Fbadges%2Fardd-version.json&query=%24.message&label=ArDD&color=lightgrey&variant=secondary&theme=gray" /></a>
   <!-- ardd-badge-end -->
   <a href="https://github.com/sponsors/moui72"><img alt="sponsor" src="https://shieldcn.dev/badge/sponsor-%E2%9D%A4-ea4aaa.svg?variant=secondary&theme=pink" /></a>
 </p>
