@@ -8,14 +8,8 @@
 <p align="center">
   <a href="https://www.npmjs.com/package/assisted-review">
     <picture>
-      <source media="(prefers-color-scheme: dark)" srcset="https://shieldcn.dev/npm/assisted-review.svg?variant=secondary&mode=dark" />
-      <img alt="npm version" src="https://shieldcn.dev/npm/assisted-review.svg?variant=secondary&mode=light" />
-    </picture>
-  </a>
-  <a href="https://www.npmjs.com/package/assisted-review">
-    <picture>
-      <source media="(prefers-color-scheme: dark)" srcset="https://shieldcn.dev/npm/dt/assisted-review.svg?variant=secondary&mode=dark" />
-      <img alt="npm downloads" src="https://shieldcn.dev/npm/dt/assisted-review.svg?variant=secondary&mode=light" />
+      <source media="(prefers-color-scheme: dark)" srcset="https://shieldcn.dev/group/npm/assisted-review+npm/dt/assisted-review.svg?variant=secondary&color=CB3837&mode=dark" />
+      <img alt="npm version and downloads" src="https://shieldcn.dev/group/npm/assisted-review+npm/dt/assisted-review.svg?variant=secondary&color=CB3837&mode=light" />
     </picture>
   </a>
   <!-- ardd-badge-start -->
