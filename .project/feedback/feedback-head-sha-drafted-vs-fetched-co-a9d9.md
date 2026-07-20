@@ -11,8 +11,10 @@ plan: null
 - [ ] F001 `ReviewState.head_sha` conflates two different SHAs, which makes the
   pre-submit stale guard largely inert. `loadState()` overwrites `head_sha`
   with the freshly-fetched SHA on every load (`src/state.ts:190`), so the SHA
-  the comments were actually drafted against is lost. `buildReviewPayload()`
-  then passes that refreshed value as `commit_id` (`src/server.ts:287`), and
+  the comments were actually drafted against is lost. The submit route passes
+  that refreshed value into `buildReviewPayload()` (call site
+  `src/server.ts:285`; defined at `src/submit.ts:31`), which sets it as
+  `commit_id` (`src/submit.ts:46`), and
   `submitReview()` checks it via `shaOnPr()` (`src/submit.ts:85`) — i.e. it
   asks "is the latest SHA on this PR?", which is nearly always yes. The
   `SubmitResult.stale` 409 path therefore fires mainly through the GitHub
