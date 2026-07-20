@@ -3,9 +3,9 @@ name: datamodel
 render_target: docs/ARCHITECTURE.md
 render_section: Datamodel
 status: stable
-last_updated: 2026-07-10
+last_updated: 2026-07-20
 diagram_type: erDiagram
-diagram_status: current
+diagram_status: stale
 ---
 
 # Data Model
@@ -175,7 +175,7 @@ values rather than reinventing the shape.
 |-------|------|-------|
 | id | string | UUID for real notes; `mock-{chunk_id}-{n}` for mock notes |
 | chunk_id | string | Or `OVERVIEW_ID` for the overview page's note. When `displaced` is true, this is the *last-known* chunk id, kept only as a hint |
-| kind | AiNoteKind | |
+| kind | AiNoteKind | `'initial'` \| `'investigation'` \| `'context'` \| `'error'` — see Normalization Rules |
 | prompt | string? | |
 | body | string | |
 | suggested_action | string? | |
@@ -219,7 +219,7 @@ Resumed on next open of the same PR/MR.
 | version | number | `STATE_VERSION = 2`; drives `migrate()` |
 | pr | PrRef | |
 | meta | PrMeta? | Cached so `listReviews()` can show titles without re-fetching |
-| head_sha | string | Refreshed to the latest fetched SHA on every load (staleness handling is otherwise deferred — see `state.ts` comment) |
+| head_sha | string | Refreshed to the latest fetched SHA on every load; staleness handling beyond that is deferred (see Production Annotations) |
 | started_at | string | ISO, set once on first load |
 | comments | DraftComment[] | |
 | flagged | FlaggedEntry[] | |
@@ -265,6 +265,26 @@ than per-review data.
 | clone_path | string? | Only set for `'temp-clone'`/`'always-clone'` — computed deterministically (`STATE_DIR/repos/<platform>-<owner>-<repo>`) once cloned, not reviewer-supplied |
 | chosen_at | string | ISO, set when the mode is first chosen |
 | last_used | string? | ISO, updated each time an investigation call actually uses this config — the input to `always-clone` pruning (idle TTL) |
+
+### ReviewPayload
+
+The submit-side projection of a `ReviewState` — what `buildReviewPayload()`
+(`src/submit.ts`) hands to the platform adapter. Distinct from `ReviewState`
+because it carries only what a review submission needs, already normalized to
+the platform's wire shape: drafted comments become `ReviewComment[]` anchored
+by `path`/`line`/`side`, and the drafted-against SHA is pinned as `commit_id`
+so a stale submission can be detected rather than posted against the wrong
+head.
+
+| Field | Type | Notes |
+|-------|------|-------|
+| event | Verdict | GitHub review event; see Normalization Rules. The GitLab adapter maps its own `GitLabVerdict` separately |
+| body | string | Summary note |
+| commit_id | string | The `head_sha` the comments were drafted against |
+| comments | ReviewComment[] | Inline comments — `{ path, line, side, body }` |
+
+Server-side only: it is echoed back on `SubmitResult.payload` for a future
+manual-submit fallback and never reaches the client (see `api.md`).
 
 ### SubmitResult
 
@@ -314,6 +334,23 @@ the Claude SSE route applies internally for `add_note`). See
 - **`OVERVIEW_ID`** (`'__overview__'`) is the sentinel `chunk_id` used for
   notes attached to the overview page rather than a specific chunk. Defined
   once in `src/types.ts`, re-exported from `web/src/api.ts`.
+- **Verdicts** are platform-specific, which is why `api.md` and `ui.md` branch
+  on `review.pr.platform` to pick the set. GitHub uses `Verdict` =
+  `'APPROVE' | 'COMMENT' | 'REQUEST_CHANGES'` (the PR-review *event* names,
+  upper-case as the API expects), exported as the ordered `VERDICTS` array.
+  GitLab uses `GitLabVerdict` = `'approve' | 'comment'`, exported as
+  `GITLAB_VERDICTS` — lower-case, and only two values, because a GitLab
+  approval is a separate call from posting discussion notes, so there is no
+  "request changes" event to name. Both are defined once in `src/types.ts`
+  and re-exported from `web/src/api.ts`; the array order is the order the UI
+  offers them in.
+- **`AiNoteKind`** = `'initial' | 'investigation' | 'context' | 'error'` —
+  the `kind` discriminator on every `StoredNote`. `initial` is the
+  unprompted first pass over a chunk, `investigation` a note produced in
+  response to a reviewer question, `context` supporting material (e.g. Jira),
+  and `error` a failed generation surfaced in the note stream rather than
+  swallowed. Chosen at the call site by whether a question was supplied
+  (`src/server.ts`, `web/src/App.tsx`).
 - **Jira keys** are extracted with a single regex (`\b[A-Z][A-Z0-9]+-\d+\b`)
   applied across PR title, head branch name, and PR body; deduplicated via a
   `Set`.
@@ -357,10 +394,21 @@ Not applicable today — `ReviewState` is a single JSON document per PR/MR with
 no query surface; lookups within it (`comments.filter(c => c.chunk_id ===
 id)`, etc.) are done by linear scan in the frontend against small in-memory
 arrays. `listReviews()` scans all files in the state directory on every call
-— no separate index file.
+— no separate index file. See Production Annotations for the scaling caveat.
 
-**Future scaling note**: confirmed fine for now, but flagged for future work
-— if saved-review count grows large enough that a full-directory scan per
-`GET /api/reviews` call becomes noticeably slow, add a lightweight index
-(e.g., a manifest file updated alongside each state-file write) rather than
-changing the per-file storage model itself.
+## Production Annotations
+
+- **`listReviews()` scans the whole state directory per call.** Confirmed
+  fine at today's scale (a single user's saved reviews on local disk). If
+  saved-review count grows large enough that a full-directory scan per `GET
+  /api/reviews` becomes noticeably slow, add a lightweight index — e.g. a
+  manifest file updated alongside each state-file write — rather than
+  changing the per-file storage model itself.
+- **`head_sha` staleness is only partially handled.** It is refreshed to the
+  latest fetched SHA on every `loadState()`, and `SubmitResult.stale` reports
+  the mismatch at submit time, but nothing warns the reviewer mid-review that
+  the PR has moved under them. Anchor Reconciliation covers the
+  *chunk*-shaped consequences; the SHA-shaped ones (a comment drafted against
+  a commit that no longer exists) are deferred and surface only at submit.
+  Deliberate for a single-reviewer local tool — a hosted, multi-reviewer
+  deployment would need to decide this properly.
