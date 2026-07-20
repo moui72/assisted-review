@@ -1,0 +1,46 @@
+name: ArDD version badge
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - .project/ardd-version.md
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  update-badge:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Regenerate badge JSON from ardd-version.md
+        run: |
+          ref="$(sed -n 's/^Source-Ref: //p' .project/ardd-version.md | head -1)"
+          if [ -z "$ref" ]; then
+            echo "No Source-Ref line found in .project/ardd-version.md" >&2
+            exit 1
+          fi
+          mkdir -p .github/badges
+          cat > .github/badges/ardd-version.json <<EOF
+          {
+            "schemaVersion": 1,
+            "label": "version",
+            "message": "$ref",
+            "color": "lightgrey"
+          }
+          EOF
+
+      - name: Commit if changed
+        run: |
+          if git diff --quiet -- .github/badges/ardd-version.json; then
+            echo "Badge JSON unchanged."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add .github/badges/ardd-version.json
+          git commit -m "chore: sync ArDD version badge [skip ci]"
+          git push
