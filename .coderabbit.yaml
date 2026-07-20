@@ -81,15 +81,21 @@ reviews:
         Prose only. Do not flag style, tone, or heading structure. Flag only
         statements that contradict the code.
 
-tools:
-  eslint:
-    enabled: true
-  semgrep:
-    enabled: true
-  actionlint:
-    enabled: true
-  markdownlint:
-    enabled: false
+  # Nested under `reviews`, not top-level — a top-level `tools:` key parses as
+  # valid YAML but CodeRabbit silently ignores it (confirmed via schema.v2.json).
+  tools:
+    eslint:
+      enabled: true
+    semgrep:
+      enabled: true
+    actionlint:
+      enabled: true
+    markdownlint:
+      enabled: false
+    # Their runner currently fails to import checkov (ModuleNotFoundError),
+    # which surfaces as a tool-failure warning on every PR. No IaC here anyway.
+    checkov:
+      enabled: false
 
 chat:
   auto_reply: true
