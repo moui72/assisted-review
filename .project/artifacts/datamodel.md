@@ -404,11 +404,17 @@ arrays. `listReviews()` scans all files in the state directory on every call
   /api/reviews` becomes noticeably slow, add a lightweight index — e.g. a
   manifest file updated alongside each state-file write — rather than
   changing the per-file storage model itself.
-- **`head_sha` staleness is only partially handled.** It is refreshed to the
-  latest fetched SHA on every `loadState()`, and `SubmitResult.stale` reports
-  the mismatch at submit time, but nothing warns the reviewer mid-review that
-  the PR has moved under them. Anchor Reconciliation covers the
-  *chunk*-shaped consequences; the SHA-shaped ones (a comment drafted against
-  a commit that no longer exists) are deferred and surface only at submit.
-  Deliberate for a single-reviewer local tool — a hosted, multi-reviewer
-  deployment would need to decide this properly.
+- **The drafted-against SHA is not retained, which makes the stale check
+  largely inert.** `loadState()` overwrites `head_sha` with the
+  freshly-fetched SHA on every load (`src/state.ts:190`), so the SHA the
+  comments were actually drafted against is lost. `buildReviewPayload()` then
+  passes that refreshed value as `commit_id`, and `submitReview()` checks it
+  with `shaOnPr()` — i.e. it asks "is the latest SHA on this PR?", which is
+  nearly always yes. The `SubmitResult.stale` path therefore fires mainly via
+  the GitHub-error fallback (`STALE_RE` against `gh` stderr), not via the
+  explicit pre-check. Closing this means persisting the drafted SHA separately
+  from the latest-fetched one; the two are conflated into one field today.
+  Anchor Reconciliation independently covers the *chunk*-shaped consequences
+  of a moved head, so drafted comments are not silently mis-anchored — it is
+  specifically the commit-level guard that is weak. Deliberate-ish for a
+  single-reviewer local tool, but a real gap rather than a designed tradeoff.

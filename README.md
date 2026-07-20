@@ -202,8 +202,11 @@ works, in priority order:
    prompts for a personal access token and persists it (mode `0600`) in the
    state directory. Since this is an explicit, deliberate choice, it takes
    precedence even if `glab` is also installed and authenticated
-2. `glab` authenticated (`glab auth status`) — used when no browser token is
-   set; if installed, every GitLab call goes through it
+2. `glab` **installed** — used when no browser token is set; if the binary is
+   present, every GitLab call goes through it. Note this is a presence check
+   (`glab --version`), not an auth check: an installed-but-unauthenticated
+   `glab` is still selected, so `GITLAB_TOKEN` below is not reached as a
+   fallback in that case. Enter a browser token to override
 3. `GITLAB_TOKEN` in the environment — used by the REST fallback when
    neither of the above is available
 
