@@ -1,6 +1,11 @@
 # assisted-review — Project Status
 
-_Updated: 2026-07-20 (ArDD toolchain updated v0.10.0 → v1.0.2; cross-artifact pass surfaced 8 issues, `/ardd-refine datamodel` closed 4). Keep this current as artifacts are refined and open questions are resolved._
+_Updated: 2026-07-20 (ArDD toolchain v0.10.0 → v1.0.2; cross-artifact pass surfaced 8 issues, `/ardd-refine datamodel` closed 4; CodeRabbit review of PR #105 produced fixes and one new feedback item). Keep this current as artifacts are refined and open questions are resolved._
+
+_Note: the Feedback section below is a delta update from `/ardd-feedback`, not
+a fresh full pass. The last full `/ardd-status` ran earlier on 2026-07-20; the
+only artifact change since is datamodel.md's corrected `head_sha` production
+annotation. Re-run `/ardd-status` for a clean regeneration._
 
 ## Artifact Status
 
@@ -69,7 +74,10 @@ None — `DEFECTS.md` all-clear, last checked 2026-07-11. Refresh with
 
 ## Feedback
 
-No open feedback files.
+1 open feedback file — `feedback-head-sha-drafted-vs-fetched-co-a9d9.md`
+(F001: `head_sha` conflates drafted-against and latest-fetched SHAs, leaving
+the pre-submit stale guard largely inert). Will be picked up by the next
+`/ardd-plan`.
 
 ## Feature Backlog
 
