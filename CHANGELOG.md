@@ -1,3 +1,10 @@
+## [1.12.1](https://github.com/moui72/assisted-review/compare/v1.12.0...v1.12.1) (2026-07-20)
+
+
+### Bug Fixes
+
+* **gitlab:** browser token outranks glab CLI in transport selection ([#105](https://github.com/moui72/assisted-review/issues/105)) ([a4e3201](https://github.com/moui72/assisted-review/commit/a4e32013c0f95d32ceab5e58b2f2dcbe29f49e9d))
+
 # [1.12.0](https://github.com/moui72/assisted-review/compare/v1.11.6...v1.12.0) (2026-07-13)
 
 
