@@ -1,6 +1,6 @@
 # assisted-review — Project Status
 
-_Updated: 2026-07-21 (full `/ardd-status` pass after the ArDD toolchain update v1.0.2 → v1.0.3; `/ardd-refine datamodel` then closed 5 of the 20 issues). Keep this current as artifacts are refined and open questions are resolved._
+_Updated: 2026-07-21 (full `/ardd-status` pass after the ArDD toolchain update v1.0.2 → v1.0.3; `/ardd-refine datamodel` then closed 5 of the 20 issues. Re-verified later the same day after updating to v1.0.4 — no artifact changed in between, so the findings below stand as written.)_
 
 ## Artifact Status
 
@@ -143,17 +143,24 @@ flips.
 
 ## ArDD Toolchain
 
-Installed **v1.0.3** (`0fc43f6`, source `~/.ardd/source`, channel `stable`) —
-up to date, updated from v1.0.2 (`33ac9ae`) on 2026-07-21. No new migrations
-(all eight already applied). This run rewrote the recorded `Source-Path` to
-the portable `~/` form and added `.project/README.md` (reviewer guide).
+Installed **v1.0.4** (`68970e8`, source `~/.ardd/source`, channel `stable`) —
+up to date, updated v1.0.2 (`33ac9ae`) → v1.0.3 (`0fc43f6`) → v1.0.4 on
+2026-07-21. No new migrations at either step (all eight already applied). The
+v1.0.3 run rewrote the recorded `Source-Path` to the portable `~/` form and
+added `.project/README.md` (reviewer guide).
+
+v1.0.4 adds a third `next_step_prompt` value, `auto` (run the recommended
+skill directly rather than prompting). This project stays on `true` — field
+presence suppresses the backfill ask; `/ardd-update --reconfigure` changes it.
 
 ## In Flight
 
 - Worktree `.claude/worktrees/ardd-codify-trial` (branch `ardd-codify-trial`)
   — `tasks=none`, unmerged, not reapable.
 
-No open draft PRs. `gitlab-auth-precedence` has landed on `main` (#105).
+No open draft PRs. Two non-draft PRs are open: #98 (eslint 9 → 10, held —
+breaks `pnpm lint` while an ArDD worktree exists) and #110 (the one-line
+`.claude` eslint ignore that unblocks it).
 
 ## Recommended Next Step
 

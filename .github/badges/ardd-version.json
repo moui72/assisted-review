@@ -1,6 +1,8 @@
 {
   "schemaVersion": 1,
-  "label": "ArDD",
-  "message": "v1.0.2",
-  "color": "blue"
+  "label": "built with ArDD",
+  "message": "v1.0.4",
+  "color": "blue",
+  "labelColor": "#7C3AED",
+  "logoSvg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\" role=\"img\" aria-label=\"ArDD\">\n<!-- Source of truth for the ArDD badge mark: the badge workflow inlines this file verbatim as the endpoint JSON's logoSvg. -->\n<path fill=\"currentColor\" fill-rule=\"evenodd\" d=\"M12 2 L22.5 21 H1.5 Z M12 8.2 L17.4 18 H6.6 Z\"/>\n</svg>\n"
 }

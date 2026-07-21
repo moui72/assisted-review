@@ -6,13 +6,22 @@ name: ArDD version badge sync
 # it), and commits only if the JSON actually differs.
 #
 # Upstream ArDD's template (templates/ardd-badge-workflow.yml) targets a
-# shields.io *endpoint* badge, which consumes all three of label/message/
-# color from this JSON. The README here renders it through shieldcn instead,
+# shields.io *endpoint* badge, which consumes label/message/color/labelColor/
+# logoSvg from this JSON. The README here renders it through shieldcn instead,
 # to match the rest of the badge row, and shieldcn's dynamic/json reads only
-# `message` — label and color come from the badge URL. The label/color keys
-# below are kept anyway so the file stays a valid shields.io endpoint payload
-# and switching back is a one-line README change, but be aware the `channel`
+# `message` — label, colour, and logo ride the badge URL as query params
+# (the README passes the brand labelColor and the base64 data-URI form of
+# .github/badges/ardd-icon.svg, per upstream templates/badge.md's renderer
+# caveat). The other keys are emitted anyway, matching upstream's payload
+# field-for-field, so the file stays a valid shields.io endpoint payload and
+# switching renderers is a one-line README change. Be aware the `channel`
 # colouring is inert as currently rendered.
+#
+# .github/badges/ardd-icon.svg is the source of truth for the mark: this
+# workflow inlines it as logoSvg, and the README's `logo=` param is its
+# base64 form. Regenerate that param with:
+#     base64 < .github/badges/ardd-icon.svg
+# if the icon ever changes.
 #
 # Either way this renders only for public repos — the badge service fetches
 # raw.githubusercontent.com unauthenticated.
@@ -30,6 +39,13 @@ jobs:
       contents: write
     steps:
       - uses: actions/checkout@v7
+        with:
+          # Admin PAT so the sync commit can push past the branch ruleset
+          # ("changes must be made through a pull request" + required `ci`
+          # check). The default GITHUB_TOKEN cannot bypass it — that is why
+          # this workflow silently failed on every bump before, leaving the
+          # badge pinned at a stale version. Same pattern as publish.yml.
+          token: ${{ secrets.GH_PAT }}
 
       - name: Regenerate badge JSON
         run: |
@@ -60,6 +76,11 @@ jobs:
             *) color="blue" ;;
           esac
 
+          # Inline the mark verbatim as a JSON string, exactly as upstream's
+          # template does: escape backslashes and quotes, then join lines
+          # with literal \n.
+          logo="$(awk 'BEGIN{ORS=""} {gsub(/\\/,"\\\\"); gsub(/"/,"\\\""); print $0 "\\n"}' .github/badges/ardd-icon.svg)"
+
           mkdir -p "$(dirname "$OUT")"
           # Heredoc body must stay indented inside this block scalar: YAML
           # strips the block indentation before the shell sees it, so the
@@ -69,9 +90,11 @@ jobs:
           cat > "$OUT" <<JSON
           {
             "schemaVersion": 1,
-            "label": "ArDD",
+            "label": "built with ArDD",
             "message": "$message",
-            "color": "$color"
+            "color": "$color",
+            "labelColor": "#7C3AED",
+            "logoSvg": "$logo"
           }
           JSON
 
