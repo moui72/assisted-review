@@ -3,9 +3,9 @@ name: datamodel
 render_target: docs/ARCHITECTURE.md
 render_section: Datamodel
 status: stable
-last_updated: 2026-07-10
+last_updated: 2026-07-21
 diagram_type: erDiagram
-diagram_status: current
+diagram_status: stale
 ---
 
 # Data Model
@@ -14,10 +14,19 @@ diagram_status: current
 
 Types are defined once in `src/types.ts` and shared with the frontend via
 `import type` (re-exported from `web/src/api.ts`) — a single canonical source
-of truth for the review/state/action model. `NotePreview` (see `StoredNote`
-below) is the one legitimate frontend-only projection, with no backend type
-to share in the first place — it exists only because a live-streaming note
-preview has no `id` yet, not because of any mock-vs-real distinction.
+of truth for the review/state/action model. Two shapes are legitimately
+frontend-only, each because there is no backend type to share in the first
+place, never because of a mock-vs-real distinction: `NotePreview` (see
+`StoredNote` below), which exists only because a live-streaming note preview
+has no `id` yet, and `Anchor`, a transient line *selection* resolved to stored
+`line`/`side` before anything persists.
+
+Two further shapes sit outside `ReviewState` without being frontend-only:
+`PreloadConfig` is the `GET /api/config` response contract — the server builds
+it (`src/server.ts`), so it has a backend representation; only the named
+interface happens to live in `web/src/api.ts` today. Client-Persisted
+Preferences are genuinely never sent anywhere — browser `localStorage`, not
+server state.
 
 Two families of entities exist:
 
@@ -175,7 +184,7 @@ values rather than reinventing the shape.
 |-------|------|-------|
 | id | string | UUID for real notes; `mock-{chunk_id}-{n}` for mock notes |
 | chunk_id | string | Or `OVERVIEW_ID` for the overview page's note. When `displaced` is true, this is the *last-known* chunk id, kept only as a hint |
-| kind | AiNoteKind | |
+| kind | AiNoteKind | `'initial'` \| `'investigation'` \| `'context'` \| `'error'` — see Normalization Rules |
 | prompt | string? | |
 | body | string | |
 | suggested_action | string? | |
@@ -219,7 +228,7 @@ Resumed on next open of the same PR/MR.
 | version | number | `STATE_VERSION = 2`; drives `migrate()` |
 | pr | PrRef | |
 | meta | PrMeta? | Cached so `listReviews()` can show titles without re-fetching |
-| head_sha | string | Refreshed to the latest fetched SHA on every load (staleness handling is otherwise deferred — see `state.ts` comment) |
+| head_sha | string | Refreshed to the latest fetched SHA on every load; staleness handling beyond that is deferred (see Production Annotations) |
 | started_at | string | ISO, set once on first load |
 | comments | DraftComment[] | |
 | flagged | FlaggedEntry[] | |
@@ -262,9 +271,29 @@ than per-review data.
 | repo | string | |
 | mode | `'none' \| 'local-path' \| 'api' \| 'temp-clone' \| 'always-clone'` | `'none'` (today's diff-only behavior) until the reviewer explicitly chooses otherwise via the modal |
 | local_path | string? | Only set (and only meaningful) when `mode` is `'local-path'` — reviewer-supplied directory, validated to exist on save |
-| clone_path | string? | Only set for `'temp-clone'`/`'always-clone'` — computed deterministically (`STATE_DIR/repos/<platform>-<owner>-<repo>`) once cloned, not reviewer-supplied |
+| clone_path | string? | Only set for `'temp-clone'`/`'always-clone'`, never reviewer-supplied. The two modes use *different* path schemes (`ensureClone`, `src/investigation.ts`): `'always-clone'` uses the deterministic, reusable `STATE_DIR/repos/<platform>-<owner>-<repo>` — that stability is what lets it skip re-cloning and what the idle-TTL prune keys on; `'temp-clone'` clones fresh each time into a random `STATE_DIR/repos/tmp-<uuid>`, which is what the orphan sweep collects |
 | chosen_at | string | ISO, set when the mode is first chosen |
 | last_used | string? | ISO, updated each time an investigation call actually uses this config — the input to `always-clone` pruning (idle TTL) |
+
+### ReviewPayload
+
+The submit-side projection of a `ReviewState` — what `buildReviewPayload()`
+(`src/submit.ts`) hands to the platform adapter. Distinct from `ReviewState`
+because it carries only what a review submission needs, already normalized to
+the platform's wire shape: drafted comments become `ReviewComment[]` anchored
+by `path`/`line`/`side`, and the drafted-against SHA is pinned as `commit_id`
+so a stale submission can be detected rather than posted against the wrong
+head.
+
+| Field | Type | Notes |
+|-------|------|-------|
+| event | Verdict | GitHub review event; see Normalization Rules. The GitLab adapter maps its own `GitLabVerdict` separately |
+| body | string | Summary note |
+| commit_id | string | The `head_sha` the comments were drafted against |
+| comments | ReviewComment[] | Inline comments — `{ path, line, side, body }` |
+
+Server-side only: it is echoed back on `SubmitResult.payload` for a future
+manual-submit fallback and never reaches the client (see `api.md`).
 
 ### SubmitResult
 
@@ -288,6 +317,66 @@ comments/note/approve already landed. Like `payload`, it is server-side-only:
 the `/api/submit` route strips it before replying (`api.md`), and the client
 receives the same information via `state.gitlab_submit_progress` instead. The
 GitHub adapter's return is a plain `SubmitResult` (no `progress`).
+
+### GitLabSubmitProgress
+
+What of a GitLab submission already landed, so a retry can resume rather than
+repost. Defined in `src/types.ts`; carried on `ReviewState`'s
+`gitlab_submit_progress` and on the GitLab adapter's return (below). Has no
+GitHub counterpart — GitHub submits a review in one call, so there is no
+partial state to record.
+
+| Field | Type | Notes |
+|-------|------|-------|
+| posted_comment_ids | string[] | `DraftComment` ids whose discussion already posted successfully — a retry skips these |
+| note_posted | boolean | Whether the summary note landed |
+| approved | boolean | Whether the approve call landed |
+
+### Anchor
+
+A selected diff line, the target a comment or re-anchor points at. Frontend-only
+(`web/src/diff.ts`) — it is a *selection*, never persisted; what gets stored is
+the resolved `line`/`side` on `DraftComment`. Together with `NotePreview` (see
+`StoredNote` above) and `PreloadConfig` (below), these are the only
+frontend-only shapes in the model.
+
+| Field | Type | Notes |
+|-------|------|-------|
+| side | Side | Which side of the diff the line is on |
+| line | number | Line number on that side |
+
+### PreloadConfig
+
+The `GET /api/config` response contract (`api.md`) — startup settings, read
+once at boot. Built server-side (`src/server.ts`) but never persisted there;
+the named interface currently lives in `web/src/api.ts` rather than
+`src/types.ts`, which is why it is the one endpoint shape not shared via
+`import type`. The reviewer's own `localStorage` values (see Client-Persisted
+Preferences below) take precedence: `App.tsx` merges the two at boot, using a
+stored `ar-preload-chunks`/`ar-preload-overview` when present and falling back
+to the server's value otherwise. `app_version` is always the server's.
+
+| Field | Type | Notes |
+|-------|------|-------|
+| preload_chunks | number | How many chunks to prefetch ahead of the current one |
+| preload_overview | boolean | Whether to prefetch the overview page |
+| app_version | string? | Installed CLI version, for the Settings About row. Optional — the server defaults it to `''` and the UI renders the row only when present |
+
+### Client-Persisted Preferences
+
+Reviewer preferences that live in the browser's `localStorage`, not in
+`ReviewState` and not in `STATE_DIR`. Deliberately client-side: they are
+per-browser display choices with no submission-time consequence, so they
+neither belong in per-review state nor need to survive a state-file move. Not
+an entity with a declared TypeScript type — each key is read and written at its
+point of use.
+
+| Key | Type | Notes |
+|-----|------|-------|
+| `ar-palette` | string | Selected color palette |
+| `ar-theme` | string | Light/dark mode |
+| `ar-preload-chunks` | number | Overrides `PreloadConfig.preload_chunks` |
+| `ar-preload-overview` | boolean | Overrides `PreloadConfig.preload_overview` |
 
 ### Action
 
@@ -314,6 +403,23 @@ the Claude SSE route applies internally for `add_note`). See
 - **`OVERVIEW_ID`** (`'__overview__'`) is the sentinel `chunk_id` used for
   notes attached to the overview page rather than a specific chunk. Defined
   once in `src/types.ts`, re-exported from `web/src/api.ts`.
+- **Verdicts** are platform-specific, which is why `api.md` and `ui.md` branch
+  on `review.pr.platform` to pick the set. GitHub uses `Verdict` =
+  `'APPROVE' | 'COMMENT' | 'REQUEST_CHANGES'` (the PR-review *event* names,
+  upper-case as the API expects), exported as the ordered `VERDICTS` array.
+  GitLab uses `GitLabVerdict` = `'approve' | 'comment'`, exported as
+  `GITLAB_VERDICTS` — lower-case, and only two values, because a GitLab
+  approval is a separate call from posting discussion notes, so there is no
+  "request changes" event to name. Both are defined once in `src/types.ts`
+  and re-exported from `web/src/api.ts`; the array order is the order the UI
+  offers them in.
+- **`AiNoteKind`** = `'initial' | 'investigation' | 'context' | 'error'` —
+  the `kind` discriminator on every `StoredNote`. `initial` is the
+  unprompted first pass over a chunk, `investigation` a note produced in
+  response to a reviewer question, `context` supporting material (e.g. Jira),
+  and `error` a failed generation surfaced in the note stream rather than
+  swallowed. Chosen at the call site by whether a question was supplied
+  (`src/server.ts`, `web/src/App.tsx`).
 - **Jira keys** are extracted with a single regex (`\b[A-Z][A-Z0-9]+-\d+\b`)
   applied across PR title, head branch name, and PR body; deduplicated via a
   `Set`.
@@ -357,10 +463,27 @@ Not applicable today — `ReviewState` is a single JSON document per PR/MR with
 no query surface; lookups within it (`comments.filter(c => c.chunk_id ===
 id)`, etc.) are done by linear scan in the frontend against small in-memory
 arrays. `listReviews()` scans all files in the state directory on every call
-— no separate index file.
+— no separate index file. See Production Annotations for the scaling caveat.
 
-**Future scaling note**: confirmed fine for now, but flagged for future work
-— if saved-review count grows large enough that a full-directory scan per
-`GET /api/reviews` call becomes noticeably slow, add a lightweight index
-(e.g., a manifest file updated alongside each state-file write) rather than
-changing the per-file storage model itself.
+## Production Annotations
+
+- **`listReviews()` scans the whole state directory per call.** Confirmed
+  fine at today's scale (a single user's saved reviews on local disk). If
+  saved-review count grows large enough that a full-directory scan per `GET
+  /api/reviews` becomes noticeably slow, add a lightweight index — e.g. a
+  manifest file updated alongside each state-file write — rather than
+  changing the per-file storage model itself.
+- **The drafted-against SHA is not retained, which makes the stale check
+  largely inert.** `loadState()` overwrites `head_sha` with the
+  freshly-fetched SHA on every load (`src/state.ts:190`), so the SHA the
+  comments were actually drafted against is lost. `buildReviewPayload()` then
+  passes that refreshed value as `commit_id`, and `submitReview()` checks it
+  with `shaOnPr()` — i.e. it asks "is the latest SHA on this PR?", which is
+  nearly always yes. The `SubmitResult.stale` path therefore fires mainly via
+  the GitHub-error fallback (`STALE_RE` against `gh` stderr), not via the
+  explicit pre-check. Closing this means persisting the drafted SHA separately
+  from the latest-fetched one; the two are conflated into one field today.
+  Anchor Reconciliation independently covers the *chunk*-shaped consequences
+  of a moved head, so drafted comments are not silently mis-anchored — it is
+  specifically the commit-level guard that is weak. Deliberate-ish for a
+  single-reviewer local tool, but a real gap rather than a designed tradeoff.

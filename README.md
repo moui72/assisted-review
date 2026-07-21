@@ -8,25 +8,19 @@
 <p align="center">
   <a href="https://www.npmjs.com/package/assisted-review">
     <picture>
-      <source media="(prefers-color-scheme: dark)" srcset="https://shieldcn.dev/npm/assisted-review.svg?variant=secondary&mode=dark" />
-      <img alt="npm version" src="https://shieldcn.dev/npm/assisted-review.svg?variant=secondary&mode=light" />
-    </picture>
-  </a>
-  <a href="https://www.npmjs.com/package/assisted-review">
-    <picture>
-      <source media="(prefers-color-scheme: dark)" srcset="https://shieldcn.dev/npm/dt/assisted-review.svg?variant=secondary&mode=dark" />
-      <img alt="npm downloads" src="https://shieldcn.dev/npm/dt/assisted-review.svg?variant=secondary&mode=light" />
-    </picture>
-  </a>
-  <a href="https://github.com/moui72/assisted-review/releases">
-    <picture>
-      <source media="(prefers-color-scheme: dark)" srcset="https://shieldcn.dev/github/release/moui72/assisted-review.svg?variant=secondary&mode=dark" />
-      <img alt="latest release" src="https://shieldcn.dev/github/release/moui72/assisted-review.svg?variant=secondary&mode=light" />
+      <source media="(prefers-color-scheme: dark)" srcset="https://shieldcn.dev/group/npm/assisted-review+npm/dt/assisted-review.svg?variant=secondary&color=CB3837&mode=dark" />
+      <img alt="npm version and downloads" src="https://shieldcn.dev/group/npm/assisted-review+npm/dt/assisted-review.svg?variant=secondary&color=CB3837&mode=light" />
     </picture>
   </a>
   <!-- ardd-badge-start -->
-  <a href="https://github.com/moui72/artifact-driven-dev"><img alt="built with ARDD" src="https://shieldcn.dev/badge/built%20with-ARDD-blue.svg?variant=branded" /></a>
+  <a href="https://github.com/moui72/artifact-driven-dev">
+    <picture>
+      <source media="(prefers-color-scheme: dark)" srcset="https://shieldcn.dev/badge/dynamic/json.svg?url=https%3A%2F%2Fraw.githubusercontent.com%2Fmoui72%2Fassisted-review%2Fmain%2F.github%2Fbadges%2Fardd-version.json&query=%24.message&label=built%20with%20ArDD&split=true&variant=secondary&mode=dark" />
+      <img alt="built with ArDD" src="https://shieldcn.dev/badge/dynamic/json.svg?url=https%3A%2F%2Fraw.githubusercontent.com%2Fmoui72%2Fassisted-review%2Fmain%2F.github%2Fbadges%2Fardd-version.json&query=%24.message&label=built%20with%20ArDD&split=true&variant=secondary&mode=light" />
+    </picture>
+  </a>
   <!-- ardd-badge-end -->
+  <a href="https://github.com/sponsors/moui72"><img alt="sponsor" src="https://shieldcn.dev/badge/sponsor-%E2%9D%A4-ea4aaa.svg?variant=secondary&theme=pink" /></a>
 </p>
 
 ## What is assisted-review?
@@ -197,11 +191,15 @@ one-off run: `GITLAB_TOKEN=<token> assisted-review namespace/repo!123`.
 GitHub PRs work out of the box via `gh`. For GitLab MRs, any one of these
 works, in priority order:
 
-1. `glab` authenticated (`glab auth status`) — if installed, every GitLab
-   call goes through it and takes precedence over a stored token
-2. A token entered in the browser — when a GitLab ref needs auth and `glab`
-   isn't available, the UI prompts for a personal access token and persists
-   it (mode `0600`) in the state directory
+1. A token entered in the browser — when a GitLab ref needs auth, the UI
+   prompts for a personal access token and persists it (mode `0600`) in the
+   state directory. Since this is an explicit, deliberate choice, it takes
+   precedence even if `glab` is also installed and authenticated
+2. `glab` **installed** — used when no browser token is set; if the binary is
+   present, every GitLab call goes through it. Note this is a presence check
+   (`glab --version`), not an auth check: an installed-but-unauthenticated
+   `glab` is still selected, so `GITLAB_TOKEN` below is not reached as a
+   fallback in that case. Enter a browser token to override
 3. `GITLAB_TOKEN` in the environment — used by the REST fallback when
    neither of the above is available
 

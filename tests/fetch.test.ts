@@ -5,6 +5,7 @@ vi.mock('node:child_process', () => ({ execFile: vi.fn() }));
 import { execFile } from 'node:child_process';
 import { fetchDiff, fetchMeta, fetchFileContent } from '../src/fetch';
 import { _setGlabAvailable } from '../src/gitlab-rest';
+import { _setBrowserToken } from '../src/gitlab-token';
 import type { PrRef } from '../src/types';
 
 const ghRef: PrRef = { owner: 'alice', repo: 'proj', number: 42, platform: 'github' };
@@ -29,6 +30,7 @@ function fail(err: Error) {
 afterEach(() => {
   vi.mocked(execFile).mockReset();
   _setGlabAvailable(undefined);
+  _setBrowserToken(undefined);
 });
 
 describe('fetchDiff — GitHub', () => {
@@ -213,6 +215,38 @@ function mockFetch(responses: Array<{ ok: boolean; status?: number; statusText?:
     } as unknown as Response);
   });
 }
+
+describe('fetchMeta — GitLab, browser token takes priority over glab', () => {
+  beforeEach(() => {
+    _setGlabAvailable(true);
+    _setBrowserToken('browser-token');
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it('uses the REST path (not glab) when a browser token is set, even though glab is available', async () => {
+    mockFetch([{ ok: true, body: glabView }]);
+    const meta = await fetchMeta(glRef);
+    expect(meta.title).toBe('MR title');
+    expect(vi.mocked(execFile)).not.toHaveBeenCalled();
+    const [[, init]] = (globalThis.fetch as ReturnType<typeof vi.spyOn>).mock.calls as [[string, RequestInit]];
+    expect((init.headers as Record<string, string>)['PRIVATE-TOKEN']).toBe('browser-token');
+  });
+
+  it('falls back to glab when no browser token is set (regression guard)', async () => {
+    _setBrowserToken(undefined);
+    succeed(JSON.stringify(glabView));
+    await fetchMeta(glRef);
+    expect(vi.mocked(execFile)).toHaveBeenCalledWith(
+      'glab',
+      expect.arrayContaining(['mr', 'view']),
+      expect.any(Object),
+      expect.any(Function),
+    );
+  });
+});
 
 describe('fetchMeta — GitLab REST fallback', () => {
   beforeEach(() => {

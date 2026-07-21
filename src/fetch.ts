@@ -7,7 +7,7 @@
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import type { PrMeta, PrRef } from './types.js';
-import { glabAvailable, glProjectId, gitlabBaseUrl } from './gitlab-rest.js';
+import { shouldUseGlab, glProjectId, gitlabBaseUrl } from './gitlab-rest.js';
 import { getGitLabToken, GitLabAuthError } from './gitlab-token.js';
 
 const execFileAsync = promisify(execFile);
@@ -155,7 +155,7 @@ async function fetchGitLabMetaREST(ref: PrRef): Promise<PrMeta> {
 }
 
 async function fetchGitLabDiff(ref: PrRef): Promise<string> {
-  if (!await glabAvailable()) return fetchGitLabDiffREST(ref);
+  if (!await shouldUseGlab()) return fetchGitLabDiffREST(ref);
   const { repo, number } = cliTarget(ref);
   const { stdout } = await execFileAsync(
     'glab',
@@ -166,7 +166,7 @@ async function fetchGitLabDiff(ref: PrRef): Promise<string> {
 }
 
 async function fetchGitLabMeta(ref: PrRef): Promise<PrMeta> {
-  if (!await glabAvailable()) return fetchGitLabMetaREST(ref);
+  if (!await shouldUseGlab()) return fetchGitLabMetaREST(ref);
   const { repo, number } = cliTarget(ref);
   const { stdout } = await execFileAsync(
     'glab',
@@ -214,7 +214,7 @@ async function fetchGitLabFileContent(
   sha: string,
 ): Promise<string | null> {
   const encodedPath = encodeURIComponent(path);
-  if (await glabAvailable()) {
+  if (await shouldUseGlab()) {
     try {
       const { stdout } = await execFileAsync(
         'glab',
