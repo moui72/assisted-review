@@ -20,7 +20,7 @@ jobs:
           # branch ruleset (the default GITHUB_TOKEN cannot bypass it on a user repo).
           token: ${{ secrets.GH_PAT }}
 
-      - uses: pnpm/action-setup@v4
+      - uses: pnpm/action-setup@v6
 
       # Trusted publishing requires Node 22.14.0+ and npm 11.5.1+
       - uses: actions/setup-node@v4
