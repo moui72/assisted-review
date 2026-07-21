@@ -23,7 +23,7 @@ jobs:
       - uses: pnpm/action-setup@v6
 
       # Trusted publishing requires Node 22.14.0+ and npm 11.5.1+
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: '22'
           cache: 'pnpm'
