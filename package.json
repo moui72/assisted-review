@@ -60,7 +60,7 @@
     "@vitejs/plugin-react": "^4",
     "@vitest/coverage-v8": "^4.1.9",
     "concurrently": "^9",
-    "eslint": "^9",
+    "eslint": "^10",
     "eslint-config-prettier": "^10",
     "globals": "^17",
     "highlight.js": "^11.11.1",
