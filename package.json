@@ -62,7 +62,7 @@
     "concurrently": "^9",
     "eslint": "^9",
     "eslint-config-prettier": "^10",
-    "globals": "^16",
+    "globals": "^17",
     "highlight.js": "^11.11.1",
     "husky": "^9.1.7",
     "jsdom": "^29.1.1",
