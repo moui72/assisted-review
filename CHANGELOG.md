@@ -1,3 +1,11 @@
+## [1.12.2](https://github.com/moui72/assisted-review/compare/v1.12.1...v1.12.2) (2026-07-21)
+
+
+### Bug Fixes
+
+* **badge:** repair ArDD badge sync and align it with upstream ([#111](https://github.com/moui72/assisted-review/issues/111)) ([2d41a3d](https://github.com/moui72/assisted-review/commit/2d41a3dfa8f08878692539df141c8ad5588c0f1a)), closes [#7C3AED](https://github.com/moui72/assisted-review/issues/7C3AED) [#7c3aed](https://github.com/moui72/assisted-review/issues/7c3aed)
+* **lint:** ignore .claude so worktrees don't break eslint ([#110](https://github.com/moui72/assisted-review/issues/110)) ([546c5e9](https://github.com/moui72/assisted-review/commit/546c5e9cd1df06e1903a8984527cb2d42d9f792c)), closes [#98](https://github.com/moui72/assisted-review/issues/98)
+
 ## [1.12.1](https://github.com/moui72/assisted-review/compare/v1.12.0...v1.12.1) (2026-07-20)
 
 
