@@ -74,6 +74,7 @@ export function AiCommentary({
   error,
   askRef,
   onAsk,
+  onStop,
   onDeleteNote,
   subject = 'chunk',
 }: {
@@ -87,6 +88,7 @@ export function AiCommentary({
   error: string | null;
   askRef: RefObject<HTMLInputElement | null>;
   onAsk: (question: string) => void;
+  onStop?: () => void;
   onDeleteNote: (id: string) => void;
   subject?: 'chunk' | 'PR';
 }) {
@@ -127,6 +129,15 @@ export function AiCommentary({
             >
               {busy ? '…' : q.trim() ? 'Ask' : 'Explain'}
             </button>
+            {streaming && onStop && (
+              <button
+                type="button"
+                onClick={onStop}
+                className="rounded-md border border-[var(--del-fg)]/45 px-2.5 py-1 text-[12px] font-medium text-[var(--del-fg)]/90 transition hover:bg-[var(--del-bg)]"
+              >
+                Stop
+              </button>
+            )}
           </form>
         </div>
 

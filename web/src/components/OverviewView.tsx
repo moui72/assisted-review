@@ -90,6 +90,14 @@ function Summary({ ai }: { ai: AiPanelProps }) {
           AI summary
         </span>
         <span className="h-px flex-1 bg-edge" />
+        {ai.streaming && ai.onStop && (
+          <button
+            onClick={ai.onStop}
+            className="font-sans text-[11px] text-[var(--del-fg)]/90 transition hover:text-[var(--del-fg)]"
+          >
+            stop
+          </button>
+        )}
         {summary?.id && (
           <button
             onClick={() => ai.onDeleteNote(summary.id!)}

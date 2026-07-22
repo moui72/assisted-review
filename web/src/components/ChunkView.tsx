@@ -12,6 +12,7 @@ export interface AiPanelProps {
   error: string | null;
   askRef: RefObject<HTMLInputElement | null>;
   onAsk: (question: string) => void;
+  onStop?: () => void;
   onDeleteNote: (id: string) => void;
 }
 

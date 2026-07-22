@@ -277,6 +277,12 @@ export function App() {
     setAiConfig(next);
   }, []);
 
+  const stopAi = useCallback(() => {
+    aiCloseRef.current?.();
+    aiCloseRef.current = null;
+    setStreaming(null);
+  }, []);
+
   // Ask AI about the current chunk (empty question → "explain"). One stream
   // at a time; it persists server-side on completion, so navigating away is safe.
   const askAi = useCallback(
@@ -464,6 +470,7 @@ export function App() {
     error: aiError,
     askRef,
     onAsk: askAi,
+    onStop: streaming?.chunkId === activeId ? stopAi : undefined,
     onDeleteNote: (id: string) => void dispatch({ type: 'delete_note', id }),
   };
 
