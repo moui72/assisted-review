@@ -7,7 +7,7 @@ status: in-progress
 # Tasks
 
 ## Phase 1: Data and API contracts
-- [ ] T001 [artifacts: datamodel] Add an `AiProviderConfig` domain type and persistence helpers for `STATE_DIR/ai-config.json`, with defaults that preserve current behavior: missing config selects `provider: 'claude'`, blank/missing provider-specific model fields omit the subprocess model argument, and saving one provider's model preserves the inactive provider's model field.
+- [x] T001 [artifacts: datamodel] Add an `AiProviderConfig` domain type and persistence helpers for `STATE_DIR/ai-config.json`, with defaults that preserve current behavior: missing config selects `provider: 'claude'`, blank/missing provider-specific model fields omit the subprocess model argument, and saving one provider's model preserves the inactive provider's model field.
 - [ ] T002 [artifacts: api] Add backend coverage for AI config persistence: default read with no file, valid updates for `claude` and `codex`, model-field preservation across provider switches, invalid provider rejection, and malformed/corrupt config recovery or clear error behavior matching the existing state-file test style.
 - [ ] T003 [artifacts: api] Add `GET /api/ai-config` and `POST /api/ai-config` routes using the new persistence helpers, returning normalized config JSON and rejecting invalid payloads without mutating the saved config.
 - [ ] T004 [artifacts: datamodel] Split review draft state so the submitted note payload is guarded by the SHA it was drafted against, not only the latest fetched `ReviewState.head_sha`. Preserve existing load/save compatibility for older state files while introducing the new drafted-against field.

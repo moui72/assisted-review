@@ -15,6 +15,7 @@ import {
 import { randomUUID } from 'node:crypto';
 import type {
   Action,
+  AiProviderConfig,
   Chunk,
   DraftComment,
   FlaggedEntry,
@@ -27,6 +28,8 @@ import { OVERVIEW_ID, STATE_VERSION } from './types.js';
 
 export const STATE_DIR =
   process.env.ASSISTED_REVIEW_STATE_DIR || join(homedir(), '.assisted-review');
+
+const AI_CONFIG_FILE = 'ai-config.json';
 
 function statePath(pr: PrRef): string {
   if (pr.platform === 'gitlab') {
@@ -47,6 +50,54 @@ function emptyState(pr: PrRef, headSha: string): ReviewState {
     viewed: [],
     notes: [],
   };
+}
+
+function aiConfigPath(): string {
+  return join(STATE_DIR, AI_CONFIG_FILE);
+}
+
+function cleanModel(value: unknown): string | undefined {
+  if (typeof value !== 'string') return undefined;
+  const trimmed = value.trim();
+  return trimmed === '' ? undefined : trimmed;
+}
+
+export function normalizeAiProviderConfig(raw: unknown): AiProviderConfig {
+  const obj = raw && typeof raw === 'object'
+    ? raw as Record<string, unknown>
+    : {};
+  const provider = obj.provider === 'codex' ? 'codex' : 'claude';
+  const updatedAt = typeof obj.updated_at === 'string'
+    ? obj.updated_at
+    : new Date(0).toISOString();
+  const config: AiProviderConfig = {
+    provider,
+    updated_at: updatedAt,
+  };
+  const claudeModel = cleanModel(obj.claude_model);
+  const codexModel = cleanModel(obj.codex_model);
+  if (claudeModel) config.claude_model = claudeModel;
+  if (codexModel) config.codex_model = codexModel;
+  return config;
+}
+
+export async function loadAiProviderConfig(): Promise<AiProviderConfig> {
+  try {
+    const raw = await readFile(aiConfigPath(), 'utf8');
+    return normalizeAiProviderConfig(JSON.parse(raw));
+  } catch {
+    return normalizeAiProviderConfig(null);
+  }
+}
+
+export async function saveAiProviderConfig(config: AiProviderConfig): Promise<AiProviderConfig> {
+  const normalized = normalizeAiProviderConfig(config);
+  await mkdir(STATE_DIR, { recursive: true });
+  const path = aiConfigPath();
+  const tmp = `${path}.tmp`;
+  await writeFile(tmp, JSON.stringify(normalized, null, 2));
+  await rename(tmp, path);
+  return normalized;
 }
 
 // Ordered migration steps applied to raw persisted state on load, so old
