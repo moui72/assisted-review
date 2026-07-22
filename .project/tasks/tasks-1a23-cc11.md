@@ -22,7 +22,7 @@ status: in-progress
 - [x] T011 [artifacts: api, infrastructure] Add backend route/adapter tests for `/api/ai` and `/api/claude`: default Claude dispatch, Codex dispatch, provider-specific model argument forwarding, missing executable errors, cancellation cleanup, SSE event compatibility, and alias parity.
 
 ## Phase 3: Settings and stream controls
-- [ ] T012 [artifacts: ui, api] Add frontend API helpers and client state for loading/saving AI config via `/api/ai-config`, including validation/error display consistent with existing settings controls.
+- [x] T012 [artifacts: ui, api] Add frontend API helpers and client state for loading/saving AI config via `/api/ai-config`, including validation/error display consistent with existing settings controls.
 - [ ] T013 [artifacts: ui] Extend Settings with AI provider and model controls: provider selection for Claude/Codex, provider-specific model inputs, persistence through the new API, defaults that show existing Claude behavior, and no loss of inactive provider model values when switching.
 - [ ] T014 [artifacts: ui] Replace user-visible Claude-only commentary labels with provider-neutral AI language except where an explicit provider choice is being shown, preserving existing layout density and accessibility.
 - [ ] T015 [artifacts: ui] Add Stop behavior for active AI streams: expose a Stop control while streaming, close the EventSource/request, call any backend cancellation path already used for review resets where appropriate, reset streaming UI state, and do not persist partial notes.

@@ -21,11 +21,11 @@ vi.mock('../../web/src/api.ts', async (importOriginal) => {
     fetchReview: vi.fn(),
     fetchState: vi.fn(),
     postAction: vi.fn(),
-    streamClaude: vi.fn(() => vi.fn()),
+    streamAi: vi.fn(() => vi.fn()),
   };
 });
 
-import { fetchReview, fetchState, streamClaude } from '../../web/src/api.ts';
+import { fetchReview, fetchState, streamAi } from '../../web/src/api.ts';
 import { App } from '../../web/src/App.tsx';
 
 const pr = { owner: 'alice', repo: 'proj', number: 1, platform: 'github' as const };
@@ -88,12 +88,12 @@ describe('App — preload loading state', () => {
   it('shows busy (disabled Summarize/input) while the overview preload is in flight, and clears it on completion', async () => {
     vi.mocked(fetchReview).mockResolvedValue(review);
     vi.mocked(fetchState).mockImplementation(async () => initialState());
-    vi.mocked(streamClaude).mockClear();
+    vi.mocked(streamAi).mockClear();
 
     render(<App />);
 
-    await waitFor(() => expect(vi.mocked(streamClaude)).toHaveBeenCalledTimes(1));
-    expect(vi.mocked(streamClaude).mock.calls[0][0]).toEqual(
+    await waitFor(() => expect(vi.mocked(streamAi)).toHaveBeenCalledTimes(1));
+    expect(vi.mocked(streamAi).mock.calls[0][0]).toEqual(
       expect.objectContaining({ chunkId: '__overview__' }),
     );
 
@@ -107,7 +107,7 @@ describe('App — preload loading state', () => {
     expect(screen.queryByText('regenerate')).not.toBeInTheDocument();
 
     // Resolve the preload's stream.
-    const [, handlers] = vi.mocked(streamClaude).mock.calls[0];
+    const [, handlers] = vi.mocked(streamAi).mock.calls[0];
     const doneState: ReviewState = {
       ...initialState(),
       notes: [
@@ -127,32 +127,32 @@ describe('App — preload loading state', () => {
     expect(screen.getByPlaceholderText('Ask about this PR… (a)')).not.toBeDisabled();
   });
 
-  it('does not fire a second streamClaude call for the same target while its preload is in flight', async () => {
+  it('does not fire a second streamAi call for the same target while its preload is in flight', async () => {
     vi.mocked(fetchReview).mockResolvedValue(review);
     vi.mocked(fetchState).mockImplementation(async () => initialState());
-    vi.mocked(streamClaude).mockClear();
+    vi.mocked(streamAi).mockClear();
 
     render(<App />);
 
-    await waitFor(() => expect(vi.mocked(streamClaude)).toHaveBeenCalledTimes(1));
+    await waitFor(() => expect(vi.mocked(streamAi)).toHaveBeenCalledTimes(1));
 
     // The Ask input/button are disabled while busy, so a normal submit
     // can't reach onAsk — but assert the call count stays at 1 regardless
     // of any additional render passes triggered by other effects.
     await new Promise((r) => setTimeout(r, 20));
-    expect(vi.mocked(streamClaude)).toHaveBeenCalledTimes(1);
+    expect(vi.mocked(streamAi)).toHaveBeenCalledTimes(1);
   });
 
   it('asking about a chunk cancels an unrelated in-flight preload and proceeds with a new request', async () => {
     const user = userEvent.setup();
     vi.mocked(fetchReview).mockResolvedValue(review);
     vi.mocked(fetchState).mockImplementation(async () => initialState());
-    vi.mocked(streamClaude).mockClear();
+    vi.mocked(streamAi).mockClear();
 
     render(<App />);
 
     // Overview preload starts automatically (index defaults to -1).
-    await waitFor(() => expect(vi.mocked(streamClaude)).toHaveBeenCalledTimes(1));
+    await waitFor(() => expect(vi.mocked(streamAi)).toHaveBeenCalledTimes(1));
 
     // Navigate into chunk c1 and ask a question there (different target
     // than the in-flight overview preload).
@@ -163,10 +163,10 @@ describe('App — preload loading state', () => {
     await user.type(askInput, 'what does this do?');
     await user.click(screen.getByRole('button', { name: 'Ask' }));
 
-    // A new streamClaude call for c1 should have been made — the different
+    // A new streamAi call for c1 should have been made — the different
     // -target case is unaffected by the same-target no-op guard.
     await waitFor(() =>
-      expect(vi.mocked(streamClaude)).toHaveBeenCalledWith(
+      expect(vi.mocked(streamAi)).toHaveBeenCalledWith(
         expect.objectContaining({ chunkId: 'c1', question: 'what does this do?' }),
         expect.anything(),
       ),

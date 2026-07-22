@@ -5,11 +5,14 @@ import {
   fetchReview,
   fetchState,
   fetchConfig,
+  fetchAiConfig,
   fetchInvestigationConfig,
   postAction,
-  streamClaude,
+  saveAiConfig,
+  streamAi,
   OVERVIEW_ID,
   type Action,
+  type AiProviderConfig,
   type AiNoteKind,
   type InvestigationConfig,
   type PreloadConfig,
@@ -64,7 +67,8 @@ export function App() {
     kind: AiNoteKind;
     text: string;
   } | null>(null);
-  const [claudeError, setClaudeError] = useState<string | null>(null);
+  const [aiError, setAiError] = useState<string | null>(null);
+  const [aiConfig, setAiConfig] = useState<AiProviderConfig | null>(null);
   const [preloadTargetId, setPreloadTargetId] = useState<string | null>(null);
   const [preloadConfig, setPreloadConfig] = useState<PreloadConfig | null>(null);
   const [preloadTick, setPreloadTick] = useState(0);
@@ -73,7 +77,7 @@ export function App() {
   const [investigationBannerDismissed, setInvestigationBannerDismissed] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const askRef = useRef<HTMLInputElement>(null);
-  const claudeCloseRef = useRef<(() => void) | null>(null);
+  const aiCloseRef = useRef<(() => void) | null>(null);
   const preloadCancelRef = useRef<(() => void) | null>(null);
   const preloadAttemptedRef = useRef<Set<string>>(new Set());
 
@@ -87,6 +91,7 @@ export function App() {
         app_version: serverCfg.app_version,
       });
     }).catch(() => {});
+    fetchAiConfig().then(setAiConfig).catch(() => {});
     Promise.all([fetchReview(), fetchState()])
       .then(([r, s]) => {
         setReview(r);
@@ -107,10 +112,10 @@ export function App() {
   const chunk = index >= 0 ? review?.chunks[index] : undefined;
   const activeId = index < 0 ? OVERVIEW_ID : chunk?.id;
 
-  // Clear the line anchor + any Claude error when the page changes.
+  // Clear the line anchor + any AI error when the page changes.
   useEffect(() => {
     setAnchor(null);
-    setClaudeError(null);
+    setAiError(null);
   }, [activeId]);
 
   // Fetch this repo's investigation-access config whenever the active
@@ -121,7 +126,7 @@ export function App() {
     fetchInvestigationConfig().then(setInvestigationConfig).catch(() => {});
   }, [review?.pr.platform, review?.pr.owner, review?.pr.repo]);
 
-  // Background preloading: silently request Claude notes for upcoming chunks one at a time.
+  // Background preloading: silently request AI notes for upcoming chunks one at a time.
   // Driven by navigation (index), state changes (completed preloads), and preloadTick (errors).
   useEffect(() => {
     if (!review || !state || !preloadConfig || streaming || preloadCancelRef.current) return;
@@ -131,7 +136,7 @@ export function App() {
 
     preloadAttemptedRef.current.add(next);
     setPreloadTargetId(next);
-    const cancel = streamClaude(
+    const cancel = streamAi(
       { chunkId: next, question: '' },
       {
         onDelta: () => {},
@@ -163,8 +168,8 @@ export function App() {
   }, []);
 
   const cancelInFlight = useCallback(() => {
-    claudeCloseRef.current?.();
-    claudeCloseRef.current = null;
+    aiCloseRef.current?.();
+    aiCloseRef.current = null;
     preloadCancelRef.current?.();
     preloadCancelRef.current = null;
     preloadAttemptedRef.current = new Set();
@@ -267,30 +272,35 @@ export function App() {
 
   const cancelReanchor = useCallback(() => setReanchoring(null), []);
 
-  // Ask Claude about the current chunk (empty question → "explain"). One stream
+  const handleAiConfigChange = useCallback(async (update: Partial<AiProviderConfig>) => {
+    const next = await saveAiConfig(update);
+    setAiConfig(next);
+  }, []);
+
+  // Ask AI about the current chunk (empty question → "explain"). One stream
   // at a time; it persists server-side on completion, so navigating away is safe.
-  const askClaude = useCallback(
+  const askAi = useCallback(
     (question: string) => {
       if (!activeId || streaming) return;
       if (preloadTargetId === activeId) return;
       preloadCancelRef.current?.();
       preloadCancelRef.current = null;
-      setClaudeError(null);
+      setAiError(null);
       const kind: AiNoteKind = question.trim() ? 'investigation' : 'initial';
       setStreaming({ chunkId: activeId, kind, text: '' });
-      claudeCloseRef.current = streamClaude(
+      aiCloseRef.current = streamAi(
         { chunkId: activeId, question },
         {
           onDelta: (t) =>
             setStreaming((s) => (s ? { ...s, text: s.text + t } : s)),
           onDone: (next) => {
-            claudeCloseRef.current = null;
+            aiCloseRef.current = null;
             setState(next);
             setStreaming(null);
           },
           onError: (msg) => {
-            claudeCloseRef.current = null;
-            setClaudeError(msg);
+            aiCloseRef.current = null;
+            setAiError(msg);
             setStreaming(null);
           },
         },
@@ -451,9 +461,9 @@ export function App() {
     deletableNoteIds,
     streaming: streaming?.chunkId === activeId ? streaming : null,
     busy: streaming?.chunkId === activeId || preloadTargetId === activeId,
-    error: claudeError,
+    error: aiError,
     askRef,
-    onAsk: askClaude,
+    onAsk: askAi,
     onDeleteNote: (id: string) => void dispatch({ type: 'delete_note', id }),
   };
 
@@ -483,7 +493,7 @@ export function App() {
               onClick={() => setInvestigationModalOpen(true)}
               className="text-left underline decoration-dotted underline-offset-2 hover:no-underline"
             >
-              Enable deeper investigation — let Claude see more than the diff.
+              Enable deeper investigation — let AI see more than the diff.
             </button>
             <button
               onClick={() => setInvestigationBannerDismissed(true)}
@@ -588,6 +598,8 @@ export function App() {
         onClose={() => setSettingsOpen(false)}
         preloadConfig={preloadConfig}
         onPreloadChange={handlePreloadChange}
+        aiConfig={aiConfig}
+        onAiConfigChange={handleAiConfigChange}
         investigationMode={investigationConfig?.mode}
         onOpenInvestigation={() => setInvestigationModalOpen(true)}
       />
@@ -613,7 +625,7 @@ export function App() {
           setDrafts({});
           setAnchor(null);
           setStreaming(null);
-          setClaudeError(null);
+          setAiError(null);
         }}
         onCleared={() => {
           cancelInFlight();
@@ -621,7 +633,7 @@ export function App() {
           setState(null);
           setReviewsOpen(false);
           setStreaming(null);
-          setClaudeError(null);
+          setAiError(null);
         }}
       />
       <SubmitModal
