@@ -27,7 +27,7 @@ status: in-progress
 - [x] T014 [artifacts: ui] Replace user-visible Claude-only commentary labels with provider-neutral AI language except where an explicit provider choice is being shown, preserving existing layout density and accessibility.
 - [x] T015 [artifacts: ui] Add Stop behavior for active AI streams: expose a Stop control while streaming, close the EventSource/request, call any backend cancellation path already used for review resets where appropriate, reset streaming UI state, and do not persist partial notes.
 - [x] T016 [artifacts: ui] Add Regenerate behavior for existing AI notes: remove the current generated note from local state, start a fresh empty-question AI request for the same chunk, show streaming/progress state, and handle failure without losing manually authored notes.
-- [ ] T017 [artifacts: ui] Add frontend tests for AI settings, provider-neutral labels, Stop state reset, Regenerate replacement flow, and stale drafted-against SHA submit protection surfacing to the reviewer.
+- [x] T017 [artifacts: ui] Add frontend tests for AI settings, provider-neutral labels, Stop state reset, Regenerate replacement flow, and stale drafted-against SHA submit protection surfacing to the reviewer.
 
 ## Phase 4: Verification and compatibility
 - [ ] T018 [artifacts: api, infrastructure, ui] Run the existing backend and frontend test suites, update snapshots only when behavior intentionally changed, and confirm legacy Claude commentary still works through `/api/claude`.

@@ -23,6 +23,19 @@ vi.mock('../../web/src/api.ts', async (importOriginal) => {
   return {
     ...actual,
     fetchConfig: vi.fn(async () => ({ preload_chunks: 0, preload_overview: false })),
+    fetchAiConfig: vi.fn(async () => ({
+      provider: 'claude',
+      claude_model: 'sonnet',
+      codex_model: 'gpt-5-codex',
+      updated_at: '2026-01-01T00:00:00.000Z',
+    })),
+    saveAiConfig: vi.fn(async (update: unknown) => ({
+      provider: 'codex',
+      claude_model: 'sonnet',
+      codex_model: 'gpt-5-codex',
+      updated_at: '2026-01-01T00:00:01.000Z',
+      ...(update as object),
+    })),
     fetchReview: vi.fn(),
     fetchState: vi.fn(),
     postAction: vi.fn(),
@@ -37,7 +50,14 @@ vi.mock('../../web/src/api.ts', async (importOriginal) => {
   };
 });
 
-import { fetchReview, fetchState, postAction, fetchInvestigationConfig, streamAi } from '../../web/src/api.ts';
+import {
+  fetchReview,
+  fetchState,
+  postAction,
+  fetchInvestigationConfig,
+  saveAiConfig,
+  streamAi,
+} from '../../web/src/api.ts';
 import { App } from '../../web/src/App.tsx';
 
 const pr = { owner: 'alice', repo: 'proj', number: 1, platform: 'github' as const };
@@ -323,5 +343,51 @@ describe('App — AI note regeneration', () => {
       { chunkId: '__overview__', question: '' },
       expect.anything(),
     );
+    expect(postAction).not.toHaveBeenCalledWith(expect.objectContaining({ type: 'delete_comment' }));
+  });
+});
+
+describe('App — AI stream controls', () => {
+  it('Stop closes the active stream and removes the live preview', async () => {
+    const user = userEvent.setup();
+    const cancel = vi.fn();
+
+    vi.mocked(fetchReview).mockResolvedValue(review);
+    vi.mocked(fetchState).mockResolvedValue(initialState());
+    vi.mocked(streamAi).mockImplementation((_params, handlers) => {
+      handlers.onDelta('partial');
+      return cancel;
+    });
+
+    render(<App />);
+
+    await waitFor(() => expect(screen.getByRole('button', { name: /begin review/i })).toBeInTheDocument());
+    await user.click(screen.getByRole('button', { name: /begin review/i }));
+    await user.click(screen.getByRole('button', { name: 'Explain' }));
+
+    await waitFor(() => expect(screen.getByText('partial')).toBeInTheDocument());
+    await user.click(screen.getByRole('button', { name: 'Stop' }));
+
+    expect(cancel).toHaveBeenCalledOnce();
+    await waitFor(() => expect(screen.queryByText('partial')).not.toBeInTheDocument());
+  });
+});
+
+describe('App — AI settings', () => {
+  it('loads the AI config and saves provider changes from Settings', async () => {
+    const user = userEvent.setup();
+
+    vi.mocked(fetchReview).mockResolvedValue(review);
+    vi.mocked(fetchState).mockResolvedValue(initialState());
+
+    render(<App />);
+
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Settings' })).toBeInTheDocument());
+    await user.click(screen.getByRole('button', { name: 'Settings' }));
+    expect(await screen.findByLabelText('Claude model')).toHaveValue('sonnet');
+
+    await user.click(screen.getByRole('button', { name: 'Codex' }));
+
+    expect(saveAiConfig).toHaveBeenCalledWith({ provider: 'codex' });
   });
 });
