@@ -1,4 +1,9 @@
-import { selectedModel, streamAiProvider, type AiProviderAdapters } from '../src/ai-provider';
+import {
+  defaultAiProviderAdapters,
+  selectedModel,
+  streamAiProvider,
+  type AiProviderAdapters,
+} from '../src/ai-provider';
 import type { AiProviderConfig } from '../src/types';
 
 const config = (overrides: Partial<AiProviderConfig> = {}): AiProviderConfig => ({
@@ -85,5 +90,11 @@ describe('streamAiProvider', () => {
     );
     expect(handlers.onError).toHaveBeenCalledWith('Codex provider is not available');
     expect(cancel).toEqual(expect.any(Function));
+  });
+});
+
+describe('defaultAiProviderAdapters', () => {
+  it('provides the Claude adapter by default', () => {
+    expect(defaultAiProviderAdapters.claude).toEqual(expect.any(Function));
   });
 });
