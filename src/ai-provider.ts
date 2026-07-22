@@ -1,5 +1,6 @@
 import type { AiProviderConfig } from './types.js';
 import { streamClaude } from './claude.js';
+import { streamCodex } from './codex.js';
 
 export interface AiStreamHandlers {
   onDelta: (text: string) => void;
@@ -26,6 +27,7 @@ export interface AiProviderAdapters {
 
 export const defaultAiProviderAdapters: AiProviderAdapters = {
   claude: streamClaude,
+  codex: streamCodex,
 };
 
 export function selectedModel(config: AiProviderConfig): string | undefined {
