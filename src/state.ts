@@ -81,6 +81,39 @@ export function normalizeAiProviderConfig(raw: unknown): AiProviderConfig {
   return config;
 }
 
+export function applyAiProviderConfigUpdate(
+  current: AiProviderConfig,
+  raw: unknown,
+  updatedAt = new Date().toISOString(),
+): AiProviderConfig {
+  if (!raw || typeof raw !== 'object') {
+    throw new Error('AI provider config update must be an object');
+  }
+  const obj = raw as Record<string, unknown>;
+  if (obj.provider !== 'claude' && obj.provider !== 'codex') {
+    throw new Error('AI provider must be claude or codex');
+  }
+  const normalized = normalizeAiProviderConfig(current);
+  const next: AiProviderConfig = {
+    ...normalized,
+    provider: obj.provider,
+    updated_at: updatedAt,
+  };
+
+  if ('claude_model' in obj) {
+    const model = cleanModel(obj.claude_model);
+    if (model) next.claude_model = model;
+    else delete next.claude_model;
+  }
+  if ('codex_model' in obj) {
+    const model = cleanModel(obj.codex_model);
+    if (model) next.codex_model = model;
+    else delete next.codex_model;
+  }
+
+  return next;
+}
+
 export async function loadAiProviderConfig(): Promise<AiProviderConfig> {
   try {
     const raw = await readFile(aiConfigPath(), 'utf8');

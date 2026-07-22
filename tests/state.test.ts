@@ -1,12 +1,18 @@
-import { rm } from 'node:fs/promises';
+import { rm, writeFile } from 'node:fs/promises';
+import { join } from 'node:path';
 import {
+  applyAiProviderConfigUpdate,
   applyAction,
   deleteReview,
   listReviews,
+  loadAiProviderConfig,
   loadState,
   migrate,
+  normalizeAiProviderConfig,
   reconcileAnchors,
+  saveAiProviderConfig,
   saveState,
+  STATE_DIR,
   statePath,
 } from '../src/state';
 import type { Action, Chunk, PrRef, ReviewState } from '../src/types';
@@ -602,6 +608,94 @@ describe('loadState / saveState persistence', () => {
     const reloaded = await loadState(pr, 'new-sha');
     expect(reloaded.head_sha).toBe('new-sha');
     await cleanup(pr);
+  });
+});
+
+describe('AI provider config persistence', () => {
+  const configPath = join(STATE_DIR, 'ai-config.json');
+
+  beforeEach(async () => {
+    await rm(configPath, { force: true });
+    await rm(`${configPath}.tmp`, { force: true });
+  });
+
+  afterEach(async () => {
+    await rm(configPath, { force: true });
+    await rm(`${configPath}.tmp`, { force: true });
+  });
+
+  it('loadAiProviderConfig defaults to Claude when no file exists', async () => {
+    await expect(loadAiProviderConfig()).resolves.toEqual({
+      provider: 'claude',
+      updated_at: '1970-01-01T00:00:00.000Z',
+    });
+  });
+
+  it('saveAiProviderConfig round-trips a Claude model update', async () => {
+    await saveAiProviderConfig({
+      provider: 'claude',
+      claude_model: '  opus  ',
+      updated_at: '2026-01-01T00:00:00.000Z',
+    });
+    await expect(loadAiProviderConfig()).resolves.toEqual({
+      provider: 'claude',
+      claude_model: 'opus',
+      updated_at: '2026-01-01T00:00:00.000Z',
+    });
+  });
+
+  it('saveAiProviderConfig round-trips a Codex model update', async () => {
+    await saveAiProviderConfig({
+      provider: 'codex',
+      codex_model: 'gpt-5-codex',
+      updated_at: '2026-01-02T00:00:00.000Z',
+    });
+    await expect(loadAiProviderConfig()).resolves.toEqual({
+      provider: 'codex',
+      codex_model: 'gpt-5-codex',
+      updated_at: '2026-01-02T00:00:00.000Z',
+    });
+  });
+
+  it('applyAiProviderConfigUpdate preserves inactive provider model fields', () => {
+    const current = normalizeAiProviderConfig({
+      provider: 'claude',
+      claude_model: 'sonnet',
+      codex_model: 'gpt-5-codex',
+      updated_at: 'old',
+    });
+    const next = applyAiProviderConfigUpdate(
+      current,
+      { provider: 'codex', codex_model: 'gpt-5' },
+      'new',
+    );
+    expect(next).toEqual({
+      provider: 'codex',
+      claude_model: 'sonnet',
+      codex_model: 'gpt-5',
+      updated_at: 'new',
+    });
+  });
+
+  it('applyAiProviderConfigUpdate rejects invalid providers', () => {
+    const current = normalizeAiProviderConfig(null);
+    expect(() =>
+      applyAiProviderConfigUpdate(current, { provider: 'openai' }),
+    ).toThrow('AI provider must be claude or codex');
+  });
+
+  it('loadAiProviderConfig recovers to defaults for malformed config JSON', async () => {
+    await saveAiProviderConfig({
+      provider: 'codex',
+      codex_model: 'gpt-5-codex',
+      updated_at: '2026-01-02T00:00:00.000Z',
+    });
+    await rm(configPath, { force: true });
+    await writeFile(configPath, '{not-json');
+    await expect(loadAiProviderConfig()).resolves.toEqual({
+      provider: 'claude',
+      updated_at: '1970-01-01T00:00:00.000Z',
+    });
   });
 });
 
