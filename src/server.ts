@@ -8,7 +8,15 @@ import {
 } from 'node:http';
 import { readFile, stat } from 'node:fs/promises';
 import { join, normalize, extname } from 'node:path';
-import { applyAction, deleteReview, listReviews, saveState } from './state.js';
+import {
+  applyAction,
+  applyAiProviderConfigUpdate,
+  deleteReview,
+  listReviews,
+  loadAiProviderConfig,
+  saveAiProviderConfig,
+  saveState,
+} from './state.js';
 import {
   getInvestigationConfig,
   loadInvestigationConfigs,
@@ -188,6 +196,29 @@ export async function startServer(
         preload_overview: preloadOverview,
         app_version: appVersion,
       });
+    }
+
+    if (url.pathname === '/api/ai-config') {
+      if (req.method === 'GET') {
+        return sendJson(res, 200, await loadAiProviderConfig());
+      }
+      if (req.method === 'POST') {
+        let payload: unknown;
+        try {
+          payload = JSON.parse(await readBody(req)) as unknown;
+        } catch {
+          return sendJson(res, 400, { error: 'request body must be valid JSON' });
+        }
+        try {
+          const current = await loadAiProviderConfig();
+          const next = applyAiProviderConfigUpdate(current, payload);
+          return sendJson(res, 200, await saveAiProviderConfig(next));
+        } catch (err) {
+          return sendJson(res, 400, {
+            error: err instanceof Error ? err.message : String(err),
+          });
+        }
+      }
     }
 
     if (url.pathname === '/api/review') {

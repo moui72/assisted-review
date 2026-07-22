@@ -54,7 +54,15 @@ vi.mock('../src/gitlab-token', async (importOriginal) => {
 });
 
 import { startServer, type AppContext } from '../src/server';
-import { applyAction, saveState, deleteReview, listReviews } from '../src/state';
+import {
+  applyAction,
+  loadAiProviderConfig,
+  saveAiProviderConfig,
+  saveState,
+  deleteReview,
+  listReviews,
+  STATE_DIR,
+} from '../src/state';
 import { loadReview } from '../src/review';
 import { submitReview, submitGitLabReview } from '../src/submit';
 import {
@@ -158,6 +166,104 @@ describe('GET /api/config', () => {
     expect(res.status).toBe(200);
     const body = await res.json() as { app_version: string };
     expect(body.app_version).toBe('9.9.9-test');
+  });
+});
+
+describe('GET/POST /api/ai-config', () => {
+  const configPath = join(STATE_DIR, 'ai-config.json');
+
+  beforeEach(async () => {
+    await rm(configPath, { force: true });
+    await rm(`${configPath}.tmp`, { force: true });
+  });
+
+  afterEach(async () => {
+    await rm(configPath, { force: true });
+    await rm(`${configPath}.tmp`, { force: true });
+  });
+
+  it('GET returns the default Claude config without an active review', async () => {
+    const url = await makeServer({ review: null, state: null });
+    const res = await get(url, '/api/ai-config');
+    expect(res.status).toBe(200);
+    await expect(res.json()).resolves.toEqual({
+      provider: 'claude',
+      updated_at: '1970-01-01T00:00:00.000Z',
+    });
+  });
+
+  it('POST persists and returns a normalized Claude config', async () => {
+    const url = await makeServer({ review: null, state: null });
+    const res = await post(url, '/api/ai-config', {
+      provider: 'claude',
+      claude_model: '  claude-sonnet  ',
+    });
+    expect(res.status).toBe(200);
+    const body = await res.json() as { provider: string; claude_model?: string; updated_at: string };
+    expect(body.provider).toBe('claude');
+    expect(body.claude_model).toBe('claude-sonnet');
+    expect(Number.isNaN(Date.parse(body.updated_at))).toBe(false);
+    await expect(loadAiProviderConfig()).resolves.toMatchObject({
+      provider: 'claude',
+      claude_model: 'claude-sonnet',
+    });
+  });
+
+  it('POST preserves the inactive provider model when switching providers', async () => {
+    await saveAiProviderConfig({
+      provider: 'claude',
+      claude_model: 'sonnet',
+      codex_model: 'gpt-5-codex',
+      updated_at: 'old',
+    });
+    const url = await makeServer({ review: null, state: null });
+    const res = await post(url, '/api/ai-config', {
+      provider: 'codex',
+      codex_model: 'gpt-5',
+    });
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body).toMatchObject({
+      provider: 'codex',
+      claude_model: 'sonnet',
+      codex_model: 'gpt-5',
+    });
+  });
+
+  it('POST rejects an invalid provider without mutating the saved config', async () => {
+    await saveAiProviderConfig({
+      provider: 'claude',
+      claude_model: 'sonnet',
+      updated_at: 'old',
+    });
+    const url = await makeServer({ review: null, state: null });
+    const res = await post(url, '/api/ai-config', { provider: 'openai' });
+    expect(res.status).toBe(400);
+    await expect(loadAiProviderConfig()).resolves.toMatchObject({
+      provider: 'claude',
+      claude_model: 'sonnet',
+      updated_at: 'old',
+    });
+  });
+
+  it('POST rejects invalid JSON without mutating the saved config', async () => {
+    await saveAiProviderConfig({
+      provider: 'codex',
+      codex_model: 'gpt-5-codex',
+      updated_at: 'old',
+    });
+    const url = await makeServer({ review: null, state: null });
+    const res = await fetch(`${url}/api/ai-config`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: 'not-json',
+    });
+    expect(res.status).toBe(400);
+    await expect(loadAiProviderConfig()).resolves.toMatchObject({
+      provider: 'codex',
+      codex_model: 'gpt-5-codex',
+      updated_at: 'old',
+    });
   });
 });
 
