@@ -19,7 +19,7 @@ status: in-progress
 - [x] T008 [artifacts: infrastructure] Move current Claude subprocess streaming behind the provider adapter without changing default behavior, including optional `claude_model` argument handling, current prompt contract parsing, `onMessage`/`onAction`/`onError` events, and process cancellation.
 - [x] T009 [artifacts: infrastructure] Add the Codex subprocess adapter using `codex exec`, optional `codex_model` argument handling, output normalization into the existing AI event contract, cancellation behavior, and clear adapter errors when the executable or required access constraints are unavailable.
 - [x] T010 [artifacts: api, infrastructure] Add the canonical `GET /api/ai` SSE route that loads `AiProviderConfig`, dispatches to the selected adapter, preserves investigation modes and repo-access limits, and keeps `GET /api/claude` as a compatibility alias over the same implementation.
-- [ ] T011 [artifacts: api, infrastructure] Add backend route/adapter tests for `/api/ai` and `/api/claude`: default Claude dispatch, Codex dispatch, provider-specific model argument forwarding, missing executable errors, cancellation cleanup, SSE event compatibility, and alias parity.
+- [x] T011 [artifacts: api, infrastructure] Add backend route/adapter tests for `/api/ai` and `/api/claude`: default Claude dispatch, Codex dispatch, provider-specific model argument forwarding, missing executable errors, cancellation cleanup, SSE event compatibility, and alias parity.
 
 ## Phase 3: Settings and stream controls
 - [ ] T012 [artifacts: ui, api] Add frontend API helpers and client state for loading/saving AI config via `/api/ai-config`, including validation/error display consistent with existing settings controls.

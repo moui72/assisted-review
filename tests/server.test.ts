@@ -24,6 +24,13 @@ vi.mock('../src/claude', () => ({
   splitSuggestedAction: vi.fn().mockReturnValue({ body: 'the body', suggestedAction: undefined }),
 }));
 
+vi.mock('../src/codex', () => ({
+  streamCodex: vi.fn((_prompt: unknown, handlers: { onDone: (full: string) => void }) => {
+    process.nextTick(() => handlers.onDone('Codex text'));
+    return () => {};
+  }),
+}));
+
 vi.mock('../src/review', () => ({
   loadReview: vi.fn(),
 }));
@@ -72,6 +79,7 @@ import {
   clearGitLabToken,
 } from '../src/gitlab-token';
 import { streamClaude } from '../src/claude';
+import { streamCodex } from '../src/codex';
 import { fetchFileContent } from '../src/fetch';
 import { saveInvestigationConfigs, configKey } from '../src/investigation';
 import type { Review, ReviewState } from '../src/types';
@@ -1035,6 +1043,8 @@ describe('GET /api/ai', () => {
     const { STATE_DIR } = await import('../src/state');
     await rm(join(STATE_DIR, 'ai-config.json'), { force: true });
     await rm(join(STATE_DIR, 'investigation-config.json'), { force: true });
+    vi.mocked(streamCodex).mockClear();
+    vi.mocked(streamClaude).mockClear();
   });
 
   it('starts an SSE stream for a valid chunk_id', async () => {
@@ -1043,6 +1053,69 @@ describe('GET /api/ai', () => {
     expect(res.status).toBe(200);
     expect(res.headers.get('content-type')).toContain('text/event-stream');
     expect(vi.mocked(streamClaude)).toHaveBeenCalled();
+  });
+
+  it('dispatches to Codex when configured', async () => {
+    await saveAiProviderConfig({
+      provider: 'codex',
+      codex_model: 'gpt-5-codex',
+      updated_at: '2026-01-01T00:00:00.000Z',
+    });
+    const url = await makeServer({ review, state });
+    const res = await get(url, '/api/ai?chunk_id=c1');
+    expect(res.status).toBe(200);
+    expect(vi.mocked(streamCodex)).toHaveBeenCalledTimes(1);
+    expect(vi.mocked(streamClaude)).not.toHaveBeenCalled();
+    const lastCall = vi.mocked(streamCodex).mock.calls.at(-1)!;
+    expect(lastCall[2]).toEqual({ model: 'gpt-5-codex' });
+  });
+
+  it('/api/claude is an alias over the configured provider', async () => {
+    await saveAiProviderConfig({
+      provider: 'codex',
+      codex_model: 'gpt-5-codex',
+      updated_at: '2026-01-01T00:00:00.000Z',
+    });
+    const url = await makeServer({ review, state });
+    const res = await get(url, '/api/claude?chunk_id=c1');
+    expect(res.status).toBe(200);
+    expect(vi.mocked(streamCodex)).toHaveBeenCalledTimes(1);
+    expect(vi.mocked(streamClaude)).not.toHaveBeenCalled();
+  });
+
+  it('streams provider errors as SSE error events', async () => {
+    await saveAiProviderConfig({
+      provider: 'codex',
+      updated_at: '2026-01-01T00:00:00.000Z',
+    });
+    vi.mocked(streamCodex).mockImplementationOnce((_prompt, handlers) => {
+      process.nextTick(() => handlers.onError('failed to start codex: ENOENT'));
+      return () => {};
+    });
+    const url = await makeServer({ review, state });
+    const res = await get(url, '/api/ai?chunk_id=c1');
+    expect(res.status).toBe(200);
+    await expect(res.text()).resolves.toContain('event: error');
+  });
+
+  it('cancels an active Codex stream when the review is deleted', async () => {
+    await saveAiProviderConfig({
+      provider: 'codex',
+      updated_at: '2026-01-01T00:00:00.000Z',
+    });
+    const cancel = vi.fn();
+    vi.mocked(streamCodex).mockImplementationOnce((_prompt, handlers) => {
+      handlers.onDelta('partial');
+      return cancel;
+    });
+    const url = await makeServer({ review, state });
+    const streamRes = await get(url, '/api/ai?chunk_id=c1');
+    expect(streamRes.status).toBe(200);
+    expect(cancel).not.toHaveBeenCalled();
+
+    const deleteRes = await del(url, '/api/review');
+    expect(deleteRes.status).toBe(200);
+    expect(cancel).toHaveBeenCalledTimes(1);
   });
 });
 
