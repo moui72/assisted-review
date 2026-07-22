@@ -32,4 +32,4 @@ status: in-progress
 ## Phase 4: Verification and compatibility
 - [x] T018 [artifacts: api, infrastructure, ui] Run the existing backend and frontend test suites, update snapshots only when behavior intentionally changed, and confirm legacy Claude commentary still works through `/api/claude`.
 - [x] T019 [artifacts: constitution, datamodel, api, infrastructure, ui] Run the project lint/build/e2e verification commands used by this repo, then update any artifact text or task references only for drift discovered during verification.
-- [ ] T020 [parallel] Update user-facing docs or README references that still describe the commentary system as Claude-only, keeping provider-specific mentions only for installation/configuration details.
+- [x] T020 [parallel] Update user-facing docs or README references that still describe the commentary system as Claude-only, keeping provider-specific mentions only for installation/configuration details.
