@@ -44,6 +44,7 @@ function emptyState(pr: PrRef, headSha: string): ReviewState {
     version: STATE_VERSION,
     pr,
     head_sha: headSha,
+    draft_head_sha: headSha,
     started_at: new Date().toISOString(),
     comments: [],
     flagged: [],
@@ -164,6 +165,15 @@ const MIGRATIONS: MigrationStep[] = [
     },
   },
   {
+    // Backfill the SHA current drafts were created against. This intentionally
+    // runs before loadState refreshes head_sha to the latest fetched value.
+    backfill: (s) => {
+      if (typeof s.draft_head_sha !== 'string') {
+        s.draft_head_sha = typeof s.head_sha === 'string' ? s.head_sha : '';
+      }
+    },
+  },
+  {
     // v1 -> v2: DraftComment/StoredNote/flagged gained anchor-snapshot fields
     // (file, hunk_header, displaced) for Anchor Reconciliation. There's no way
     // to know what a pre-existing entry used to be anchored to, so legacy
@@ -269,8 +279,9 @@ export async function loadState(
   try {
     const raw = await readFile(statePath(pr), 'utf8');
     let state = migrate(JSON.parse(raw));
-    // Keep the persisted state; just refresh head_sha (staleness handling is a
-    // later slice — for now we surface the latest sha we fetched).
+    if (state.comments.length === 0) state.draft_head_sha = headSha;
+    // Keep the persisted state; refresh only the latest fetched head SHA.
+    // draft_head_sha is deliberately preserved while inline drafts exist.
     state.head_sha = headSha;
     if (chunks) state = reconcileAnchors(state, chunks);
     return state;
@@ -303,7 +314,11 @@ export function applyAction(state: ReviewState, action: Action): ReviewState {
         created_at: now,
         updated_at: now,
       };
-      return { ...state, comments: [...state.comments, comment] };
+      return {
+        ...state,
+        draft_head_sha: state.comments.length === 0 ? state.head_sha : state.draft_head_sha,
+        comments: [...state.comments, comment],
+      };
     }
     case 'update_comment':
       return {

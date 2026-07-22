@@ -293,7 +293,7 @@ export async function startServer(
           state.comments,
           verdict as GitLabVerdict,
           body ?? '',
-          state.head_sha,
+          state.draft_head_sha,
           state.gitlab_submit_progress,
         );
         if (result.ok && !result.html_url && review.meta?.url) {
@@ -318,7 +318,7 @@ export async function startServer(
           state.comments,
           verdict as Verdict,
           body ?? '',
-          state.head_sha,
+          state.draft_head_sha,
         );
         result = await submitReview(review.pr, payload);
         nextState = result.ok

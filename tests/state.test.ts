@@ -22,6 +22,7 @@ const baseState = (pr: PrRef): ReviewState => ({
   version: STATE_VERSION,
   pr,
   head_sha: 'sha0',
+  draft_head_sha: 'sha0',
   started_at: '2020-01-01T00:00:00.000Z',
   comments: [],
   flagged: [],
@@ -374,6 +375,20 @@ describe('migrate', () => {
     expect(result.pr.platform).toBe('github');
   });
 
+  it('backfills draft_head_sha from persisted head_sha before load refreshes it', () => {
+    const raw = {
+      pr,
+      head_sha: 'drafted-sha',
+      started_at: '2020-01-01T00:00:00.000Z',
+      comments: [],
+      flagged: [],
+      viewed: [],
+      notes: [],
+    };
+    const result = migrate(raw);
+    expect(result.draft_head_sha).toBe('drafted-sha');
+  });
+
   it('does not overwrite an existing platform field', () => {
     const glPr: PrRef = { owner: 'group/repo', repo: 'proj', number: 1, platform: 'gitlab' };
     const state = baseState(glPr);
@@ -607,6 +622,39 @@ describe('loadState / saveState persistence', () => {
     await saveState(state);
     const reloaded = await loadState(pr, 'new-sha');
     expect(reloaded.head_sha).toBe('new-sha');
+    await cleanup(pr);
+  });
+
+  it('loadState preserves draft_head_sha while inline comments exist', async () => {
+    const pr: PrRef = { owner: 'o', repo: 'r', number: 1005, platform: 'github' as const };
+    await cleanup(pr);
+    let state = await loadState(pr, 'drafted-sha');
+    state = applyAction(state, {
+      type: 'add_comment',
+      chunk_id: 'c1',
+      side: 'RIGHT',
+      line: 1,
+      body: 'drafted before refresh',
+      file: 'a.ts',
+      hunk_header: '@@ -1,3 +1,3 @@',
+    });
+    await saveState(state);
+
+    const reloaded = await loadState(pr, 'latest-sha');
+    expect(reloaded.head_sha).toBe('latest-sha');
+    expect(reloaded.draft_head_sha).toBe('drafted-sha');
+    await cleanup(pr);
+  });
+
+  it('loadState resets draft_head_sha to latest head_sha when no inline comments exist', async () => {
+    const pr: PrRef = { owner: 'o', repo: 'r', number: 1006, platform: 'github' as const };
+    await cleanup(pr);
+    const state = await loadState(pr, 'old-sha');
+    await saveState(state);
+
+    const reloaded = await loadState(pr, 'latest-sha');
+    expect(reloaded.head_sha).toBe('latest-sha');
+    expect(reloaded.draft_head_sha).toBe('latest-sha');
     await cleanup(pr);
   });
 });

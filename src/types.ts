@@ -178,7 +178,10 @@ export interface ReviewState {
   pr: PrRef;
   /** Cached PR metadata so the reviews listing can show titles without re-fetching. */
   meta?: PrMeta;
+  /** Latest fetched head SHA, refreshed on every load. */
   head_sha: string;
+  /** Head SHA that current inline drafts were created against. */
+  draft_head_sha: string;
   started_at: string;
   comments: DraftComment[];
   flagged: FlaggedEntry[];

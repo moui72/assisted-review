@@ -115,6 +115,7 @@ const state: ReviewState = {
   version: STATE_VERSION,
   pr,
   head_sha: 'abc',
+  draft_head_sha: 'abc',
   started_at: new Date().toISOString(),
   comments: [],
   flagged: [],
@@ -532,7 +533,7 @@ describe('POST /api/submit', () => {
       expect.anything(),
       'comment',
       'summary',
-      state.head_sha,
+      state.draft_head_sha,
       partialProgress,
     );
   });
