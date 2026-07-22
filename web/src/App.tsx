@@ -283,19 +283,17 @@ export function App() {
     setStreaming(null);
   }, []);
 
-  // Ask AI about the current chunk (empty question → "explain"). One stream
-  // at a time; it persists server-side on completion, so navigating away is safe.
-  const askAi = useCallback(
-    (question: string) => {
-      if (!activeId || streaming) return;
-      if (preloadTargetId === activeId) return;
+  const startAiStream = useCallback(
+    (targetId: string, question: string) => {
+      if (streaming) return false;
+      if (preloadTargetId === targetId) return false;
       preloadCancelRef.current?.();
       preloadCancelRef.current = null;
       setAiError(null);
       const kind: AiNoteKind = question.trim() ? 'investigation' : 'initial';
-      setStreaming({ chunkId: activeId, kind, text: '' });
+      setStreaming({ chunkId: targetId, kind, text: '' });
       aiCloseRef.current = streamAi(
-        { chunkId: activeId, question },
+        { chunkId: targetId, question },
         {
           onDelta: (t) =>
             setStreaming((s) => (s ? { ...s, text: s.text + t } : s)),
@@ -311,8 +309,36 @@ export function App() {
           },
         },
       );
+      return true;
     },
-    [activeId, streaming, preloadTargetId],
+    [streaming, preloadTargetId],
+  );
+
+  // Ask AI about the current chunk (empty question → "explain"). One stream
+  // at a time; it persists server-side on completion, so navigating away is safe.
+  const askAi = useCallback(
+    (question: string) => {
+      if (!activeId) return;
+      startAiStream(activeId, question);
+    },
+    [activeId, startAiStream],
+  );
+
+  const regenerateAiNote = useCallback(
+    async (id: string) => {
+      if (!state || streaming) return;
+      const note = state.notes.find((n) => n.id === id);
+      if (!note || note.kind !== 'initial') return;
+      if (preloadTargetId === note.chunk_id) return;
+      try {
+        const next = await postAction({ type: 'delete_note', id });
+        setState(next);
+        startAiStream(note.chunk_id, '');
+      } catch (e) {
+        setAiError(errMsg(e));
+      }
+    },
+    [state, streaming, preloadTargetId, startAiStream],
   );
 
   // Keyboard navigation (ignored while typing in the comment box).
@@ -472,6 +498,7 @@ export function App() {
     onAsk: askAi,
     onStop: streaming?.chunkId === activeId ? stopAi : undefined,
     onDeleteNote: (id: string) => void dispatch({ type: 'delete_note', id }),
+    onRegenerateNote: (id: string) => void regenerateAiNote(id),
   };
 
   return (

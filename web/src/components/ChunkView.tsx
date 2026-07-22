@@ -14,6 +14,7 @@ export interface AiPanelProps {
   onAsk: (question: string) => void;
   onStop?: () => void;
   onDeleteNote: (id: string) => void;
+  onRegenerateNote?: (id: string) => void;
 }
 
 // One chunk page: fixed file header, scrollable diff, pinned AI annotation.

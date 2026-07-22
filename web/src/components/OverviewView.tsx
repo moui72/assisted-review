@@ -100,7 +100,8 @@ function Summary({ ai }: { ai: AiPanelProps }) {
         )}
         {summary?.id && (
           <button
-            onClick={() => ai.onDeleteNote(summary.id!)}
+            onClick={() => ai.onRegenerateNote?.(summary.id!)}
+            disabled={!ai.onRegenerateNote}
             className="font-sans text-[11px] text-faint transition hover:text-[var(--del-fg)]"
           >
             regenerate

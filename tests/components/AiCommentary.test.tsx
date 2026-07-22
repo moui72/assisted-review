@@ -56,4 +56,25 @@ describe('AiCommentary', () => {
 
     expect(onStop).toHaveBeenCalledOnce();
   });
+
+  it('offers regenerate for persisted initial notes', async () => {
+    const onRegenerateNote = vi.fn();
+    render(
+      <AiCommentary
+        notes={[note]}
+        deletableNoteIds={new Set(['n1'])}
+        streaming={null}
+        busy={false}
+        error={null}
+        askRef={createRef<HTMLInputElement>()}
+        onAsk={vi.fn()}
+        onDeleteNote={vi.fn()}
+        onRegenerateNote={onRegenerateNote}
+      />,
+    );
+
+    await userEvent.click(screen.getByRole('button', { name: 'regenerate' }));
+
+    expect(onRegenerateNote).toHaveBeenCalledWith('n1');
+  });
 });

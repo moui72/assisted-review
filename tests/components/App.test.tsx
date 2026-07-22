@@ -26,6 +26,7 @@ vi.mock('../../web/src/api.ts', async (importOriginal) => {
     fetchReview: vi.fn(),
     fetchState: vi.fn(),
     postAction: vi.fn(),
+    streamAi: vi.fn(() => vi.fn()),
     fetchInvestigationConfig: vi.fn(async () => ({
       platform: 'github',
       owner: 'alice',
@@ -36,7 +37,7 @@ vi.mock('../../web/src/api.ts', async (importOriginal) => {
   };
 });
 
-import { fetchReview, fetchState, postAction, fetchInvestigationConfig } from '../../web/src/api.ts';
+import { fetchReview, fetchState, postAction, fetchInvestigationConfig, streamAi } from '../../web/src/api.ts';
 import { App } from '../../web/src/App.tsx';
 
 const pr = { owner: 'alice', repo: 'proj', number: 1, platform: 'github' as const };
@@ -284,5 +285,43 @@ describe('App — investigation access banner', () => {
     // Escape closes the modal via the global handler.
     await user.keyboard('{Escape}');
     expect(screen.queryByText('Diff only (default)')).not.toBeInTheDocument();
+  });
+});
+
+describe('App — AI note regeneration', () => {
+  it('deletes the persisted initial note and starts a replacement stream for the same target', async () => {
+    const user = userEvent.setup();
+    const stateWithSummary: ReviewState = {
+      ...initialState(),
+      notes: [
+        {
+          id: 'n1',
+          chunk_id: '__overview__',
+          kind: 'initial',
+          body: 'Existing summary',
+          created_at: 't',
+          updated_at: 't',
+        },
+      ],
+    };
+    const stateAfterDelete: ReviewState = { ...stateWithSummary, notes: [] };
+
+    vi.mocked(fetchReview).mockResolvedValue(review);
+    vi.mocked(fetchState).mockImplementation(async () => stateWithSummary);
+    vi.mocked(postAction).mockResolvedValue(stateAfterDelete);
+    vi.mocked(streamAi).mockClear();
+
+    render(<App />);
+
+    await waitFor(() => expect(screen.getByText('Existing summary')).toBeInTheDocument());
+    await user.click(screen.getByRole('button', { name: 'regenerate' }));
+
+    await waitFor(() =>
+      expect(postAction).toHaveBeenCalledWith({ type: 'delete_note', id: 'n1' }),
+    );
+    expect(streamAi).toHaveBeenCalledWith(
+      { chunkId: '__overview__', question: '' },
+      expect.anything(),
+    );
   });
 });

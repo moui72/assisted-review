@@ -17,17 +17,20 @@ const KIND_LABEL: Partial<Record<AiNoteKind, string>> = {
 function Note({
   note,
   onDelete,
+  onRegenerate,
   live,
 }: {
   note: StoredNote | NotePreview;
   onDelete?: (id: string) => void;
+  onRegenerate?: (id: string) => void;
   live?: boolean;
 }) {
   const label = KIND_LABEL[note.kind];
   const tone = note.kind === 'initial' ? 'text-fg/85' : 'text-muted';
+  const persistedId = 'id' in note ? note.id : undefined;
   return (
     <div className="group">
-      {(label || (onDelete && 'id' in note)) && (
+      {(label || (persistedId && (onDelete || onRegenerate))) && (
         <p className="font-serif text-[14.5px] leading-[1.7]">
           {label && (
             <span className="mr-2 align-middle font-sans text-[10px] font-medium tracking-[0.14em] text-accent/80 uppercase">
@@ -35,9 +38,17 @@ function Note({
               {note.kind === 'investigation' && note.prompt ? ` · ${note.prompt}` : ''}
             </span>
           )}
-          {onDelete && 'id' in note && (
+          {onRegenerate && persistedId && note.kind === 'initial' && (
             <button
-              onClick={() => onDelete(note.id)}
+              onClick={() => onRegenerate(persistedId)}
+              className="ml-2 align-middle font-sans text-[10px] text-faint opacity-0 transition group-hover:opacity-100 hover:text-accent"
+            >
+              regenerate
+            </button>
+          )}
+          {onDelete && persistedId && (
+            <button
+              onClick={() => onDelete(persistedId)}
               className="ml-2 align-middle font-sans text-[10px] text-faint opacity-0 transition group-hover:opacity-100 hover:text-[var(--del-fg)]"
             >
               delete
@@ -76,6 +87,7 @@ export function AiCommentary({
   onAsk,
   onStop,
   onDeleteNote,
+  onRegenerateNote,
   subject = 'chunk',
 }: {
   notes: StoredNote[];
@@ -90,6 +102,7 @@ export function AiCommentary({
   onAsk: (question: string) => void;
   onStop?: () => void;
   onDeleteNote: (id: string) => void;
+  onRegenerateNote?: (id: string) => void;
   subject?: 'chunk' | 'PR';
 }) {
   const [q, setQ] = useState('');
@@ -151,6 +164,7 @@ export function AiCommentary({
               key={n.id}
               note={n}
               onDelete={deletableNoteIds.has(n.id) ? onDeleteNote : undefined}
+              onRegenerate={deletableNoteIds.has(n.id) ? onRegenerateNote : undefined}
             />
           ))}
           {streaming && (
