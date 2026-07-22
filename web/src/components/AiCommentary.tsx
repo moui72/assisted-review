@@ -3,8 +3,8 @@ import type { AiNoteKind, StoredNote } from '../api.ts';
 import { ErrorBanner } from './ErrorBanner.tsx';
 import { Markdown } from './Markdown.tsx';
 
-/** A note not yet persisted — the live-streaming preview shown while a
- *  Claude request is in flight. Same content fields as `StoredNote`, minus
+/** A note not yet persisted — the live-streaming preview shown while an AI
+ *  request is in flight. Same content fields as `StoredNote`, minus
  *  the id/chunk_id/created_at it doesn't have yet. */
 type NotePreview = Pick<StoredNote, 'kind' | 'body' | 'prompt' | 'suggested_action'>;
 
@@ -64,7 +64,7 @@ function Note({
   );
 }
 
-// Claude's voice: an editor's margin annotation (serif), plus an ask box that
+// AI commentary: an editor's margin annotation (serif), plus an ask box that
 // streams a live answer. Empty question = "explain this chunk".
 export function AiCommentary({
   notes,
@@ -108,7 +108,7 @@ export function AiCommentary({
             ✦
           </span>
           <span className="font-sans text-[10px] font-semibold tracking-[0.22em] text-muted uppercase">
-            Claude
+            AI
           </span>
           <span className="h-px flex-1 bg-edge" />
           <form onSubmit={submit} className="flex items-center gap-1.5">
