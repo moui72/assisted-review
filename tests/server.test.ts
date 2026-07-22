@@ -445,6 +445,39 @@ describe('POST /api/submit', () => {
     expect(res.status).toBe(409);
   });
 
+  it('uses draft_head_sha, not latest head_sha, for GitHub stale checks', async () => {
+    const draftedState: ReviewState = {
+      ...state,
+      head_sha: 'latest-sha',
+      draft_head_sha: 'drafted-sha',
+      comments: [
+        {
+          id: 'draft-1',
+          chunk_id: 'c1',
+          side: 'RIGHT',
+          line: 1,
+          body: 'drafted before refresh',
+          file: chunk.file,
+          hunk_header: chunk.hunk_header,
+          displaced: false,
+          created_at: '2026-01-01T00:00:00.000Z',
+          updated_at: '2026-01-01T00:00:00.000Z',
+        },
+      ],
+    };
+    vi.mocked(submitReview).mockResolvedValueOnce({
+      ok: false,
+      stale: { old: 'drafted-sha', new_head: 'latest-sha', inline_count: 1 },
+    });
+    const url = await makeServer({ review, state: draftedState });
+    const res = await post(url, '/api/submit', { verdict: 'COMMENT', body: '' });
+    expect(res.status).toBe(409);
+    expect(vi.mocked(submitReview)).toHaveBeenCalledWith(
+      review.pr,
+      expect.objectContaining({ commit_id: 'drafted-sha' }),
+    );
+  });
+
   it('routes GitLab review to submitGitLabReview', async () => {
     const glReview: Review = { ...review, pr: { ...review.pr, platform: 'gitlab' } };
     vi.mocked(submitGitLabReview).mockClear();
@@ -455,6 +488,47 @@ describe('POST /api/submit', () => {
     expect(res.status).toBe(200);
     expect(vi.mocked(submitGitLabReview)).toHaveBeenCalledTimes(1);
     expect(vi.mocked(submitReview)).toHaveBeenCalledTimes(0);
+  });
+
+  it('uses draft_head_sha, not latest head_sha, for GitLab stale checks', async () => {
+    const glReview: Review = { ...review, pr: { ...review.pr, platform: 'gitlab' } };
+    const draftedState: ReviewState = {
+      ...state,
+      pr: glReview.pr,
+      head_sha: 'latest-sha',
+      draft_head_sha: 'drafted-sha',
+      comments: [
+        {
+          id: 'draft-1',
+          chunk_id: 'c1',
+          side: 'RIGHT',
+          line: 1,
+          body: 'drafted before refresh',
+          file: chunk.file,
+          hunk_header: chunk.hunk_header,
+          displaced: false,
+          created_at: '2026-01-01T00:00:00.000Z',
+          updated_at: '2026-01-01T00:00:00.000Z',
+        },
+      ],
+    };
+    vi.mocked(submitGitLabReview).mockResolvedValueOnce({
+      ok: false,
+      stale: { old: 'drafted-sha', new_head: 'latest-sha', inline_count: 1 },
+      progress: { posted_comment_ids: [], note_posted: false, approved: false },
+    });
+    const url = await makeServer({ review: glReview, state: draftedState });
+    const res = await post(url, '/api/submit', { verdict: 'comment', body: '' });
+    expect(res.status).toBe(409);
+    expect(vi.mocked(submitGitLabReview)).toHaveBeenCalledWith(
+      glReview.pr,
+      glReview.chunks,
+      draftedState.comments,
+      'comment',
+      '',
+      'drafted-sha',
+      undefined,
+    );
   });
 
   it('injects html_url from review meta when submitGitLabReview returns none', async () => {
