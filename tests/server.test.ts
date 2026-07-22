@@ -1030,6 +1030,22 @@ describe('GET /api/claude', () => {
   });
 });
 
+describe('GET /api/ai', () => {
+  beforeEach(async () => {
+    const { STATE_DIR } = await import('../src/state');
+    await rm(join(STATE_DIR, 'ai-config.json'), { force: true });
+    await rm(join(STATE_DIR, 'investigation-config.json'), { force: true });
+  });
+
+  it('starts an SSE stream for a valid chunk_id', async () => {
+    const url = await makeServer({ review, state });
+    const res = await get(url, '/api/ai?chunk_id=c1');
+    expect(res.status).toBe(200);
+    expect(res.headers.get('content-type')).toContain('text/event-stream');
+    expect(vi.mocked(streamClaude)).toHaveBeenCalled();
+  });
+});
+
 describe('unknown routes in api-only mode', () => {
   it('returns 404 for unrecognized paths', async () => {
     const url = await makeServer({ review: null, state: null });

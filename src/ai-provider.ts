@@ -39,10 +39,12 @@ export function streamAiProvider(
   config: AiProviderConfig,
   handlers: AiStreamHandlers,
   adapters: AiProviderAdapters,
-  opts: Omit<AiStreamOptions, 'model'> = {},
+  opts?: Omit<AiStreamOptions, 'model'>,
 ): () => void {
   const model = selectedModel(config);
-  const streamOpts: AiStreamOptions = model ? { ...opts, model } : opts;
+  const streamOpts: AiStreamOptions | undefined = model
+    ? { ...(opts ?? {}), model }
+    : opts;
   if (config.provider === 'claude') {
     return adapters.claude(prompt, handlers, streamOpts);
   }
