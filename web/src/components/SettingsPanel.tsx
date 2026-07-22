@@ -1,5 +1,6 @@
+import { useEffect, useState } from 'react';
 import { useTheme, type Palette } from '../theme.tsx';
-import type { InvestigationConfig, PreloadConfig } from '../api.ts';
+import type { AiProvider, AiProviderConfig, InvestigationConfig, PreloadConfig } from '../api.ts';
 
 // The five curated palettes, with a representative accent swatch (each
 // palette's dark-mode accent) so the picker previews the identity at a glance.
@@ -17,6 +18,16 @@ const MODE_LABEL: Record<InvestigationConfig['mode'], string> = {
   api: 'Full changed files',
   'temp-clone': 'Temporary clone',
   'always-clone': 'Persistent clone',
+};
+
+const DEFAULT_AI_CONFIG: AiProviderConfig = {
+  provider: 'claude',
+  updated_at: '1970-01-01T00:00:00.000Z',
+};
+
+const PROVIDER_LABEL: Record<AiProvider, string> = {
+  claude: 'Claude',
+  codex: 'Codex',
 };
 
 function SectionTitle({ children }: { children: string }) {
@@ -71,6 +82,8 @@ export function SettingsPanel({
   onClose,
   preloadConfig,
   onPreloadChange,
+  aiConfig,
+  onAiConfigChange,
   investigationMode,
   onOpenInvestigation,
 }: {
@@ -78,10 +91,38 @@ export function SettingsPanel({
   onClose: () => void;
   preloadConfig: PreloadConfig | null;
   onPreloadChange: (cfg: PreloadConfig) => void;
+  aiConfig: AiProviderConfig | null;
+  onAiConfigChange: (update: Partial<AiProviderConfig>) => void | Promise<void>;
   investigationMode?: InvestigationConfig['mode'];
   onOpenInvestigation: () => void;
 }) {
   const { theme, toggle, palette, setPalette } = useTheme();
+  const config = aiConfig ?? DEFAULT_AI_CONFIG;
+  const modelField = config.provider === 'claude' ? 'claude_model' : 'codex_model';
+  const [modelDraft, setModelDraft] = useState(config[modelField] ?? '');
+  const [aiError, setAiError] = useState<string | null>(null);
+  const [savingAi, setSavingAi] = useState(false);
+
+  useEffect(() => {
+    setModelDraft(config[modelField] ?? '');
+    setAiError(null);
+  }, [config.provider, config.claude_model, config.codex_model, modelField]);
+
+  const saveAi = async (update: Partial<AiProviderConfig>) => {
+    setSavingAi(true);
+    setAiError(null);
+    try {
+      await onAiConfigChange(update);
+    } catch (e) {
+      setAiError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setSavingAi(false);
+    }
+  };
+
+  const saveModelDraft = () => {
+    void saveAi({ provider: config.provider, [modelField]: modelDraft.trim() });
+  };
 
   if (!open) return null;
 
@@ -161,8 +202,37 @@ export function SettingsPanel({
           </Row>
         </div>
 
-        <SectionTitle>Claude</SectionTitle>
+        <SectionTitle>AI</SectionTitle>
         <div className="divide-y divide-edge/50">
+          <Row label="Provider">
+            <ChipGroup
+              options={['claude', 'codex'] as const}
+              value={config.provider}
+              onChange={(provider) => void saveAi({ provider })}
+              format={(provider) => PROVIDER_LABEL[provider]}
+            />
+          </Row>
+          <Row label={`${PROVIDER_LABEL[config.provider]} model`}>
+            <input
+              value={modelDraft}
+              onChange={(e) => setModelDraft(e.target.value)}
+              onBlur={saveModelDraft}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  e.currentTarget.blur();
+                }
+              }}
+              disabled={savingAi}
+              placeholder="default"
+              aria-label={`${PROVIDER_LABEL[config.provider]} model`}
+              className="w-40 rounded border border-edge-strong bg-bg px-2 py-0.5 font-mono text-[11px] text-fg placeholder:text-faint focus:border-accent/60 focus:outline-none disabled:opacity-50"
+            />
+          </Row>
+          {aiError && (
+            <div className="py-2 font-mono text-[11px] text-[var(--del-fg)]">
+              {aiError}
+            </div>
+          )}
           <Row label="Investigation access">
             <button
               onClick={onOpenInvestigation}
