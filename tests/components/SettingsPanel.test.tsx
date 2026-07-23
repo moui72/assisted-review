@@ -3,14 +3,21 @@ import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { SettingsPanel } from '../../web/src/components/SettingsPanel.tsx';
 import { ThemeProvider } from '../../web/src/theme.tsx';
-import type { PreloadConfig } from '../../web/src/api.ts';
+import type { AiProviderConfig, PreloadConfig } from '../../web/src/api.ts';
 
 const cfg: PreloadConfig = { preload_chunks: 1, preload_overview: true };
+const aiCfg: AiProviderConfig = {
+  provider: 'claude',
+  claude_model: 'sonnet',
+  codex_model: 'gpt-5-codex',
+  updated_at: '2026-01-01T00:00:00.000Z',
+};
 
 function renderPanel(props: Partial<Parameters<typeof SettingsPanel>[0]> = {}) {
   const onClose = vi.fn();
   const onPreloadChange = vi.fn();
   const onOpenInvestigation = vi.fn();
+  const onAiConfigChange = vi.fn();
   const result = render(
     <ThemeProvider>
       <SettingsPanel
@@ -18,12 +25,14 @@ function renderPanel(props: Partial<Parameters<typeof SettingsPanel>[0]> = {}) {
         onClose={onClose}
         preloadConfig={cfg}
         onPreloadChange={onPreloadChange}
+        aiConfig={aiCfg}
+        onAiConfigChange={onAiConfigChange}
         onOpenInvestigation={onOpenInvestigation}
         {...props}
       />
     </ThemeProvider>,
   );
-  return { ...result, onClose, onPreloadChange, onOpenInvestigation };
+  return { ...result, onClose, onPreloadChange, onOpenInvestigation, onAiConfigChange };
 }
 
 describe('SettingsPanel', () => {
@@ -154,6 +163,91 @@ describe('SettingsPanel', () => {
       const { onOpenInvestigation } = renderPanel();
       await userEvent.click(screen.getByRole('button', { name: 'Diff only' }));
       expect(onOpenInvestigation).toHaveBeenCalled();
+    });
+  });
+
+  describe('AI provider controls', () => {
+    it('shows Claude as the default provider when config has not loaded', () => {
+      renderPanel({ aiConfig: null });
+      expect(screen.getByRole('button', { name: 'Claude' })).toHaveClass('border-accent');
+      expect(screen.getByLabelText('Claude model')).toHaveValue('');
+    });
+
+    it('persists provider changes without dropping inactive model values', async () => {
+      const { onAiConfigChange } = renderPanel();
+      await userEvent.click(screen.getByRole('button', { name: 'Codex' }));
+      expect(onAiConfigChange).toHaveBeenCalledWith({ provider: 'codex' });
+    });
+
+    it('shows and saves the active provider model', async () => {
+      const { onAiConfigChange } = renderPanel();
+      const input = screen.getByLabelText('Claude model');
+      expect(input).toHaveValue('sonnet');
+
+      await userEvent.clear(input);
+      await userEvent.type(input, 'opus');
+      await userEvent.tab();
+
+      expect(onAiConfigChange).toHaveBeenCalledWith({ provider: 'claude', claude_model: 'opus' });
+    });
+
+    it('uses the Codex model field when Codex is active', async () => {
+      const { onAiConfigChange } = renderPanel({
+        aiConfig: { ...aiCfg, provider: 'codex' },
+      });
+      const input = screen.getByLabelText('Codex model');
+      expect(input).toHaveValue('gpt-5-codex');
+
+      await userEvent.clear(input);
+      await userEvent.type(input, 'gpt-5.1-codex');
+      await userEvent.keyboard('{Enter}');
+
+      expect(onAiConfigChange).toHaveBeenCalledWith({
+        provider: 'codex',
+        codex_model: 'gpt-5.1-codex',
+      });
+    });
+
+    it('shows save errors inline', async () => {
+      const onAiConfigChange = vi.fn(async () => {
+        throw new Error('bad model');
+      });
+      renderPanel({
+        onAiConfigChange,
+      });
+
+      await userEvent.click(screen.getByRole('button', { name: 'Codex' }));
+
+      expect(onAiConfigChange).toHaveBeenCalledWith({ provider: 'codex' });
+      expect(await screen.findByText('bad model')).toBeInTheDocument();
+    });
+
+    it('disables the model input while saving', async () => {
+      const onAiConfigChange = vi.fn(
+        () =>
+          new Promise<void>(() => {
+            // Keep pending so the saving state is visible.
+          }),
+      );
+      renderPanel({
+        onAiConfigChange,
+      });
+
+      await userEvent.clear(screen.getByLabelText('Claude model'));
+      await userEvent.type(screen.getByLabelText('Claude model'), 'opus');
+      await userEvent.tab();
+
+      expect(screen.getByLabelText('Claude model')).toBeDisabled();
+    });
+
+    it('clears a provider model with a blank value', async () => {
+      const { onAiConfigChange } = renderPanel();
+      const input = screen.getByLabelText('Claude model');
+
+      await userEvent.clear(input);
+      await userEvent.tab();
+
+      expect(onAiConfigChange).toHaveBeenCalledWith({ provider: 'claude', claude_model: '' });
     });
   });
 });

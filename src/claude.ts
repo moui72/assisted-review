@@ -150,6 +150,8 @@ export function splitSuggestedAction(text: string): { body: string; suggestedAct
 export interface StreamClaudeOptions {
   /** Working directory for the subprocess. Defaults to a temp dir (no repo access). */
   cwd?: string;
+  /** Optional Claude model override. Omitted to use the CLI default. */
+  model?: string;
   /** When true, drops Read/Grep/Glob from --disallowed-tools (still read-only — no
    *  Bash/Edit/Write/WebFetch/WebSearch/Task/NotebookEdit, ever). Default false. */
   allowRepoRead?: boolean;
@@ -172,6 +174,7 @@ export function streamClaude(
       'stream-json',
       '--include-partial-messages',
       '--verbose',
+      ...(opts.model ? ['--model', opts.model] : []),
       '--disallowed-tools',
       ...disallowedTools,
     ],

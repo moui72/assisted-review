@@ -24,6 +24,13 @@ vi.mock('../src/claude', () => ({
   splitSuggestedAction: vi.fn().mockReturnValue({ body: 'the body', suggestedAction: undefined }),
 }));
 
+vi.mock('../src/codex', () => ({
+  streamCodex: vi.fn((_prompt: unknown, handlers: { onDone: (full: string) => void }) => {
+    process.nextTick(() => handlers.onDone('Codex text'));
+    return () => {};
+  }),
+}));
+
 vi.mock('../src/review', () => ({
   loadReview: vi.fn(),
 }));
@@ -54,7 +61,15 @@ vi.mock('../src/gitlab-token', async (importOriginal) => {
 });
 
 import { startServer, type AppContext } from '../src/server';
-import { applyAction, saveState, deleteReview, listReviews } from '../src/state';
+import {
+  applyAction,
+  loadAiProviderConfig,
+  saveAiProviderConfig,
+  saveState,
+  deleteReview,
+  listReviews,
+  STATE_DIR,
+} from '../src/state';
 import { loadReview } from '../src/review';
 import { submitReview, submitGitLabReview } from '../src/submit';
 import {
@@ -64,6 +79,7 @@ import {
   clearGitLabToken,
 } from '../src/gitlab-token';
 import { streamClaude } from '../src/claude';
+import { streamCodex } from '../src/codex';
 import { fetchFileContent } from '../src/fetch';
 import { saveInvestigationConfigs, configKey } from '../src/investigation';
 import type { Review, ReviewState } from '../src/types';
@@ -107,6 +123,7 @@ const state: ReviewState = {
   version: STATE_VERSION,
   pr,
   head_sha: 'abc',
+  draft_head_sha: 'abc',
   started_at: new Date().toISOString(),
   comments: [],
   flagged: [],
@@ -158,6 +175,104 @@ describe('GET /api/config', () => {
     expect(res.status).toBe(200);
     const body = await res.json() as { app_version: string };
     expect(body.app_version).toBe('9.9.9-test');
+  });
+});
+
+describe('GET/POST /api/ai-config', () => {
+  const configPath = join(STATE_DIR, 'ai-config.json');
+
+  beforeEach(async () => {
+    await rm(configPath, { force: true });
+    await rm(`${configPath}.tmp`, { force: true });
+  });
+
+  afterEach(async () => {
+    await rm(configPath, { force: true });
+    await rm(`${configPath}.tmp`, { force: true });
+  });
+
+  it('GET returns the default Claude config without an active review', async () => {
+    const url = await makeServer({ review: null, state: null });
+    const res = await get(url, '/api/ai-config');
+    expect(res.status).toBe(200);
+    await expect(res.json()).resolves.toEqual({
+      provider: 'claude',
+      updated_at: '1970-01-01T00:00:00.000Z',
+    });
+  });
+
+  it('POST persists and returns a normalized Claude config', async () => {
+    const url = await makeServer({ review: null, state: null });
+    const res = await post(url, '/api/ai-config', {
+      provider: 'claude',
+      claude_model: '  claude-sonnet  ',
+    });
+    expect(res.status).toBe(200);
+    const body = await res.json() as { provider: string; claude_model?: string; updated_at: string };
+    expect(body.provider).toBe('claude');
+    expect(body.claude_model).toBe('claude-sonnet');
+    expect(Number.isNaN(Date.parse(body.updated_at))).toBe(false);
+    await expect(loadAiProviderConfig()).resolves.toMatchObject({
+      provider: 'claude',
+      claude_model: 'claude-sonnet',
+    });
+  });
+
+  it('POST preserves the inactive provider model when switching providers', async () => {
+    await saveAiProviderConfig({
+      provider: 'claude',
+      claude_model: 'sonnet',
+      codex_model: 'gpt-5-codex',
+      updated_at: 'old',
+    });
+    const url = await makeServer({ review: null, state: null });
+    const res = await post(url, '/api/ai-config', {
+      provider: 'codex',
+      codex_model: 'gpt-5',
+    });
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body).toMatchObject({
+      provider: 'codex',
+      claude_model: 'sonnet',
+      codex_model: 'gpt-5',
+    });
+  });
+
+  it('POST rejects an invalid provider without mutating the saved config', async () => {
+    await saveAiProviderConfig({
+      provider: 'claude',
+      claude_model: 'sonnet',
+      updated_at: 'old',
+    });
+    const url = await makeServer({ review: null, state: null });
+    const res = await post(url, '/api/ai-config', { provider: 'openai' });
+    expect(res.status).toBe(400);
+    await expect(loadAiProviderConfig()).resolves.toMatchObject({
+      provider: 'claude',
+      claude_model: 'sonnet',
+      updated_at: 'old',
+    });
+  });
+
+  it('POST rejects invalid JSON without mutating the saved config', async () => {
+    await saveAiProviderConfig({
+      provider: 'codex',
+      codex_model: 'gpt-5-codex',
+      updated_at: 'old',
+    });
+    const url = await makeServer({ review: null, state: null });
+    const res = await fetch(`${url}/api/ai-config`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: 'not-json',
+    });
+    expect(res.status).toBe(400);
+    await expect(loadAiProviderConfig()).resolves.toMatchObject({
+      provider: 'codex',
+      codex_model: 'gpt-5-codex',
+      updated_at: 'old',
+    });
   });
 });
 
@@ -338,6 +453,39 @@ describe('POST /api/submit', () => {
     expect(res.status).toBe(409);
   });
 
+  it('uses draft_head_sha, not latest head_sha, for GitHub stale checks', async () => {
+    const draftedState: ReviewState = {
+      ...state,
+      head_sha: 'latest-sha',
+      draft_head_sha: 'drafted-sha',
+      comments: [
+        {
+          id: 'draft-1',
+          chunk_id: 'c1',
+          side: 'RIGHT',
+          line: 1,
+          body: 'drafted before refresh',
+          file: chunk.file,
+          hunk_header: chunk.hunk_header,
+          displaced: false,
+          created_at: '2026-01-01T00:00:00.000Z',
+          updated_at: '2026-01-01T00:00:00.000Z',
+        },
+      ],
+    };
+    vi.mocked(submitReview).mockResolvedValueOnce({
+      ok: false,
+      stale: { old: 'drafted-sha', new_head: 'latest-sha', inline_count: 1 },
+    });
+    const url = await makeServer({ review, state: draftedState });
+    const res = await post(url, '/api/submit', { verdict: 'COMMENT', body: '' });
+    expect(res.status).toBe(409);
+    expect(vi.mocked(submitReview)).toHaveBeenCalledWith(
+      review.pr,
+      expect.objectContaining({ commit_id: 'drafted-sha' }),
+    );
+  });
+
   it('routes GitLab review to submitGitLabReview', async () => {
     const glReview: Review = { ...review, pr: { ...review.pr, platform: 'gitlab' } };
     vi.mocked(submitGitLabReview).mockClear();
@@ -348,6 +496,47 @@ describe('POST /api/submit', () => {
     expect(res.status).toBe(200);
     expect(vi.mocked(submitGitLabReview)).toHaveBeenCalledTimes(1);
     expect(vi.mocked(submitReview)).toHaveBeenCalledTimes(0);
+  });
+
+  it('uses draft_head_sha, not latest head_sha, for GitLab stale checks', async () => {
+    const glReview: Review = { ...review, pr: { ...review.pr, platform: 'gitlab' } };
+    const draftedState: ReviewState = {
+      ...state,
+      pr: glReview.pr,
+      head_sha: 'latest-sha',
+      draft_head_sha: 'drafted-sha',
+      comments: [
+        {
+          id: 'draft-1',
+          chunk_id: 'c1',
+          side: 'RIGHT',
+          line: 1,
+          body: 'drafted before refresh',
+          file: chunk.file,
+          hunk_header: chunk.hunk_header,
+          displaced: false,
+          created_at: '2026-01-01T00:00:00.000Z',
+          updated_at: '2026-01-01T00:00:00.000Z',
+        },
+      ],
+    };
+    vi.mocked(submitGitLabReview).mockResolvedValueOnce({
+      ok: false,
+      stale: { old: 'drafted-sha', new_head: 'latest-sha', inline_count: 1 },
+      progress: { posted_comment_ids: [], note_posted: false, approved: false },
+    });
+    const url = await makeServer({ review: glReview, state: draftedState });
+    const res = await post(url, '/api/submit', { verdict: 'comment', body: '' });
+    expect(res.status).toBe(409);
+    expect(vi.mocked(submitGitLabReview)).toHaveBeenCalledWith(
+      glReview.pr,
+      glReview.chunks,
+      draftedState.comments,
+      'comment',
+      '',
+      'drafted-sha',
+      undefined,
+    );
   });
 
   it('injects html_url from review meta when submitGitLabReview returns none', async () => {
@@ -426,7 +615,7 @@ describe('POST /api/submit', () => {
       expect.anything(),
       'comment',
       'summary',
-      state.head_sha,
+      state.draft_head_sha,
       partialProgress,
     );
   });
@@ -846,6 +1035,87 @@ describe('GET /api/claude', () => {
 
     // Let the intentionally-unfinished first stream close cleanly.
     handlers1?.onDone('unused');
+  });
+});
+
+describe('GET /api/ai', () => {
+  beforeEach(async () => {
+    const { STATE_DIR } = await import('../src/state');
+    await rm(join(STATE_DIR, 'ai-config.json'), { force: true });
+    await rm(join(STATE_DIR, 'investigation-config.json'), { force: true });
+    vi.mocked(streamCodex).mockClear();
+    vi.mocked(streamClaude).mockClear();
+  });
+
+  it('starts an SSE stream for a valid chunk_id', async () => {
+    const url = await makeServer({ review, state });
+    const res = await get(url, '/api/ai?chunk_id=c1');
+    expect(res.status).toBe(200);
+    expect(res.headers.get('content-type')).toContain('text/event-stream');
+    expect(vi.mocked(streamClaude)).toHaveBeenCalled();
+  });
+
+  it('dispatches to Codex when configured', async () => {
+    await saveAiProviderConfig({
+      provider: 'codex',
+      codex_model: 'gpt-5-codex',
+      updated_at: '2026-01-01T00:00:00.000Z',
+    });
+    const url = await makeServer({ review, state });
+    const res = await get(url, '/api/ai?chunk_id=c1');
+    expect(res.status).toBe(200);
+    expect(vi.mocked(streamCodex)).toHaveBeenCalledTimes(1);
+    expect(vi.mocked(streamClaude)).not.toHaveBeenCalled();
+    const lastCall = vi.mocked(streamCodex).mock.calls.at(-1)!;
+    expect(lastCall[2]).toEqual({ model: 'gpt-5-codex' });
+  });
+
+  it('/api/claude is an alias over the configured provider', async () => {
+    await saveAiProviderConfig({
+      provider: 'codex',
+      codex_model: 'gpt-5-codex',
+      updated_at: '2026-01-01T00:00:00.000Z',
+    });
+    const url = await makeServer({ review, state });
+    const res = await get(url, '/api/claude?chunk_id=c1');
+    expect(res.status).toBe(200);
+    expect(vi.mocked(streamCodex)).toHaveBeenCalledTimes(1);
+    expect(vi.mocked(streamClaude)).not.toHaveBeenCalled();
+  });
+
+  it('streams provider errors as SSE error events', async () => {
+    await saveAiProviderConfig({
+      provider: 'codex',
+      updated_at: '2026-01-01T00:00:00.000Z',
+    });
+    vi.mocked(streamCodex).mockImplementationOnce((_prompt, handlers) => {
+      process.nextTick(() => handlers.onError('failed to start codex: ENOENT'));
+      return () => {};
+    });
+    const url = await makeServer({ review, state });
+    const res = await get(url, '/api/ai?chunk_id=c1');
+    expect(res.status).toBe(200);
+    await expect(res.text()).resolves.toContain('event: error');
+  });
+
+  it('cancels an active Codex stream when the review is deleted', async () => {
+    await saveAiProviderConfig({
+      provider: 'codex',
+      updated_at: '2026-01-01T00:00:00.000Z',
+    });
+    const cancel = vi.fn();
+    vi.mocked(streamCodex).mockImplementationOnce((_prompt, handlers) => {
+      handlers.onDelta('partial');
+      return cancel;
+    });
+    const url = await makeServer({ review, state });
+    const streamRes = await get(url, '/api/ai?chunk_id=c1');
+    expect(streamRes.status).toBe(200);
+    expect(cancel).not.toHaveBeenCalled();
+
+    const deleteRes = await del(url, '/api/review');
+    expect(deleteRes.status).toBe(200);
+    expect(cancel).toHaveBeenCalledTimes(1);
   });
 });
 

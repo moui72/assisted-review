@@ -1,2 +1,4 @@
 # ARDD: copy installed skills/scripts into new worktrees (added by install.sh)
 .claude/skills/ardd-*/
+# ArDD: copy installed skills/scripts into new worktrees (added by install.sh)
+.agents/skills/ardd-*/

@@ -3,8 +3,8 @@ import type { AiNoteKind, StoredNote } from '../api.ts';
 import { ErrorBanner } from './ErrorBanner.tsx';
 import { Markdown } from './Markdown.tsx';
 
-/** A note not yet persisted — the live-streaming preview shown while a
- *  Claude request is in flight. Same content fields as `StoredNote`, minus
+/** A note not yet persisted — the live-streaming preview shown while an AI
+ *  request is in flight. Same content fields as `StoredNote`, minus
  *  the id/chunk_id/created_at it doesn't have yet. */
 type NotePreview = Pick<StoredNote, 'kind' | 'body' | 'prompt' | 'suggested_action'>;
 
@@ -17,17 +17,20 @@ const KIND_LABEL: Partial<Record<AiNoteKind, string>> = {
 function Note({
   note,
   onDelete,
+  onRegenerate,
   live,
 }: {
   note: StoredNote | NotePreview;
   onDelete?: (id: string) => void;
+  onRegenerate?: (id: string) => void;
   live?: boolean;
 }) {
   const label = KIND_LABEL[note.kind];
   const tone = note.kind === 'initial' ? 'text-fg/85' : 'text-muted';
+  const persistedId = 'id' in note ? note.id : undefined;
   return (
     <div className="group">
-      {(label || (onDelete && 'id' in note)) && (
+      {(label || (persistedId && (onDelete || onRegenerate))) && (
         <p className="font-serif text-[14.5px] leading-[1.7]">
           {label && (
             <span className="mr-2 align-middle font-sans text-[10px] font-medium tracking-[0.14em] text-accent/80 uppercase">
@@ -35,10 +38,18 @@ function Note({
               {note.kind === 'investigation' && note.prompt ? ` · ${note.prompt}` : ''}
             </span>
           )}
-          {onDelete && 'id' in note && (
+          {onRegenerate && persistedId && note.kind === 'initial' && (
             <button
-              onClick={() => onDelete(note.id)}
-              className="ml-2 align-middle font-sans text-[10px] text-faint opacity-0 transition group-hover:opacity-100 hover:text-[var(--del-fg)]"
+              onClick={() => onRegenerate(persistedId)}
+              className="ml-2 align-middle font-sans text-[10px] text-faint opacity-0 transition group-hover:opacity-100 focus-visible:opacity-100 hover:text-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/50"
+            >
+              regenerate
+            </button>
+          )}
+          {onDelete && persistedId && (
+            <button
+              onClick={() => onDelete(persistedId)}
+              className="ml-2 align-middle font-sans text-[10px] text-faint opacity-0 transition group-hover:opacity-100 focus-visible:opacity-100 hover:text-[var(--del-fg)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/50"
             >
               delete
             </button>
@@ -64,7 +75,7 @@ function Note({
   );
 }
 
-// Claude's voice: an editor's margin annotation (serif), plus an ask box that
+// AI commentary: an editor's margin annotation (serif), plus an ask box that
 // streams a live answer. Empty question = "explain this chunk".
 export function AiCommentary({
   notes,
@@ -74,7 +85,9 @@ export function AiCommentary({
   error,
   askRef,
   onAsk,
+  onStop,
   onDeleteNote,
+  onRegenerateNote,
   subject = 'chunk',
 }: {
   notes: StoredNote[];
@@ -87,7 +100,9 @@ export function AiCommentary({
   error: string | null;
   askRef: RefObject<HTMLInputElement | null>;
   onAsk: (question: string) => void;
+  onStop?: () => void;
   onDeleteNote: (id: string) => void;
+  onRegenerateNote?: (id: string) => void;
   subject?: 'chunk' | 'PR';
 }) {
   const [q, setQ] = useState('');
@@ -108,7 +123,7 @@ export function AiCommentary({
             ✦
           </span>
           <span className="font-sans text-[10px] font-semibold tracking-[0.22em] text-muted uppercase">
-            Claude
+            AI
           </span>
           <span className="h-px flex-1 bg-edge" />
           <form onSubmit={submit} className="flex items-center gap-1.5">
@@ -127,6 +142,15 @@ export function AiCommentary({
             >
               {busy ? '…' : q.trim() ? 'Ask' : 'Explain'}
             </button>
+            {streaming && onStop && (
+              <button
+                type="button"
+                onClick={onStop}
+                className="rounded-md border border-[var(--del-fg)]/45 px-2.5 py-1 text-[12px] font-medium text-[var(--del-fg)]/90 transition hover:bg-[var(--del-bg)]"
+              >
+                Stop
+              </button>
+            )}
           </form>
         </div>
 
@@ -140,6 +164,7 @@ export function AiCommentary({
               key={n.id}
               note={n}
               onDelete={deletableNoteIds.has(n.id) ? onDeleteNote : undefined}
+              onRegenerate={deletableNoteIds.has(n.id) ? onRegenerateNote : undefined}
             />
           ))}
           {streaming && (

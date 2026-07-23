@@ -1,12 +1,18 @@
-import { rm } from 'node:fs/promises';
+import { rm, writeFile } from 'node:fs/promises';
+import { join } from 'node:path';
 import {
+  applyAiProviderConfigUpdate,
   applyAction,
   deleteReview,
   listReviews,
+  loadAiProviderConfig,
   loadState,
   migrate,
+  normalizeAiProviderConfig,
   reconcileAnchors,
+  saveAiProviderConfig,
   saveState,
+  STATE_DIR,
   statePath,
 } from '../src/state';
 import type { Action, Chunk, PrRef, ReviewState } from '../src/types';
@@ -16,6 +22,7 @@ const baseState = (pr: PrRef): ReviewState => ({
   version: STATE_VERSION,
   pr,
   head_sha: 'sha0',
+  draft_head_sha: 'sha0',
   started_at: '2020-01-01T00:00:00.000Z',
   comments: [],
   flagged: [],
@@ -368,6 +375,20 @@ describe('migrate', () => {
     expect(result.pr.platform).toBe('github');
   });
 
+  it('backfills draft_head_sha from persisted head_sha before load refreshes it', () => {
+    const raw = {
+      pr,
+      head_sha: 'drafted-sha',
+      started_at: '2020-01-01T00:00:00.000Z',
+      comments: [],
+      flagged: [],
+      viewed: [],
+      notes: [],
+    };
+    const result = migrate(raw);
+    expect(result.draft_head_sha).toBe('drafted-sha');
+  });
+
   it('does not overwrite an existing platform field', () => {
     const glPr: PrRef = { owner: 'group/repo', repo: 'proj', number: 1, platform: 'gitlab' };
     const state = baseState(glPr);
@@ -602,6 +623,127 @@ describe('loadState / saveState persistence', () => {
     const reloaded = await loadState(pr, 'new-sha');
     expect(reloaded.head_sha).toBe('new-sha');
     await cleanup(pr);
+  });
+
+  it('loadState preserves draft_head_sha while inline comments exist', async () => {
+    const pr: PrRef = { owner: 'o', repo: 'r', number: 1005, platform: 'github' as const };
+    await cleanup(pr);
+    let state = await loadState(pr, 'drafted-sha');
+    state = applyAction(state, {
+      type: 'add_comment',
+      chunk_id: 'c1',
+      side: 'RIGHT',
+      line: 1,
+      body: 'drafted before refresh',
+      file: 'a.ts',
+      hunk_header: '@@ -1,3 +1,3 @@',
+    });
+    await saveState(state);
+
+    const reloaded = await loadState(pr, 'latest-sha');
+    expect(reloaded.head_sha).toBe('latest-sha');
+    expect(reloaded.draft_head_sha).toBe('drafted-sha');
+    await cleanup(pr);
+  });
+
+  it('loadState resets draft_head_sha to latest head_sha when no inline comments exist', async () => {
+    const pr: PrRef = { owner: 'o', repo: 'r', number: 1006, platform: 'github' as const };
+    await cleanup(pr);
+    const state = await loadState(pr, 'old-sha');
+    await saveState(state);
+
+    const reloaded = await loadState(pr, 'latest-sha');
+    expect(reloaded.head_sha).toBe('latest-sha');
+    expect(reloaded.draft_head_sha).toBe('latest-sha');
+    await cleanup(pr);
+  });
+});
+
+describe('AI provider config persistence', () => {
+  const configPath = join(STATE_DIR, 'ai-config.json');
+
+  beforeEach(async () => {
+    await rm(configPath, { force: true });
+    await rm(`${configPath}.tmp`, { force: true });
+  });
+
+  afterEach(async () => {
+    await rm(configPath, { force: true });
+    await rm(`${configPath}.tmp`, { force: true });
+  });
+
+  it('loadAiProviderConfig defaults to Claude when no file exists', async () => {
+    await expect(loadAiProviderConfig()).resolves.toEqual({
+      provider: 'claude',
+      updated_at: '1970-01-01T00:00:00.000Z',
+    });
+  });
+
+  it('saveAiProviderConfig round-trips a Claude model update', async () => {
+    await saveAiProviderConfig({
+      provider: 'claude',
+      claude_model: '  opus  ',
+      updated_at: '2026-01-01T00:00:00.000Z',
+    });
+    await expect(loadAiProviderConfig()).resolves.toEqual({
+      provider: 'claude',
+      claude_model: 'opus',
+      updated_at: '2026-01-01T00:00:00.000Z',
+    });
+  });
+
+  it('saveAiProviderConfig round-trips a Codex model update', async () => {
+    await saveAiProviderConfig({
+      provider: 'codex',
+      codex_model: 'gpt-5-codex',
+      updated_at: '2026-01-02T00:00:00.000Z',
+    });
+    await expect(loadAiProviderConfig()).resolves.toEqual({
+      provider: 'codex',
+      codex_model: 'gpt-5-codex',
+      updated_at: '2026-01-02T00:00:00.000Z',
+    });
+  });
+
+  it('applyAiProviderConfigUpdate preserves inactive provider model fields', () => {
+    const current = normalizeAiProviderConfig({
+      provider: 'claude',
+      claude_model: 'sonnet',
+      codex_model: 'gpt-5-codex',
+      updated_at: 'old',
+    });
+    const next = applyAiProviderConfigUpdate(
+      current,
+      { provider: 'codex', codex_model: 'gpt-5' },
+      'new',
+    );
+    expect(next).toEqual({
+      provider: 'codex',
+      claude_model: 'sonnet',
+      codex_model: 'gpt-5',
+      updated_at: 'new',
+    });
+  });
+
+  it('applyAiProviderConfigUpdate rejects invalid providers', () => {
+    const current = normalizeAiProviderConfig(null);
+    expect(() =>
+      applyAiProviderConfigUpdate(current, { provider: 'openai' }),
+    ).toThrow('AI provider must be claude or codex');
+  });
+
+  it('loadAiProviderConfig recovers to defaults for malformed config JSON', async () => {
+    await saveAiProviderConfig({
+      provider: 'codex',
+      codex_model: 'gpt-5-codex',
+      updated_at: '2026-01-02T00:00:00.000Z',
+    });
+    await rm(configPath, { force: true });
+    await writeFile(configPath, '{not-json');
+    await expect(loadAiProviderConfig()).resolves.toEqual({
+      provider: 'claude',
+      updated_at: '1970-01-01T00:00:00.000Z',
+    });
   });
 });
 

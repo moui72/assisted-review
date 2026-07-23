@@ -1,14 +1,14 @@
 ---
-status: open
+status: planned
 created: 2026-07-20
-plan: null
+plan: plan-1a23-2026-07-22-7942.md
 ---
 
 # Feedback
 
 ## Bugs
 
-- [ ] F001 `ReviewState.head_sha` conflates two different SHAs, which makes the
+- [x] F001 `ReviewState.head_sha` conflates two different SHAs, which makes the
   pre-submit stale guard largely inert. `loadState()` overwrites `head_sha`
   with the freshly-fetched SHA on every load (`src/state.ts:190`), so the SHA
   the comments were actually drafted against is lost. The submit route passes

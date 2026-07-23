@@ -12,7 +12,9 @@ export interface AiPanelProps {
   error: string | null;
   askRef: RefObject<HTMLInputElement | null>;
   onAsk: (question: string) => void;
+  onStop?: () => void;
   onDeleteNote: (id: string) => void;
+  onRegenerateNote?: (id: string) => void;
 }
 
 // One chunk page: fixed file header, scrollable diff, pinned AI annotation.

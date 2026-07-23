@@ -59,6 +59,19 @@ describe('streamClaude', () => {
     expect((opts as { cwd?: string }).cwd).toBe('/some/repo');
   });
 
+  it('passes an explicit Claude model when configured', () => {
+    const child = makeChild();
+    vi.mocked(spawn).mockReturnValue(asSpawnResult(child));
+    streamClaude(
+      'p',
+      { onDelta: () => {}, onDone: () => {}, onError: () => {} },
+      { model: 'claude-sonnet' },
+    );
+    const [, args] = vi.mocked(spawn).mock.calls[0];
+    expect(args).toContain('--model');
+    expect((args as string[])[(args as string[]).indexOf('--model') + 1]).toBe('claude-sonnet');
+  });
+
   it('calls onDelta for each text_delta and onDone when result arrives', async () => {
     const child = makeChild();
     vi.mocked(spawn).mockReturnValue(asSpawnResult(child));

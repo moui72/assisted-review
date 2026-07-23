@@ -8,6 +8,7 @@ coverage/
 playwright-report/
 test-results/
 .claude/skills/ardd-*/
+.agents/skills/ardd-*/
 .claude/skills/shieldcn-badges/
 skills-lock.json
 .project/.lock

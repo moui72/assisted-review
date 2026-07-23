@@ -33,18 +33,20 @@ and the temptation to skim grows with every file.
 assisted-review is a standalone CLI that fetches a GitHub PR or GitLab MR and
 serves a focused, keyboard-driven browser UI for walking it **one chunk at a
 time**. Each chunk — adjacent hunks from the same file, merged when the gap
-between them is small — gets its own page, with Claude-generated commentary
-alongside it. You can ask Claude follow-up questions, flag chunks, draft
+between them is small — gets its own page, with AI-generated commentary
+alongside it. You can ask follow-up questions, flag chunks, draft
 inline comments, and finally publish everything back to GitHub/GitLab as a
 real review. Progress persists to disk, so a half-finished review resumes
 exactly where you left off.
 
-You stay in control. Claude assists — it never decides or auto-posts anything.
+You stay in control. The configured AI provider assists — it never decides or
+auto-posts anything.
 
 Everything runs on your machine: the diff is fetched with `gh`/`glab`, the
 server binds to `127.0.0.1` only, and AI commentary streams from a headless
-`claude` subprocess. No hosted backend, no account. Nothing leaves your
-machine except the comments you explicitly choose to submit.
+local provider subprocess. No hosted backend, no account. Nothing leaves your
+machine except whatever your selected provider CLI sends and the comments you
+explicitly choose to submit.
 
 > Status: young but moving fast — see the [changelog](./CHANGELOG.md) for
 > what's shipped and the [roadmap](./ROADMAP.md) for what's planned.
@@ -53,7 +55,7 @@ machine except the comments you explicitly choose to submit.
 
 - Node >= 20.18
 - [`gh`](https://cli.github.com/) authenticated (`gh auth status`) — for GitHub PRs
-- [`claude`](https://claude.com/claude-code) CLI on `PATH` — for AI commentary (optional; its absence disables only that feature)
+- A local AI provider CLI on `PATH` for AI commentary: [`claude`](https://claude.com/claude-code) or `codex` (optional; absence disables only that provider)
 - For GitLab MRs (optional): [`glab`](https://gitlab.com/gitlab-org/cli) authenticated, **or** a GitLab personal access token — assisted-review falls back to the GitLab REST API when `glab` isn't available, using `GITLAB_TOKEN` or a token entered in the browser UI
 - [pnpm](https://pnpm.io) — only for working on the project, not for the global install
 
@@ -123,7 +125,7 @@ The UI is built keyboard-first. Press `?` in the app for the same reference.
 | `esc` | Mark unread |
 | `f` | Flag chunk |
 | `c` | Comment |
-| `a` | Ask Claude |
+| `a` | Ask AI |
 | `?` | Show help |
 
 Plain letters only fire without a modifier, so browser combos like `⌘C`,
@@ -131,18 +133,22 @@ Plain letters only fire without a modifier, so browser combos like `⌘C`,
 
 ## AI commentary
 
-Each chunk (and the PR overview) gets Claude commentary streamed live into a
+Each chunk (and the PR overview) gets AI commentary streamed live into a
 sidebar. Ask follow-up questions and the conversation threads — prior notes
 for the same chunk are passed back as context. Upcoming chunks are preloaded
 quietly in the background (`PRELOAD_CHUNKS`, default 1) so commentary is
 usually already there when you arrive.
 
-Claude runs as a headless subprocess with shell, write, and web access
+Settings lets you choose the AI provider (`Claude` or `Codex`) and an optional
+provider-specific model. Missing model values use that CLI's default model;
+existing installs continue to default to Claude until changed.
+
+The provider runs as a headless local subprocess with write and network access
 disabled — by default it sees only the diff text. If you want deeper answers,
 Settings offers a per-repo **investigation access** choice (persisted, asked
 at most once per repo):
 
-| Mode | What Claude can see |
+| Mode | What the AI provider can see |
 |---|---|
 | None (default) | The diff text only; no tools |
 | Local path | Read-only `Read`/`Grep`/`Glob` in a checkout you point it at |
@@ -262,7 +268,7 @@ they compose freely. Syntax-highlighting colors travel with the palette.
 The short version: `src/` is a strict-TypeScript ESM backend — a CLI that
 fetches and chunks the diff, then a localhost-only Node `http` server exposing
 a small REST + SSE API; `web/` is a Vite + React 19 + Tailwind v4 single-page
-app served by that same server. External tools (`gh`, `glab`, `claude`, `op`)
+app served by that same server. External tools (`gh`, `glab`, `claude`, `codex`, `op`)
 are always subprocesses, never vendored SDKs.
 
 The full write-up — module map, data model, infrastructure, and UI diagrams —

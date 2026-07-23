@@ -1,5 +1,6 @@
 import type {
   Action,
+  AiProviderConfig,
   GitLabVerdict,
   InvestigationConfig,
   PrRef,
@@ -57,18 +58,18 @@ export async function submitReview(
   return (await res.json()) as SubmitResponse;
 }
 
-export interface ClaudeStreamHandlers {
+export interface AiStreamHandlers {
   onDelta: (text: string) => void;
   onDone: (state: ReviewState) => void;
   onError: (message: string) => void;
 }
 
-/** Stream a Claude note over SSE. Returns a cancel function. */
-export function streamClaude(
+/** Stream an AI note over SSE. Returns a cancel function. */
+export function streamAi(
   params: { chunkId: string; question: string },
-  handlers: ClaudeStreamHandlers,
+  handlers: AiStreamHandlers,
 ): () => void {
-  const u = new URL('/api/claude', location.origin);
+  const u = new URL('/api/ai', location.origin);
   u.searchParams.set('chunk_id', params.chunkId);
   if (params.question.trim()) u.searchParams.set('q', params.question.trim());
 
@@ -90,7 +91,7 @@ export function streamClaude(
   es.addEventListener('error', (e) => {
     if (settled) return;
     const data = (e as MessageEvent).data as string | undefined;
-    let message = 'Claude request failed (connection lost)';
+    let message = 'AI request failed (connection lost)';
     if (data) {
       try {
         message = JSON.parse(data).message;
@@ -105,6 +106,9 @@ export function streamClaude(
   return close;
 }
 
+/** Backward-compatible alias for callers that have not moved to streamAi yet. */
+export const streamClaude = streamAi;
+
 export interface PreloadConfig {
   preload_chunks: number;
   preload_overview: boolean;
@@ -115,6 +119,25 @@ export async function fetchConfig(): Promise<PreloadConfig> {
   const res = await fetch('/api/config');
   if (!res.ok) throw new Error(`/api/config returned ${res.status}`);
   return (await res.json()) as PreloadConfig;
+}
+
+export async function fetchAiConfig(): Promise<AiProviderConfig> {
+  const res = await fetch('/api/ai-config');
+  if (!res.ok) throw new Error(`/api/ai-config returned ${res.status}`);
+  return (await res.json()) as AiProviderConfig;
+}
+
+export async function saveAiConfig(update: Partial<AiProviderConfig>): Promise<AiProviderConfig> {
+  const res = await fetch('/api/ai-config', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify(update),
+  });
+  if (!res.ok) {
+    const data = (await res.json()) as { error?: string };
+    throw new Error(data.error ?? `/api/ai-config returned ${res.status}`);
+  }
+  return (await res.json()) as AiProviderConfig;
 }
 
 export async function fetchReviews(): Promise<ReviewSummary[]> {
@@ -203,6 +226,8 @@ export { OVERVIEW_ID, VERDICTS, GITLAB_VERDICTS } from '../../src/types.ts';
 export type { Verdict, GitLabVerdict, ReviewSummary } from '../../src/types.ts';
 export type { Review };
 export type {
+  AiProvider,
+  AiProviderConfig,
   Chunk,
   AiNoteKind,
   PrRef,

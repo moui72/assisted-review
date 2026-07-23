@@ -1,17 +1,18 @@
 ---
 name: api
 status: stable
-last_updated: 2026-07-13
+last_updated: 2026-07-22
 ---
 
 # API
 
 ## Overview
 
-REST + one SSE endpoint, served by a single Node `http` server
+REST + one AI SSE endpoint, served by a single Node `http` server
 (`src/server.ts`) bound to `127.0.0.1:4319` (default; `--port` overrides).
 No auth — protected only by binding to loopback (`constitution.md` Principle
-I). All responses are JSON except `/api/claude` (SSE) and the static UI. The
+I). All responses are JSON except `/api/ai` (SSE; `/api/claude` remains a
+compatibility alias during the provider-neutral transition) and the static UI. The
 API surface is small and mirrors the `Action` union in `datamodel.md` almost
 exactly — most mutation goes through one generic endpoint
 (`POST /api/action`) rather than one route per operation.
@@ -27,13 +28,16 @@ open reviews server-side (only multiple *saved* ones, listed via
 ### `GET /api/config`
 
 Returns preload behavior config: `{ preload_chunks: number, preload_overview:
-boolean, app_version: string }`, sourced from `StartOptions` (in turn from
+boolean, app_version?: string }`, sourced from `StartOptions` (in turn from
 `PRELOAD_CHUNKS` / `PRELOAD_OVERVIEW` env vars, and — for `app_version` —
 the running package's resolved version, the same value `src/cli.ts` prints
 at startup; see `infrastructure.md`'s npm Registry section for how it's
-distinguished from the update-check notice). Used by the frontend to decide
-how aggressively to prefetch AI commentary, and to display the running
-version (`ui.md` — Settings panel).
+distinguished from the update-check notice). `src/server.ts` defaults the
+field to `''` when no version was supplied, and the frontend type keeps it
+optional because tests and callers may omit it; the Settings About row only
+renders when the value is present/truthy. Used by the frontend to decide how
+aggressively to prefetch AI commentary, and to display the running version
+(`ui.md` — Settings panel).
 
 ### `GET /api/review`
 
@@ -43,7 +47,7 @@ concern (see `GET /api/state`), not part of `Review` itself.
 
 ### `DELETE /api/review`
 
-Clears the active review: cancels any in-flight Claude SSE stream, deletes
+Clears the active review: cancels any in-flight AI SSE stream, deletes
 the review's state file on disk (best-effort — errors swallowed), and nulls
 out `ctx.review`/`ctx.state`. Returns `{ ok: true }`.
 
@@ -129,7 +133,7 @@ GitLab namespaces can contain `/`). Deletes that review's state file
 Body: `{ ref: string }` — a PR/MR reference in any format `parseRef()`
 accepts (`owner/repo#N`, `namespace/repo!N`, or a GitHub/GitLab URL; see
 `datamodel.md`'s `PrRef`). `400` if `ref` is missing/invalid JSON or
-unparseable. Cancels any in-flight Claude stream (same reasoning as
+unparseable. Cancels any in-flight AI stream (same reasoning as
 `DELETE /api/review` — never let a stale stream write into the new review's
 state), then fetches + loads the review via `loadReview()`
 (`infrastructure.md`), replaces `ctx.review`/`ctx.state`, persists the
@@ -180,13 +184,33 @@ kicks off the clone (`gh repo clone`/`glab repo clone` into
 `STATE_DIR/repos/...`, see `infrastructure.md`) synchronously before
 responding — the request is slower for these two modes (a real network
 clone), but the client only calls this once per repo (`chosen_at`) or when
-the reviewer changes their mind, not on every review open. `502` if the
-clone itself fails (`git`/`gh`/`glab` error), and the mode is not persisted
-in that case — same "don't record success that didn't happen" convention as
+the reviewer changes their mind, not on every review open. There is no
+separate API-level progress stream, cancel endpoint, or request timeout for
+this setup call today: the browser shows a modal-local "Cloning..." busy
+state while the HTTP request waits for the subprocess to exit, and a client
+disconnect does not cancel the server-side clone. `502` if the clone itself
+fails (`git`/`gh`/`glab` error), and the mode is not persisted in that case
+— same "don't record success that didn't happen" convention as
 `POST /api/submit`. On success, persists `InvestigationConfig` and returns
 it.
 
-### `GET /api/claude` (Server-Sent Events)
+### `GET /api/ai-config`
+
+Returns the global `AiProviderConfig` (`datamodel.md`) — defaulting to
+`{ provider: 'claude' }` if no config file exists yet. No active review is
+required.
+
+### `POST /api/ai-config`
+
+Body: `{ provider: 'claude' | 'codex', claude_model?: string, codex_model?:
+string }`. Validates `provider` against the supported adapter names and
+trims model strings; blank strings are persisted as omitted fields so the
+underlying CLI default remains authoritative. Persists the config to
+`STATE_DIR/ai-config.json` with the same atomic tmp-then-`rename()` pattern
+as other state files and returns the saved `AiProviderConfig`. No active
+review is required, since this is a global reviewer preference.
+
+### `GET /api/ai` (Server-Sent Events)
 
 Query params: `chunk_id` (required — a real chunk id or `OVERVIEW_ID`), `q`
 (optional question; empty means "explain/summarize"). Requires an active
@@ -194,30 +218,35 @@ review/state (`503`); `404` if `chunk_id` doesn't resolve to a real chunk
 (and isn't the overview sentinel).
 
 Streams three possible SSE event types:
-- `delta` — `{ text: string }`, one per incremental chunk of Claude's output.
+- `delta` — `{ text: string }`, one per incremental chunk of provider output.
 - `done` — `{ state: ReviewState }`, sent once the note has been persisted
   (`add_note` applied + saved) — the frontend gets the authoritative
   post-save state back, not just the raw note text.
 - `error` — `{ message: string }`.
 
-Only one Claude stream may be in flight globally at a time — a new
-`/api/claude` request, a new `/api/reviews/open`, or a client disconnect
+Only one AI stream may be in flight globally at a time — a new
+`/api/ai` request, a new `/api/reviews/open`, or a client disconnect
 (`req.on('close')`) all cancel whatever stream is currently running
 (`currentCancel` in `server.ts`). See `infrastructure.md` for what's actually
 inside the stream.
 
-Before spawning, this route consults the active repo's `InvestigationConfig`
-(above): `mode: 'none'` (or unset) behaves exactly as today (diff-only,
-`tmpdir()` cwd, all tools disallowed); `local-path`/`temp-clone`/
-`always-clone` pass a resolved repo path and relax `Read`/`Grep`/`Glob` into
-`streamClaude`'s allowed set (`infrastructure.md`); `api` instead augments
-the prompt with full file contents for files touched by the diff, with no
-tool/cwd change. See `infrastructure.md`'s "Repo Investigation Access"
-section for the full mode-by-mode behavior.
+Before spawning, this route consults both `AiProviderConfig` and the active
+repo's `InvestigationConfig` (above): `mode: 'none'` (or unset) behaves as
+diff-only; `local-path`/`temp-clone`/`always-clone` pass a resolved repo path
+and adapter-specific read-only tool allowances; `api` instead augments the
+prompt with full file contents for files touched by the diff, with no
+tool/cwd change. See `infrastructure.md`'s "AI Providers" and "Repo
+Investigation Access" sections for provider and mode behavior. The selected
+model, when present for the active provider, is passed to that provider's CLI;
+missing/blank model means the provider default is used.
 
 The stream's terminal `add_note` mutation also runs inside `withStateLock` —
 the same lock `POST /api/action` uses — so a note landing here can't race a
 concurrent manual action (see Production Annotations below).
+
+`GET /api/claude` remains as a backwards-compatible alias for `/api/ai` while
+the frontend and tests transition away from Claude-specific naming; it uses
+the configured provider, not necessarily Claude.
 
 ### Static UI
 
@@ -267,7 +296,7 @@ standing guideline on not gratuitously foreclosing it in new code.
 
 ## Production Annotations
 
-- **State-mutation race, resolved**: `POST /api/action` and the Claude SSE
+- **State-mutation race, resolved**: `POST /api/action` and the AI SSE
   stream's terminal `add_note` write both used to read `ctx.state`, compute,
   and write it back without any serialization. Node's single-threaded event
   loop still lets two overlapping requests interleave at each `await` point,

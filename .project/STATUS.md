@@ -1,182 +1,190 @@
 # assisted-review — Project Status
 
-_Updated: 2026-07-21 (full `/ardd-status` pass after the ArDD toolchain update v1.0.2 → v1.0.3; `/ardd-refine datamodel` then closed 5 of the 20 issues. Re-verified later the same day after updating to v1.0.4 — no artifact changed in between, so the findings below stand as written.)_
+_Updated: 2026-07-23 (post-`/ardd-update` status pass)._
 
 ## Artifact Status
 
 | Artifact | Status | Open questions |
 |---|---|---|
-| constitution.md | stable ✅ (v3.2.0) | 3 (see below) |
-| datamodel.md | stable ✅ (refined 2026-07-21) | 3 (see below) |
-| infrastructure.md | stable ✅ | 3 (see below) |
-| api.md | stable ✅ | 2 (see below) |
-| ui.md | stable ✅ | 2 (see below) |
+| constitution.md | stable ✅ (v3.4.0, refined 2026-07-22) | — |
+| datamodel.md | stable ✅ (refined 2026-07-22) | — |
+| infrastructure.md | stable ✅ (refined 2026-07-22) | — |
+| api.md | stable ✅ (refined 2026-07-22) | — |
+| ui.md | stable ✅ (refined 2026-07-22) | — |
 
-No `[OPEN: ...]` or `TODO` markers in any artifact; the counts above are issues
-found by this consistency pass, not authored placeholders.
+No `[OPEN: ...]` or `TODO` markers in any artifact.
 
 ## Cross-Artifact Issues
 
-- ~~**[CONFLICT] `temp-clone` clone location**~~ — **resolved 2026-07-21.**
-  datamodel.md claimed the deterministic
-  `STATE_DIR/repos/<platform>-<owner>-<repo>` path for *both* clone modes;
-  `src/investigation.ts:66` uses `tmp-<uuid>` for `temp-clone`. `clone_path`'s
-  row now states both schemes and why each exists.
-- **[CONFLICT] Constitution names a `features.md` backlog file and stale slash
-  commands** — the actual register is the per-feature directory
-  `.project/features/*.md`, and the named commands (`/ardd-analyze`,
-  `/ardd-tasks`, `/ardd-feature`, `/ardd-critique`, `/ardd-verify`) no longer
-  exist; the installed set is `/ardd-status`, `/ardd-audit`, `/ardd-defects`,
-  `/ardd-backlog`, `/ardd-plan`.
-- **[CONFLICT] Unamended GitLab-credential exception** (carried forward) —
-  api.md self-declares a "deliberate exception" where the server manages a
-  GitLab PAT (`STATE_DIR/gitlab-token`). Principle IV's *normative* clause
-  (subprocesses, not SDKs) is intact; the gap is that Governance requires an
-  amendment and none happened.
-- **[CONFLICT] Principle I's "no data leaves the machine" is now factually
-  narrower than behavior** — `api` investigation mode fetches file contents,
-  and the npm update check calls `registry.npmjs.org`. Neither is a comment the
-  reviewer explicitly submits.
-- **[CONFLICT] `app_version` optionality** (carried forward) — api.md types it
-  required in `StartOptions`; ui.md renders the About row "only when present",
-  and the code agrees (`web/src/api.ts` `app_version?: string`,
-  `src/server.ts` defaults to `''`). api.md should mark it optional.
-- **[GAP] Principle IV's subprocess enumeration is stale** — it lists `gh`,
-  `glab`, `claude`, optionally `op`; infrastructure.md's clone modes add a hard
-  `git` dependency (its own Production Annotation admits it).
-- ~~**[GAP] `Anchor`, `PreloadConfig`, `GitLabSubmitProgress` undefined**~~ —
-  **resolved 2026-07-21.** All three now have their own datamodel.md entity
-  sections with field tables. The Overview's "one legitimate frontend-only
-  projection" claim was corrected to name all three frontend-only shapes.
-- ~~**[GAP] Client-persisted preferences unowned**~~ — **resolved 2026-07-21.**
-  datamodel.md gained a `Client-Persisted Preferences` section covering
-  `ar-palette`, `ar-theme`, `ar-preload-chunks`, `ar-preload-overview`, and
-  why they live in `localStorage` rather than `ReviewState`.
-- **[GAP] Stale-SHA "offers re-fetch"** — ui.md says so, but no artifact defines
-  a re-fetch action or endpoint, and `SubmitModal.tsx` only renders
-  instructional text. Either an undefined capability or ui.md overstating it.
+None.
 
 ## Within-Artifact Issues
 
-### infrastructure.md
-- **[GAP]** the `always-clone` 30-day TTL is "flagged as a tunable in **Open
-  Questions**" — no such section exists. Dangling pointer.
-- **[VAGUE]** the same TTL's configurability is deferred with no criterion for
-  revisiting.
-- **[VAGUE]** `'api'` mode clips each file `MAX_DIFF_CHARS`-style with no
-  *total* prompt budget stated, despite fetching every file the diff touches.
-
-### datamodel.md
-- **[VAGUE]** `Overview.jira` — "leaves room for future overview-page
-  enrichments" with no decision on what else; `Overview` is a one-field wrapper.
-- **[VAGUE]** the drafted-SHA annotation describes the fix ("persisting the
-  drafted SHA separately") but leaves whether/when undecided. Tracked as open
-  feedback F001.
-- **[VAGUE]** `ReviewPayload.payload` is echoed "for a future manual-submit
-  fallback" — motivation stated, feature never specified anywhere.
-
-### api.md
-- **[VAGUE]** `POST /api/investigation-config` clones synchronously with no
-  timeout, cancel, or progress contract beyond the UI's "Cloning…" label.
-  Behavior on a multi-minute clone is undefined.
-
-### ui.md
-- **[VAGUE]** Displaced Comments — notes and flags are "read-only there
-  (delete/unflag only)", but delete/unflag *is* a mutation, and the Overview
-  view section and States section state it two different ways.
+None.
 
 ## Constitution Compliance
 
-- **[ANNOTATION PLACEMENT]** infrastructure.md carries three shortcut/failure-
-  mode annotations as inline prose rather than under its `## Production
-  Annotations` heading: the `api`-mode "explicit scope limit", the parse-diff
-  "two behaviors changed as a result", and — most clearly an unintentional
-  failure mode — suggested-action parsing being "inherently best-effort and
-  could silently fail to split if Claude's phrasing drifts". These are
-  workflow-rule violations of the 3.1.0 amendment.
-- No other violations. api.md's submit-race shortcut is correctly annotated;
-  datamodel, api, and ui all use the required heading. The unamended
-  GitLab-credential exception is tracked above as a cross-artifact conflict —
-  it needs a governance decision, not an artifact edit.
+No violations found in this pass.
 
 ## Diagrams
 
-- datamodel.md — **stale ⚠️** (`erDiagram` — run `/ardd-diagram datamodel`)
-- infrastructure.md — current ✅ (`graph TD`)
-- ui.md — **stale ⚠️** (`graph TD` — run `/ardd-diagram ui`)
+- datamodel.md — stale ⚠️ (`erDiagram` — run `/ardd-diagram datamodel`)
+- infrastructure.md — stale ⚠️ (`graph TD` — run `/ardd-diagram infrastructure`)
+- ui.md — stale ⚠️ (`graph TD` — run `/ardd-diagram ui`)
 
 Rendered to `docs/ARCHITECTURE.md`.
 
 ## Code-vs-Artifact Defects
 
 None — `DEFECTS.md` all-clear, last checked 2026-07-11. Refresh with
-`/ardd-defects` (that survey predates several merged PRs).
+`/ardd-defects` because that survey predates several merged PRs.
 
 ## Feedback
 
-1 open feedback file — `feedback-head-sha-drafted-vs-fetched-co-a9d9.md`
-(F001: `head_sha` conflates drafted-against and latest-fetched SHAs, leaving
-the pre-submit stale guard largely inert). Will be picked up by the next
-`/ardd-plan`.
+1 open feedback file — `feedback-ardd-update-usage-improvements-1c35.md`.
+Will be picked up by the next `/ardd-plan`.
 
 ## Feature Backlog
 
-13 backlogged · 0 planned · 0 tasked · 9 implemented — see `.project/features/`.
-Target a backlogged slug with `/ardd-plan <slug>`.
+11 backlogged · 0 planned · 3 tasked · 9 implemented — see
+`.project/features/`. Target a backlogged slug with `/ardd-plan <slug>`.
 
-Register-coverage note (unchanged): the GitLab browser-token auth capability
-(`src/gitlab-token.ts`, PR #50) has no entry in `.project/features/` though it
-is fully implemented. Not a "documented but untracked" finding — that test
-requires no code either — but the register under-describes shipped work.
+The three tasked entries are the feature set implemented on branch `1a23`
+(`codex-ai-provider-support`, `claude-model-selection`,
+`ai-stream-stop-regenerate`); they remain `tasked` until that PR lands and the
+register is flipped.
 
 ## Documented but Untracked
 
-None. Every capability described in the stable artifacts is implemented and
-verified against `src/` and `web/src/`. The two unimplemented items — the
-manual-submit fallback and the in-place load-error retry — are both framed as
-future work rather than described as existing behavior.
+None. Every capability described in the stable artifacts is implemented,
+already represented by an active feature/task, or documented as future work.
 
 ## Work Queue
 
-No tasks file at `ready` — all 16 are `completed`. No orphaned completion
-flips.
-
-## ArDD Toolchain
-
-Installed **v1.0.4** (`68970e8`, source `~/.ardd/source`, channel `stable`) —
-up to date, updated v1.0.2 (`33ac9ae`) → v1.0.3 (`0fc43f6`) → v1.0.4 on
-2026-07-21. No new migrations at either step (all eight already applied). The
-v1.0.3 run rewrote the recorded `Source-Path` to the portable `~/` form and
-added `.project/README.md` (reviewer guide).
-
-v1.0.4 adds a third `next_step_prompt` value, `auto` (run the recommended
-skill directly rather than prompting). This project stays on `true` — field
-presence suppresses the backfill ask; `/ardd-update --reconfigure` changes it.
+No ready task files.
 
 ## In Flight
 
-- Worktree `.claude/worktrees/ardd-codify-trial` (branch `ardd-codify-trial`)
-  — `tasks=none`, unmerged, not reapable.
+- Worktree `.claude/worktrees/ardd-codify-trial` (branch
+  `ardd-codify-trial`) — `tasks=none`, unmerged, not reapable.
 
-No open draft PRs. Two non-draft PRs are open: #98 (eslint 9 → 10, held —
-breaks `pnpm lint` while an ArDD worktree exists) and #110 (the one-line
-`.claude` eslint ignore that unblocks it).
+No open draft PRs were found in this pass.
+
+## ArDD Toolchain
+
+Installed ArDD is up to date on the beta channel
+(`9bc9b38fa85cb21afa2f4108b8b6a6b9f2dea0d2`, `v1.1.1-beta.3`).
+
+## Summary
+
+3 issues found: the stale datamodel, infrastructure, and UI diagrams. Safe
+to `/ardd-plan`: yes; no ready task files remain.
 
 ## Recommended Next Step
 
-`/ardd-refine api` — mark `app_version` optional (datamodel.md's new
-`PreloadConfig` section now types it correctly, so api.md is the last place
-that disagrees with the code); specify the synchronous clone's
-timeout/cancel contract.
+Review/merge PR #112 for branch `1a23`, then run `/ardd-status` on the default
+branch to catch any completion flips. Separately, run `/ardd-diagram
+datamodel`, `/ardd-diagram infrastructure`, and `/ardd-diagram ui` to clear
+the stale diagrams.
 
-Then, in rough priority order:
-- `/ardd-refine infrastructure` — move the three inline annotations under
-  `## Production Annotations`; fix the dangling "Open Questions" pointer.
-- `/ardd-diagram datamodel` and `/ardd-diagram ui` — clear both stale diagrams.
-- `/ardd-defects` — the last code-vs-artifact survey is ten days and several
-  merged PRs old.
+_Updated: 2026-07-22 (full `/ardd-status` pass)._
 
-Deliberate governance calls, not drive-by edits: the api.md-vs-constitution
-credential exception, Principle I's "no data leaves the machine" wording versus
-`api` mode and the npm update check, and the constitution's stale `features.md`
-/ slash-command references. All three want a constitution amendment.
+## Artifact Status
+
+| Artifact | Status | Open questions |
+|---|---|---|
+| constitution.md | stable ✅ (v3.4.0, refined 2026-07-22) | — |
+| datamodel.md | stable ✅ (refined 2026-07-22) | — |
+| infrastructure.md | stable ✅ (refined 2026-07-22) | — |
+| api.md | stable ✅ (refined 2026-07-22) | — |
+| ui.md | stable ✅ (refined 2026-07-22) | — |
+
+No `[OPEN: ...]` or `TODO` markers in any artifact.
+
+## Cross-Artifact Issues
+
+None.
+
+## Within-Artifact Issues
+
+None.
+
+## Constitution Compliance
+
+No violations found in this pass.
+
+## Diagrams
+
+- datamodel.md — stale ⚠️ (`erDiagram` — run `/ardd-diagram datamodel`)
+- infrastructure.md — stale ⚠️ (`graph TD` — run `/ardd-diagram infrastructure`)
+- ui.md — stale ⚠️ (`graph TD` — run `/ardd-diagram ui`)
+
+Rendered to `docs/ARCHITECTURE.md`.
+
+## Code-vs-Artifact Defects
+
+None — `DEFECTS.md` all-clear, last checked 2026-07-11. Refresh with
+`/ardd-defects` because that survey predates several merged PRs.
+
+## Feedback
+
+1 open feedback file — `feedback-ardd-update-usage-improvements-1c35.md`
+(F001-F003: `$ardd-update` Codex-sandbox guidance, installer-suggestion
+application flow, and up-to-date reinstall confirmation behavior). Will be
+picked up by the next `/ardd-plan`.
+
+## Feature Backlog
+
+11 backlogged · 0 planned · 3 tasked · 9 implemented — see
+`.project/features/`. Target a backlogged slug with `/ardd-plan <slug>`.
+
+Register-coverage note: the GitLab browser-token auth capability
+(`src/gitlab-token.ts`, PR #50) has no entry in `.project/features/` though it
+is fully implemented. Not a "Documented but untracked" finding because that
+test requires no code implementation either; the register under-describes
+shipped work.
+
+## Documented but Untracked
+
+None. Every capability described in the stable artifacts is implemented,
+already represented by an active feature/task, or documented as future work.
+
+## Work Queue
+
+- `tasks-1a23-cc11.md` — ready, 0/20, plan
+  `plan-1a23-2026-07-22-7942.md`, features
+  `codex-ai-provider-support`, `claude-model-selection`,
+  `ai-stream-stop-regenerate`.
+
+Only one ready tasks file exists, so there are no pairwise ready-task overlap
+verdicts. `independent` verdicts, when present, mean no declared overlap only;
+`merge_policy` still governs merge-time conflicts.
+
+## In Flight
+
+- Worktree `.claude/worktrees/ardd-codify-trial` (branch
+  `ardd-codify-trial`) — `tasks=none`, unmerged, not reapable.
+
+No open draft PRs were checked in this pass.
+
+## ArDD Toolchain
+
+Installed ArDD is up to date on the beta channel
+(`997e7d28878ffed151091206c14f4bc485f2e28c`, `v1.1.1-beta.2`).
+
+## Summary
+
+3 issues found: the stale datamodel, infrastructure, and UI diagrams. Safe
+to `/ardd-plan`: yes; current implementation queue is ready.
+
+## Recommended Next Step
+
+`/ardd-implement` — execute the ready task file
+`tasks-1a23-cc11.md`.
+
+Then:
+
+- `/ardd-diagram datamodel`, `/ardd-diagram infrastructure`, and
+  `/ardd-diagram ui` — clear stale diagrams.
+- `/ardd-defects` — the last code-vs-artifact survey is eleven days and
+  several merged PRs old.

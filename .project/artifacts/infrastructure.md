@@ -3,9 +3,9 @@ name: infrastructure
 render_target: docs/ARCHITECTURE.md
 render_section: Infrastructure
 status: stable
-last_updated: 2026-07-13
+last_updated: 2026-07-22
 diagram_type: graph TD
-diagram_status: current
+diagram_status: stale
 ---
 
 # Infrastructure
@@ -22,7 +22,8 @@ server, during development).
 
 Every external integration is optional except `gh`/`glab` (required to fetch
 a PR/MR at all): Jira enrichment degrades to a setup banner, AI commentary
-requires the `claude` CLI but its absence only disables that one feature.
+requires whichever local provider CLI is configured (`claude` or `codex`),
+but provider absence only disables that one feature.
 
 This artifact covers both the transport mechanics (auth, retries, pagination,
 fallback selection) and the shape-mapping/normalization layer (how each
@@ -174,14 +175,8 @@ operates on.
 
 Previously a hand-rolled, line-oriented parser (a direct TS port of an
 earlier Python `parse-diff.py`); replaced with the library to stop
-reinventing unified-diff parsing. Two behaviors changed as a result, both
-low-impact since real `gh`/`glab` diffs (and this codebase's own GitLab REST
-reconstruction) never produce the malformed input that triggers them: a
-non-standard line inside a hunk is now treated as a context line rather than
-ending the hunk, and unrecognized lines outside a hunk are silently ignored
-rather than logged as a warning (a still-unresolvable hunk — no file path at
-all — is still warned about, since that's this codebase's own adapter logic,
-not the library's).
+reinventing unified-diff parsing. The adapter still warns when this
+codebase's own mapping cannot resolve a hunk file path.
 
 ### Jira REST API — `src/jira.ts`
 
@@ -211,30 +206,53 @@ not the library's).
   function normalizes both the linked issue(s) and the epic — both go
   through `fetchIssue()` → `adfToText()` uniformly.
 
-### Claude (headless `claude` CLI) — `src/claude.ts`
+### AI Providers — `src/ai-provider.ts`, `src/claude.ts`, `src/codex.ts`
 
-- **Invocation**: `claude -p --output-format stream-json
-  --include-partial-messages --verbose --disallowed-tools <tools>`, where
-  `<tools>` is always `Bash Edit Write WebFetch WebSearch Task NotebookEdit`
-  (no write/shell/web access, ever) plus — when the active repo's
+AI commentary runs through a provider-neutral adapter boundary rather than
+letting `/api/ai` call one CLI directly. The boundary accepts a built prompt,
+the selected `AiProviderConfig` (`datamodel.md`), optional repo-access
+stream options (`cwd`, `allowRepoRead`), and handlers
+`{ onDelta, onDone, onError }`; it returns a cancel function. The API route
+does not know how a specific CLI streams — it only knows this common
+contract.
+
+- **Claude invocation**: `claude -p --output-format stream-json
+  --include-partial-messages --verbose --disallowed-tools <tools>`, plus a
+  model argument when `AiProviderConfig.claude_model` is set. `<tools>` is
+  always `Bash Edit Write WebFetch WebSearch Task NotebookEdit` (no
+  write/shell/web access, ever) plus — when the active repo's
   `InvestigationConfig.mode` (below) is `'none'`/unset — also `Read Grep
   Glob`, spawned with `cwd: tmpdir()`. When the mode grants repo access
   (`local-path`/`temp-clone`/`always-clone`), `Read`/`Grep`/`Glob` are
   dropped from the disallowed list and `cwd` becomes the resolved repo path
   instead of `tmpdir()`, so Claude can read/search real files — still
   strictly read-only (no `Edit`/`Write`/`Bash`).
+- **Codex invocation**: `codex exec` receives the same built prompt through
+  stdin or equivalent non-interactive input, plus a model argument when
+  `AiProviderConfig.codex_model` is set. The adapter maps Codex output into
+  the same `onDelta`/`onDone`/`onError` stream contract. Codex must be run as
+  a local subprocess, not via an imported OpenAI SDK. If the Codex CLI cannot
+  exactly mirror Claude's tool-deny flags for a given investigation mode, the
+  adapter documents and enforces the closest available read-only behavior and
+  returns a clear error rather than silently granting write/shell/web access.
+- **Model defaults**: blank or missing model fields mean the adapter omits the
+  model flag entirely, delegating to that provider CLI's default. Switching
+  providers does not erase the inactive provider's saved model field.
+- **Absence handling**: provider spawn `ENOENT` failures surface as actionable
+  "is the `<provider>` CLI installed and on PATH?" errors through `onError`,
+  matching the current Claude behavior.
 
 ### Repo Investigation Access — `src/investigation.ts`, `InvestigationConfig`
 
-Governs how much of the actual repo (beyond the clipped diff text) Claude
-can see when investigating a PR/MR, per `datamodel.md`'s
+Governs how much of the actual repo (beyond the clipped diff text) the
+configured AI provider can see when investigating a PR/MR, per `datamodel.md`'s
 `InvestigationConfig`. Default is `'none'` — today's original diff-only
 behavior — until the reviewer explicitly opts in via the UI modal
 (`ui.md`), once per repo (persisted, not re-prompted on every review).
 
-- **`'none'`**: unchanged from the original design — `tmpdir()` cwd, all
-  built-in tools disabled, Claude answers only from the diff text passed in
-  the prompt.
+- **`'none'`**: unchanged from the original design — `tmpdir()` cwd, provider
+  read tools disabled, AI answers only from the diff text passed in the
+  prompt.
 - **`'local-path'`**: reviewer supplies a directory (validated to exist on
   save, `api.md`). No clone. `cwd` is that path; `Read`/`Grep`/`Glob`
   enabled. Simplest mode — the reviewer already has the repo checked out
@@ -247,13 +265,12 @@ behavior — until the reviewer explicitly opts in via the UI modal
   (or the REST-fallback equivalent when `glab` is unavailable, same
   `glabApiJson`/`restFetch` pattern as everywhere else in this section) —
   and appends each as a "Full file contents" block to the prompt
-  (`buildPrompt`/`buildOverviewPrompt`, `src/claude.ts`), clipped the same
-  way the diff itself is (`MAX_DIFF_CHARS`-style cap per file, to bound
-  total prompt size). **Explicit scope limit**: this only ever covers files
-  already touched by the diff — it cannot satisfy "explore the rest of the
-  repo" the way the filesystem-access modes can, since there's no tool
-  Claude can use to look beyond what was pre-fetched. The choice modal
-  (`ui.md`) states this limit up front so the reviewer picks it knowingly.
+  (`buildPrompt`/`buildOverviewPrompt`, `src/claude.ts`). Each fetched file
+  is clipped independently to `MAX_DIFF_CHARS = 12000` characters, the same
+  per-block cap used for the combined diff; there is no separate aggregate
+  prompt-size cap beyond the number of changed files. This mode only covers
+  files already touched by the diff — it cannot inspect unrelated files the
+  way the filesystem-access modes can.
 - **`'temp-clone'`**: clones the repo (`gh repo clone <owner>/<repo>
   <dest>` / `glab repo clone <owner/repo> <dest>` — reuses whatever
   `gh`/`glab` auth is already configured, no new credential handling) into
@@ -279,8 +296,9 @@ behavior — until the reviewer explicitly opts in via the UI modal
   `always-clone` entry whose `last_used` is older than 30 days has its
   clone directory deleted and its `InvestigationConfig` reset to `mode:
   'none'` (reviewer would need to re-opt-in) — a fixed default TTL, not
-  currently configurable via env var (flagged as a tunable in Open
-  Questions if that turns out to matter in practice).
+  currently configurable via env var. Revisit configurability only if
+  reviewers report either disk pressure from active persistent clones or
+  unwanted re-cloning after the 30-day idle window.
 - **Storage**: `InvestigationConfig` entries live in a single
   `investigation-config.json` map in `STATE_DIR` (keyed by
   `platform:owner/repo`), same atomic tmp-then-`rename()` write as every
@@ -288,11 +306,14 @@ behavior — until the reviewer explicitly opts in via the UI modal
 - **Streaming protocol**: reads newline-delimited JSON events from stdout.
   `stream_event` / `content_block_delta` / `text_delta` events feed
   `onDelta`; a terminal `result` event (with `is_error`) resolves via
-  `onDone`/`onError`. Malformed lines are silently skipped. Only two event
-  types matter — `content_block_delta`/`text_delta` (incremental text,
-  forwarded via `onDelta` and SSE'd to the browser as-is) and the terminal
-  `result` event (`is_error` + `result` string) — the adapter is deliberately
-  narrow, not a general stream-json consumer.
+  `onDone`/`onError` in the Claude adapter. Malformed lines are silently
+  skipped. Only two event types matter for Claude —
+  `content_block_delta`/`text_delta` (incremental text, forwarded via
+  `onDelta` and SSE'd to the browser as-is) and the terminal `result` event
+  (`is_error` + `result` string) — that adapter is deliberately narrow, not a
+  general stream-json consumer. The Codex adapter owns whatever output
+  framing `codex exec` provides and converts it to the same provider-neutral
+  callbacks.
 - **Prompt construction**: two builders — `buildPrompt()` (per-chunk: explain
   or answer a follow-up question, diff clipped to the chunk) and
   `buildOverviewPrompt()` (whole-PR: title, description, Jira context if
@@ -301,33 +322,39 @@ behavior — until the reviewer explicitly opts in via the UI modal
   parsed back out by `splitSuggestedAction()` — a trailing line matching
   `/\n+\s*\*{0,2}\s*suggested\s+action\s*\*{0,2}\s*:\s*\*{0,2}\s*/i` (tolerant
   of markdown bold and a numbered-list prefix Claude sometimes adds), split
-  into `{ body, suggestedAction }`. This is prompt-contract parsing, not a
-  structured API response — inherently best-effort and could silently fail
-  to split if Claude's phrasing drifts from the expected format.
-  Both builders also take two flags the `/api/claude` route derives from the
+  into `{ body, suggestedAction }`.
+  Both builders also take two flags the `/api/ai` route derives from the
   active `InvestigationConfig`: `allowRepoRead` swaps the intro sentence
   between "answer only from the diff shown; do not use tools" (diff-only
   modes) and an explicit invitation to use `Read`/`Grep`/`Glob` on the
   checked-out repo (the repo-access modes — so the prompt no longer tells
-  Claude not to use tools it was actually granted); and `history` threads
+  the provider not to use tools it was actually granted); and `history` threads
   prior notes for the same chunk/overview (excluding `kind: 'error'`) into a
   "Prior conversation:" transcript ahead of the new question, so a follow-up
   Ask isn't answered cold. `history` is gathered from `ReviewState.notes`
   before the new question's own note is added, so a question is never part of
   its own history.
-- **Cancellation**: `streamClaude()` returns a kill function. The server
+- **Cancellation**: every provider adapter returns a kill function. The server
   tracks one in-flight stream at a time (`currentCancel` in `server.ts`) and
   cancels it whenever a new review is opened or the SSE connection closes —
   guards against a finishing stream writing a note into the wrong review's
-  state after the user has switched PRs.
+  state after the user has switched PRs. User-visible Stop closes the active
+  SSE stream and invokes that cancel function; partial live text is discarded
+  and no `add_note` action is persisted.
+- **Regeneration**: regenerating an existing initial note is modeled as
+  deleting the persisted note (`delete_note`) and immediately starting a new
+  empty-question AI stream for the same chunk/overview. The replacement note
+  is persisted only when the new stream reaches `done`; a stopped or failed
+  regeneration leaves either no note (if delete already happened) or the
+  existing error banner, never a partial note.
 - **Mock mode** (`src/mock-ai.ts`, `--mock-ai` flag / `mockAi` option):
   attaches lorem-ipsum-style placeholder `StoredNote`-shaped notes (with
   fake `id`/`chunk_id`/`created_at`, see `datamodel.md`) directly onto
   chunks at load time, bypassing the subprocess entirely — for offline use
   and in the Playwright e2e suite.
 - **Absence handling**: `child.on('error')` catches `ENOENT` and produces an
-  actionable "is the `claude` CLI installed and on PATH?" message rather than
-  an opaque spawn failure.
+  actionable "is the provider CLI installed and on PATH?" message rather
+  than an opaque spawn failure.
 
 ### npm Registry (update check) — `src/update-check.ts`
 
@@ -368,14 +395,14 @@ raw token.
 
 ## Normalization Rules
 
-- Every adapter that can fail (Jira, GitLab REST, Claude) resolves to a
+- Every adapter that can fail (Jira, GitLab REST, AI providers) resolves to a
   well-typed "unavailable"/error shape rather than throwing past its own
   boundary — enforced convention (`constitution.md` Principle V), not a
   shared abstraction; each integration implements its own degrade path.
 - `PrMeta.author` and `.body` both have source-specific fallback defaults
   (`'unknown'`, `''`) applied at the mapping boundary so downstream code
   never has to null-check them.
-- Jira description flattening and Claude suggested-action parsing are both
+- Jira description flattening and AI suggested-action parsing are both
   intentionally lossy/best-effort text transforms — neither round-trips.
 
 ## Storage — Local State Files
@@ -416,6 +443,11 @@ raw token.
   `STATE_DIR` holds the `InvestigationConfig` map (`datamodel.md`); repo
   clones for `temp-clone`/`always-clone` modes live under
   `STATE_DIR/repos/` (see Repo Investigation Access, above).
+- **AI provider config**: `ai-config.json` in `STATE_DIR` holds the global
+  `AiProviderConfig` (`datamodel.md`) — selected provider plus optional
+  provider-specific model fields. It uses the same atomic tmp-then-`rename()`
+  write convention as `saveState()`. Missing config means
+  `{ provider: 'claude' }` for backwards-compatible startup behavior.
 - **GitLab browser token**: `STATE_DIR/gitlab-token` holds a raw (not JSON)
   browser-entered GitLab PAT, mode `0o600`, same atomic tmp-then-`rename()`
   write. See the GitLab entry in Integration Components, above.
@@ -436,6 +468,9 @@ Known variables: `JIRA_BASE_URL`, `JIRA_USER`, `JIRA_TOKEN`,
 `JIRA_EPIC_FIELD`, `GITLAB_TOKEN`, `GITLAB_HOST`, `ASSISTED_REVIEW_STATE_DIR`,
 `PR_REF` (default ref for `pnpm dev`), `PRELOAD_CHUNKS`, `PRELOAD_OVERVIEW`,
 `ASSISTED_REVIEW_NO_UPDATE_CHECK` (disables the npm-registry update check).
+AI provider/model selection is intentionally not environment-driven in this
+slice; it is stored in `ai-config.json` through `/api/ai-config` so the
+reviewer can change it from Settings without restarting the CLI.
 `assisted-review configure` (`src/setup-jira.ts`) runs an interactive wizard
 to populate the Jira vars.
 
@@ -484,11 +519,28 @@ to populate the Jira vars.
   `glab` CLI otherwise hides (diff version SHAs, `x-next-page` following) —
   more surface area for GitLab-specific bugs than the GitHub path, which has
   no REST fallback at all (GitHub always requires `gh`).
+- **`api` investigation mode is limited to changed files** — it pre-fetches
+  full contents only for files already touched by the diff, with no tool/cwd
+  change and no way for the configured AI provider to inspect unrelated files. The choice modal
+  states this limit up front so the reviewer picks it knowingly.
+- **`parse-diff` library migration changed two malformed-input behaviors** —
+  a non-standard line inside a hunk is now treated as a context line rather
+  than ending the hunk, and unrecognized lines outside a hunk are silently
+  ignored rather than logged as a warning. Low impact for real `gh`/`glab`
+  diffs and this codebase's GitLab REST reconstruction, which do not produce
+  those malformed shapes.
+- **Suggested-action parsing is prompt-contract parsing** — `splitSuggestedAction()`
+  recognizes a tolerant trailing "Suggested action:" line, not a structured
+  model response. If the active provider's phrasing drifts from that
+  contract, the split can silently fail and leave the suggestion inside the
+  note body. Codex may need adapter-specific prompt/output normalization to
+  meet the same contract.
 - **No adapter-level retry policy (partially addressed)** — no retry exists
-  for fetch/Jira/Claude today; a transient failure there surfaces immediately
-  as an error or unavailable state rather than being retried. The *absence of
-  retry* is not intentional there — a single dropped network call currently
-  has the same user-visible effect as a genuinely unreachable service.
+  for fetch/Jira/AI provider streams today; a transient failure there surfaces
+  immediately as an error or unavailable state rather than being retried. The
+  *absence of retry* is not intentional there — a single dropped network call
+  currently has the same user-visible effect as a genuinely unreachable
+  service.
   GitLab's submit path (`submitGitLabReview`, `src/submit.ts`) is the one
   exception: each individual discussion/note/approve POST gets up to 3
   retries with linear 50ms/100ms/150ms backoff (300ms max added latency)
@@ -506,5 +558,5 @@ to populate the Jira vars.
   there's no explicit absence check/actionable error for `git` specifically
   before attempting a clone modes, so a missing `git` install surfaces as
   whatever raw error `gh repo clone` produces rather than this codebase's
-  usual "is X installed?" hint pattern (`src/claude.ts`'s `ENOENT` handling,
+  usual "is X installed?" hint pattern (AI-provider `ENOENT` handling,
   `src/fetch.ts`'s auth hints).

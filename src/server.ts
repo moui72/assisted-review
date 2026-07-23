@@ -8,7 +8,15 @@ import {
 } from 'node:http';
 import { readFile, stat } from 'node:fs/promises';
 import { join, normalize, extname } from 'node:path';
-import { applyAction, deleteReview, listReviews, saveState } from './state.js';
+import {
+  applyAction,
+  applyAiProviderConfigUpdate,
+  deleteReview,
+  listReviews,
+  loadAiProviderConfig,
+  saveAiProviderConfig,
+  saveState,
+} from './state.js';
 import {
   getInvestigationConfig,
   loadInvestigationConfigs,
@@ -24,8 +32,8 @@ import {
   buildOverviewPrompt,
   buildPrompt,
   splitSuggestedAction,
-  streamClaude,
 } from './claude.js';
+import { defaultAiProviderAdapters, streamAiProvider } from './ai-provider.js';
 import {
   buildReviewPayload,
   submitReview,
@@ -156,13 +164,13 @@ export async function startServer(
   // `null` and route through glab — exactly the precedence this is meant to fix.
   await loadGitLabToken();
 
-  // Track the active Claude SSE stream cancel fn — called before switching reviews
+  // Track the active AI SSE stream cancel fn — called before switching reviews
   // to prevent a finishing stream from writing notes into the wrong review's state.
   let currentCancel: (() => void) | null = null;
 
   // Serializes every read-modify-write-persist cycle against ctx.state, so
   // overlapping mutations (two POST /api/action calls, or an in-flight
-  // Claude stream's add_note landing alongside a manual action) can't race —
+  // AI stream's add_note landing alongside a manual action) can't race —
   // without this, a mutation could read ctx.state before an earlier one
   // finished writing it, then overwrite that earlier change once its own
   // (stale-based) write lands, both in memory and on disk.
@@ -188,6 +196,29 @@ export async function startServer(
         preload_overview: preloadOverview,
         app_version: appVersion,
       });
+    }
+
+    if (url.pathname === '/api/ai-config') {
+      if (req.method === 'GET') {
+        return sendJson(res, 200, await loadAiProviderConfig());
+      }
+      if (req.method === 'POST') {
+        let payload: unknown;
+        try {
+          payload = JSON.parse(await readBody(req)) as unknown;
+        } catch {
+          return sendJson(res, 400, { error: 'request body must be valid JSON' });
+        }
+        try {
+          const current = await loadAiProviderConfig();
+          const next = applyAiProviderConfigUpdate(current, payload);
+          return sendJson(res, 200, await saveAiProviderConfig(next));
+        } catch (err) {
+          return sendJson(res, 400, {
+            error: err instanceof Error ? err.message : String(err),
+          });
+        }
+      }
     }
 
     if (url.pathname === '/api/review') {
@@ -262,7 +293,7 @@ export async function startServer(
           state.comments,
           verdict as GitLabVerdict,
           body ?? '',
-          state.head_sha,
+          state.draft_head_sha,
           state.gitlab_submit_progress,
         );
         if (result.ok && !result.html_url && review.meta?.url) {
@@ -287,7 +318,7 @@ export async function startServer(
           state.comments,
           verdict as Verdict,
           body ?? '',
-          state.head_sha,
+          state.draft_head_sha,
         );
         result = await submitReview(review.pr, payload);
         nextState = result.ok
@@ -434,8 +465,8 @@ export async function startServer(
       }
     }
 
-    // Server-Sent Events: stream a Claude note for a chunk (or the overview).
-    if (url.pathname === '/api/claude') {
+    // Server-Sent Events: stream an AI note for a chunk (or the overview).
+    if (url.pathname === '/api/ai' || url.pathname === '/api/claude') {
       const { review, state: initialState } = ctx;
       if (!review || !initialState) return sendJson(res, 503, { error: 'no active review' });
 
@@ -506,7 +537,8 @@ export async function startServer(
       const sse = (event: string, data: unknown) =>
         res.write(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`);
 
-      const cancel = streamClaude(prompt, {
+      const aiConfig = await loadAiProviderConfig();
+      const cancel = streamAiProvider(prompt, aiConfig, {
         onDelta: (text) => sse('delta', { text }),
         onError: (message) => {
           if (currentCancel === cancel) currentCancel = null;
@@ -547,7 +579,7 @@ export async function startServer(
               res.end();
             });
         },
-      }, streamOpts);
+      }, defaultAiProviderAdapters, streamOpts);
       currentCancel = cancel;
       req.on('close', () => {
         if (currentCancel === cancel) currentCancel = null;

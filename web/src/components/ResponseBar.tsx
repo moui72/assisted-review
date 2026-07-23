@@ -137,10 +137,10 @@ export function ResponseBar({
             </button>
             <button
               onClick={onAskAi}
-              title="Streams from Claude — wired in slice 3"
+              title="Ask the configured AI provider"
               className="rounded-md border border-edge-strong px-3 py-1.5 text-[12.5px] font-medium text-muted transition hover:border-fg/30 hover:text-fg"
             >
-              ✦ Ask Claude
+              ✦ Ask AI
               <Kbd>a</Kbd>
             </button>
           </div>

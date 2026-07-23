@@ -8,7 +8,7 @@ const CHOICES: Array<{ mode: Mode; label: string; description: string }> = [
   {
     mode: 'none',
     label: 'Diff only (default)',
-    description: 'Claude answers only from the diff text shown — no file/repo access at all.',
+    description: 'AI answers only from the diff text shown — no file/repo access at all.',
   },
   {
     mode: 'local-path',
@@ -97,7 +97,7 @@ export function InvestigationModal({
 
         <div className="space-y-2 px-5 py-4">
           <p className="text-[12px] text-muted">
-            Choose how much of the repo Claude can see when investigating this PR/MR.
+            Choose how much of the repo AI can see when investigating this PR/MR.
           </p>
           {CHOICES.map((c) => (
             <label

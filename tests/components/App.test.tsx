@@ -23,9 +23,23 @@ vi.mock('../../web/src/api.ts', async (importOriginal) => {
   return {
     ...actual,
     fetchConfig: vi.fn(async () => ({ preload_chunks: 0, preload_overview: false })),
+    fetchAiConfig: vi.fn(async () => ({
+      provider: 'claude',
+      claude_model: 'sonnet',
+      codex_model: 'gpt-5-codex',
+      updated_at: '2026-01-01T00:00:00.000Z',
+    })),
+    saveAiConfig: vi.fn(async (update: unknown) => ({
+      provider: 'codex',
+      claude_model: 'sonnet',
+      codex_model: 'gpt-5-codex',
+      updated_at: '2026-01-01T00:00:01.000Z',
+      ...(update as object),
+    })),
     fetchReview: vi.fn(),
     fetchState: vi.fn(),
     postAction: vi.fn(),
+    streamAi: vi.fn(() => vi.fn()),
     fetchInvestigationConfig: vi.fn(async () => ({
       platform: 'github',
       owner: 'alice',
@@ -36,7 +50,14 @@ vi.mock('../../web/src/api.ts', async (importOriginal) => {
   };
 });
 
-import { fetchReview, fetchState, postAction, fetchInvestigationConfig } from '../../web/src/api.ts';
+import {
+  fetchReview,
+  fetchState,
+  postAction,
+  fetchInvestigationConfig,
+  saveAiConfig,
+  streamAi,
+} from '../../web/src/api.ts';
 import { App } from '../../web/src/App.tsx';
 
 const pr = { owner: 'alice', repo: 'proj', number: 1, platform: 'github' as const };
@@ -284,5 +305,89 @@ describe('App — investigation access banner', () => {
     // Escape closes the modal via the global handler.
     await user.keyboard('{Escape}');
     expect(screen.queryByText('Diff only (default)')).not.toBeInTheDocument();
+  });
+});
+
+describe('App — AI note regeneration', () => {
+  it('deletes the persisted initial note and starts a replacement stream for the same target', async () => {
+    const user = userEvent.setup();
+    const stateWithSummary: ReviewState = {
+      ...initialState(),
+      notes: [
+        {
+          id: 'n1',
+          chunk_id: '__overview__',
+          kind: 'initial',
+          body: 'Existing summary',
+          created_at: 't',
+          updated_at: 't',
+        },
+      ],
+    };
+    const stateAfterDelete: ReviewState = { ...stateWithSummary, notes: [] };
+
+    vi.mocked(fetchReview).mockResolvedValue(review);
+    vi.mocked(fetchState).mockImplementation(async () => stateWithSummary);
+    vi.mocked(postAction).mockResolvedValue(stateAfterDelete);
+    vi.mocked(streamAi).mockClear();
+
+    render(<App />);
+
+    await waitFor(() => expect(screen.getByText('Existing summary')).toBeInTheDocument());
+    await user.click(screen.getByRole('button', { name: 'regenerate' }));
+
+    await waitFor(() =>
+      expect(postAction).toHaveBeenCalledWith({ type: 'delete_note', id: 'n1' }),
+    );
+    expect(streamAi).toHaveBeenCalledWith(
+      { chunkId: '__overview__', question: '' },
+      expect.anything(),
+    );
+    expect(postAction).not.toHaveBeenCalledWith(expect.objectContaining({ type: 'delete_comment' }));
+  });
+});
+
+describe('App — AI stream controls', () => {
+  it('Stop closes the active stream and removes the live preview', async () => {
+    const user = userEvent.setup();
+    const cancel = vi.fn();
+
+    vi.mocked(fetchReview).mockResolvedValue(review);
+    vi.mocked(fetchState).mockResolvedValue(initialState());
+    vi.mocked(streamAi).mockImplementation((_params, handlers) => {
+      handlers.onDelta('partial');
+      return cancel;
+    });
+
+    render(<App />);
+
+    await waitFor(() => expect(screen.getByRole('button', { name: /begin review/i })).toBeInTheDocument());
+    await user.click(screen.getByRole('button', { name: /begin review/i }));
+    await user.click(screen.getByRole('button', { name: 'Explain' }));
+
+    await waitFor(() => expect(screen.getByText('partial')).toBeInTheDocument());
+    await user.click(screen.getByRole('button', { name: 'Stop' }));
+
+    expect(cancel).toHaveBeenCalledOnce();
+    await waitFor(() => expect(screen.queryByText('partial')).not.toBeInTheDocument());
+  });
+});
+
+describe('App — AI settings', () => {
+  it('loads the AI config and saves provider changes from Settings', async () => {
+    const user = userEvent.setup();
+
+    vi.mocked(fetchReview).mockResolvedValue(review);
+    vi.mocked(fetchState).mockResolvedValue(initialState());
+
+    render(<App />);
+
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Settings' })).toBeInTheDocument());
+    await user.click(screen.getByRole('button', { name: 'Settings' }));
+    expect(await screen.findByLabelText('Claude model')).toHaveValue('sonnet');
+
+    await user.click(screen.getByRole('button', { name: 'Codex' }));
+
+    expect(saveAiConfig).toHaveBeenCalledWith({ provider: 'codex' });
   });
 });

@@ -39,7 +39,7 @@ function JiraSection({ jira }: { jira: JiraContext }) {
     return (
       <div className="rounded-lg border border-accent/30 bg-accent/[0.06] p-4">
         <div className="mb-1 flex items-center gap-2 font-sans text-[13px] font-semibold text-accent">
-          <span aria-hidden>⚠</span> Claude can't access Jira
+          <span aria-hidden>⚠</span> AI can't access Jira
         </div>
         {jira.reason && <p className="font-sans text-[12.5px] text-fg/70">{jira.reason}.</p>}
         {jira.setup_hint && (
@@ -87,12 +87,21 @@ function Summary({ ai }: { ai: AiPanelProps }) {
           ✦
         </span>
         <span className="font-sans text-[11px] font-semibold tracking-[0.22em] text-muted uppercase">
-          Claude’s summary
+          AI summary
         </span>
         <span className="h-px flex-1 bg-edge" />
-        {summary?.id && (
+        {ai.streaming && ai.onStop && (
           <button
-            onClick={() => ai.onDeleteNote(summary.id!)}
+            onClick={ai.onStop}
+            className="font-sans text-[11px] text-[var(--del-fg)]/90 transition hover:text-[var(--del-fg)]"
+          >
+            stop
+          </button>
+        )}
+        {summary?.id && ai.deletableNoteIds.has(summary.id) && (
+          <button
+            onClick={() => ai.onRegenerateNote?.(summary.id!)}
+            disabled={!ai.onRegenerateNote}
             className="font-sans text-[11px] text-faint transition hover:text-[var(--del-fg)]"
           >
             regenerate

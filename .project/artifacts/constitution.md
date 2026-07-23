@@ -1,6 +1,38 @@
 <!--
 SYNC IMPACT REPORT
 ==================
+Version change: 3.3.0 → 3.4.0
+Modified sections:
+- Project Scope & Intent, Principles I/V, and Quality Standards — generalized
+  Claude-specific AI commentary language to "configured AI provider" so Codex
+  can be added without treating Claude as the permanent architectural name.
+  MINOR change (material scope expansion inside the existing optional
+  local-assistant boundary).
+- Principle IV — added `codex` to the subprocess dependency list and clarified
+  that Claude/Codex AI providers remain external tools, not vendored SDKs.
+  MINOR change (new external subprocess, no SDK/API-client relaxation).
+
+--- Prior report (3.2.0 → 3.3.0) ---
+Version change: 3.2.0 → 3.3.0
+Modified sections:
+- Principle I — clarified that "no off-machine exposure" governs inbound
+  exposure of the local HTTP server, not a ban on every outbound integration
+  call. The allowed outbound set now explicitly includes reviewer-requested
+  GitHub/GitLab/Jira/Claude operations, `api` investigation-mode file-content
+  fetches, and the non-blocking npm update check. MINOR change (material
+  scope clarification, no hosted/multi-user relaxation).
+- Principle IV — recorded two existing exceptions/details that were already
+  implemented and documented elsewhere: GitLab may use a browser-entered PAT
+  persisted at `STATE_DIR/gitlab-token`, and clone investigation modes depend
+  on `git` indirectly through `gh repo clone` / `glab repo clone`. MINOR
+  change (material expansion of the integration/dependency rule).
+- Development Workflow — replaced stale ArDD command names and the obsolete
+  `features.md` register reference with the current skill set:
+  `/ardd-backlog`, `/ardd-status`, `/ardd-plan`, `/ardd-implement`,
+  `/ardd-audit`, and per-feature files in `.project/features/`. PATCH-shaped
+  wording correction included in this MINOR amendment.
+
+--- Prior report (3.1.1 → 3.2.0) ---
 Version change: 3.1.1 → 3.2.0
 Modified sections:
 - Development Workflow — added a rule that Production Annotations stay as
@@ -68,7 +100,7 @@ during this refine pass along with the rest of the document.
 ---
 name: constitution
 status: stable
-last_updated: 2026-07-02
+last_updated: 2026-07-22
 next_step_prompt: true
 workflow_mode: collaborative
 delegation: eager
@@ -81,10 +113,11 @@ delegation: eager
 A standalone CLI that serves a localhost browser UI for walking a GitHub PR
 (or GitLab MR) hunk-by-hunk. It fetches the diff and metadata via `gh`/`glab`,
 groups hunks into reviewable chunks, optionally pulls Jira context, streams
-AI commentary from a headless `claude` subprocess, persists reviewer state
-(comments, flags, viewed, AI notes) to disk, and publishes drafted comments
-back to GitHub/GitLab as a single review on submit. The human reviewer stays
-in control — Claude assists, it does not decide or auto-post anything.
+AI commentary from a configured local AI-provider subprocess, persists
+reviewer state (comments, flags, viewed, AI notes) to disk, and publishes
+drafted comments back to GitHub/GitLab as a single review on submit. The
+human reviewer stays in control — AI assists, it does not decide or
+auto-post anything.
 
 The current implementation targets a single local reviewer running the CLI
 on their own machine. This is today's real architecture, not a placeholder —
@@ -96,11 +129,15 @@ doesn't needlessly foreclose a possible future hosted/multi-user direction.
 ### I. Local-Only, No Off-Machine Exposure
 
 The HTTP server binds to `127.0.0.1` only (`src/server.ts`); this is called
-out explicitly in `CLAUDE.md` ("never expose off-machine"). No data leaves
-the machine except the comments the reviewer explicitly chooses to submit
-via `gh api` / `glab api`. There is no auth layer, no rate limiting, and no
-network-facing API surface beyond what `gh`/`glab`/Jira/Claude subprocess
-calls require.
+out explicitly in `CLAUDE.md` ("never expose off-machine"). There is no auth
+layer, no rate limiting, and no network-facing API surface. "No off-machine
+exposure" is an inbound/server-exposure rule, not a ban on outbound calls:
+reviewer-requested fetch/submit/enrichment operations may contact GitHub,
+GitLab, Jira, and configured AI providers through the adapters in
+`infrastructure.md`; `api` investigation mode may fetch full contents for
+files touched by the diff; and startup may make the non-blocking npm
+registry update check. Comments are still published only when the reviewer
+explicitly submits them.
 
 *Rationale*: a single local reviewer on their own machine, authenticated via
 tools they've already configured (`gh auth`, `glab auth`), needs no
@@ -147,31 +184,43 @@ style inconsistency.
 
 ### IV. External Tools Are Subprocesses, Not Vendored SDKs
 
-`gh`, `glab`, `claude`, and optionally `op` (1Password CLI) are invoked as
-child processes (`node:child_process` `execFile`/`spawn`), never as imported
-API client libraries. `src/gitlab-rest.ts` centralizes a single glab-CLI +
-REST-fallback transport used by both `fetch.ts` and `submit.ts`, rather than
-each call site reimplementing the choice. Missing binaries surface as clear,
-actionable errors (see `src/claude.ts`'s `ENOENT` handling and `cli.ts`'s
-auth hints).
+`gh`, `glab`, `git`, configured AI providers (`claude` and/or `codex`), and
+optionally `op` (1Password CLI) are invoked as child processes
+(`node:child_process` `execFile`/`spawn`), never as imported API client
+libraries. `git` is used indirectly by
+`gh repo clone` / `glab repo clone` for repo investigation clone modes, so
+clone-mode reviewers need it on `PATH` even though this codebase does not
+preflight it directly yet. `src/gitlab-rest.ts` centralizes a single
+glab-CLI + REST-fallback transport used by both `fetch.ts` and `submit.ts`,
+rather than each call site reimplementing the choice. GitLab is the one
+credential-management exception: a browser-entered GitLab PAT may be held in
+memory and persisted at `STATE_DIR/gitlab-token`, taking precedence over
+`glab`/`GITLAB_TOKEN` as documented in `api.md` and `infrastructure.md`.
+Missing binaries surface as clear, actionable errors where explicit checks
+exist (see the AI-provider adapter `ENOENT` handling and `cli.ts`'s auth
+hints).
 
-*Rationale*: this keeps the tool thin and delegates auth/session handling to
-tools the user already has configured (`gh auth status`, `glab auth status`),
-at the cost of a hard runtime dependency on those CLIs being on `PATH`.
+*Rationale*: this keeps the tool thin and delegates most auth/session
+handling to tools the user already has configured (`gh auth status`,
+`glab auth status`), at the cost of hard runtime dependencies on the needed
+CLIs being on `PATH`. The GitLab browser-token exception exists because
+GitLab has no CLI-auth equivalent as frictionless as `gh auth login` for a
+quick one-off review, and the browser token represents an explicit reviewer
+choice rather than hidden credential discovery.
 
 ### V. Every Adapter Degrades to a Clear "Unavailable" State, Never a Crash
 
 Jira (`src/jira.ts`) returns `{ available: false, reason, setup_hint }`
 rather than throwing when credentials are missing or a fetch fails; the UI
-renders a setup banner instead of erroring. The Claude bridge similarly
-surfaces `onError` with an actionable message instead of letting the SSE
-stream hang. GitLab's `glab`-vs-REST fallback (`gitlab-rest.ts`) is invisible
-to callers — both paths return the same shape.
+renders a setup banner instead of erroring. AI provider adapters similarly
+surface `onError` with actionable messages instead of letting the SSE stream
+hang. GitLab's `glab`-vs-REST fallback (`gitlab-rest.ts`) is invisible to
+callers — both paths return the same shape.
 
 *Rationale*: Jira and AI commentary are optional enrichments to the core
 review workflow (viewing a diff and drafting comments), not blocking
-dependencies. A misconfigured Jira token should never prevent someone from
-reviewing a PR.
+dependencies. A misconfigured Jira token or unavailable AI provider should
+never prevent someone from reviewing a PR.
 
 ## Quality Standards
 
@@ -181,9 +230,10 @@ reviewing a PR.
   Enforced in CI (`.github/workflows/ci.yml`), not just locally.
 - Frontend (`web/src/`) coverage is measured but not gated — explicitly
   called out in `CLAUDE.md` as "a work in progress."
-- External CLIs (`gh`, `op`, `claude`) and `node:child_process` are mocked in
-  tests via module mocks; HTTP calls are mocked via `vi.spyOn(globalThis,
-  'fetch')` — no tests hit real network/subprocess dependencies.
+- External CLIs (`gh`, `glab`, `git`, `op`, `claude`, `codex`) and
+  `node:child_process` are mocked in tests via module mocks; HTTP calls are
+  mocked via `vi.spyOn(globalThis, 'fetch')` — no tests hit real network/
+  subprocess dependencies.
 - `dangerouslySetInnerHTML` is permitted only for sanitized `hljs` output or
   strings processed by `escapeHtml`; never raw user or API content
   (`CLAUDE.md`).
@@ -193,19 +243,22 @@ reviewing a PR.
 
 ## Development Workflow
 
-ARDD (`/ardd-refine`, `/ardd-analyze`, `/ardd-plan`, `/ardd-tasks`,
-`/ardd-implement`, `/ardd-critique`, `/ardd-feature`, etc.) governs how new
-work proceeds on this project, supplementing the existing
+ARDD (`/ardd-backlog`, `/ardd-refine`, `/ardd-status`, `/ardd-plan`,
+`/ardd-implement`, `/ardd-feedback`, `/ardd-defects`, `/ardd-audit`,
+`/ardd-diagram`, etc.) governs how new work proceeds on this project,
+supplementing the existing
 conventions-driven mechanics (conventional commits → `semantic-release`,
 PR-gated CI, husky pre-commit hook), which remain the release/CI plumbing.
 Concretely:
 
 - New features or scope changes are proposed against the artifacts first
-  (`/ardd-feature`, `/ardd-refine <artifact>`), not directly as code.
-- `/ardd-analyze` is run after artifact changes to catch cross-artifact
+  (`/ardd-backlog <idea>`, then `/ardd-plan <slug>` and any needed
+  `/ardd-refine <artifact>`), not directly as code.
+- `/ardd-status` is run after artifact changes to catch cross-artifact
   drift before planning.
-- `/ardd-plan` and `/ardd-tasks` generate the implementation plan and task
-  list from stable artifacts; `/ardd-implement` executes them.
+- `/ardd-plan` generates both the implementation plan and, after explicit
+  approval, the ordered task list from stable artifacts; `/ardd-implement`
+  executes it.
 - `ROADMAP.md` continues to track higher-level milestone sequencing; it is
   not replaced, but artifact refinement is now the mechanism by which
   ROADMAP items get scoped into concrete, implementable decisions.
@@ -213,11 +266,12 @@ Concretely:
   simplification, an unintentional gap awaiting future work, etc.) does so
   under a `## Production Annotations` heading — not inline prose elsewhere in
   the artifact — so `/ardd-plan`'s Production Annotation Summary and
-  `/ardd-critique` can rely on a single, consistent place to find them.
-- A Production Annotation stays as inline prose by default — it does not need
-  its own `features.md` backlog entry just for being written down. It is only
-  promoted to a backlog entry (cross-referencing back to the annotation) when
-  an `/ardd-critique` pass specifically flags it as worth acting on now,
+  `/ardd-audit` can rely on a single, consistent place to find them.
+- A Production Annotation stays documented in its owning artifact by default
+  — it does not need its own `.project/features/<slug>.md` backlog entry just
+  for being written down. It is only promoted to a backlog entry
+  (cross-referencing back to the annotation) when an `/ardd-audit` pass
+  specifically flags it as worth acting on now,
   rather than left as an accepted, indefinitely-deferred limitation. This is
   the pattern `os-aware-keyboard-hints`, `displaced-comment-reanchoring`, and
   `resilient-gitlab-submit` already followed; this bullet makes it a rule
@@ -235,4 +289,4 @@ repository once confirmed. Amendments require:
    clarifications or wording fixes.
 4. `last_updated` date updated in frontmatter.
 
-**Version**: 3.2.0 | **Ratified**: 2026-06-30 | **Last Amended**: 2026-07-02
+**Version**: 3.4.0 | **Ratified**: 2026-06-30 | **Last Amended**: 2026-07-22

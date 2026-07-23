@@ -97,6 +97,26 @@ describe('OverviewView', () => {
     expect(onBegin).toHaveBeenCalledTimes(1);
   });
 
+  it('shows Stop while the summary is streaming', async () => {
+    const user = userEvent.setup();
+    const onStop = vi.fn();
+    render(
+      <OverviewView
+        pr={pr}
+        meta={meta}
+        jira={jira}
+        ai={{ ...ai, streaming: { kind: 'initial', text: 'partial' }, busy: true, onStop }}
+        onBegin={vi.fn()}
+        chunkCount={3}
+        {...noDisplaced}
+      />,
+    );
+
+    await user.click(screen.getByRole('button', { name: 'stop' }));
+
+    expect(onStop).toHaveBeenCalledOnce();
+  });
+
   it('shows "Begin review" with no viewed chunks and "Resume review" once any chunk is viewed', () => {
     const { rerender } = render(
       <OverviewView
