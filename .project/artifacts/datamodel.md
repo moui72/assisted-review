@@ -3,7 +3,7 @@ name: datamodel
 render_target: docs/ARCHITECTURE.md
 render_section: Datamodel
 status: stable
-last_updated: 2026-07-21
+last_updated: 2026-07-22
 diagram_type: erDiagram
 diagram_status: stale
 ---
@@ -21,12 +21,13 @@ place, never because of a mock-vs-real distinction: `NotePreview` (see
 has no `id` yet, and `Anchor`, a transient line *selection* resolved to stored
 `line`/`side` before anything persists.
 
-Two further shapes sit outside `ReviewState` without being frontend-only:
+Three further shapes sit outside `ReviewState` without being frontend-only:
 `PreloadConfig` is the `GET /api/config` response contract — the server builds
 it (`src/server.ts`), so it has a backend representation; only the named
-interface happens to live in `web/src/api.ts` today. Client-Persisted
-Preferences are genuinely never sent anywhere — browser `localStorage`, not
-server state.
+interface happens to live in `web/src/api.ts` today. `AiProviderConfig`
+(`GET`/`POST /api/ai-config`) is persisted server-side in `STATE_DIR` but is
+not tied to one review. Client-Persisted Preferences are genuinely never sent
+anywhere — browser `localStorage`, not server state.
 
 Two families of entities exist:
 
@@ -140,7 +141,7 @@ Overview-page Jira background, or the reason it's unavailable.
 
 | Field | Type | Notes |
 |-------|------|-------|
-| jira | JiraContext | Only Jira context today; the shape leaves room for future overview-page enrichments |
+| jira | JiraContext | The only overview enrichment today; there is no generic extension map or second overview data source |
 
 ### Review
 
@@ -175,10 +176,12 @@ whole chunk" (anchored at submit time — see `submit.ts`'s `commentAnchor`).
 ### StoredNote
 
 The single note shape for AI commentary — real notes written by the
-`add_note` action when a Claude SSE stream completes, *and* mock-AI notes
-(`chunk.ai_notes`, see `Chunk` above, filled with fake `id`/`chunk_id`/
-`created_at`). There is no separate mock-only note type: the mock path fakes
-values rather than reinventing the shape.
+`add_note` action when the configured AI provider's SSE stream completes,
+*and* mock-AI notes (`chunk.ai_notes`, see `Chunk` above, filled with fake
+`id`/`chunk_id`/`created_at`). There is no separate mock-only note type: the
+mock path fakes values rather than reinventing the shape. The provider and
+model that generated a note are not stored per-note in this slice; changing
+provider/model affects future notes only.
 
 | Field | Type | Notes |
 |-------|------|-------|
@@ -194,7 +197,7 @@ values rather than reinventing the shape.
 | created_at | string | ISO; a fixed placeholder for mock notes (unused by rendering) |
 
 Frontend note: `AiCommentary.tsx`'s live-streaming preview (the in-progress
-buffer shown while a Claude request is in flight) is a `NotePreview` —
+buffer shown while an AI request is in flight) is a `NotePreview` —
 `Pick<StoredNote, 'kind' | 'body' | 'prompt' | 'suggested_action'>` — since a
 not-yet-persisted stream has no `id`/`chunk_id`/`created_at` yet. The
 `Note` component renders `StoredNote | NotePreview` and only shows a delete
@@ -228,7 +231,7 @@ Resumed on next open of the same PR/MR.
 | version | number | `STATE_VERSION = 2`; drives `migrate()` |
 | pr | PrRef | |
 | meta | PrMeta? | Cached so `listReviews()` can show titles without re-fetching |
-| head_sha | string | Refreshed to the latest fetched SHA on every load; staleness handling beyond that is deferred (see Production Annotations) |
+| head_sha | string | Latest fetched head SHA, refreshed on every load. This is not a durable drafted-against SHA; see Production Annotations |
 | started_at | string | ISO, set once on first load |
 | comments | DraftComment[] | |
 | flagged | FlaggedEntry[] | |
@@ -256,10 +259,10 @@ all saved reviews.
 
 ### InvestigationConfig
 
-Per-repo (not per-PR) choice of how much filesystem/repo access the headless
-Claude investigation gets — see `infrastructure.md`'s "Repo Investigation
-Access" section. Persisted once chosen so the same repo isn't re-prompted on
-every review; keyed by `platform:owner/repo` in a single
+Per-repo (not per-PR) choice of how much filesystem/repo access AI
+investigation gets — see `infrastructure.md`'s "Repo Investigation Access"
+section. Persisted once chosen so the same repo isn't re-prompted on every
+review; keyed by `platform:owner/repo` in a single
 `investigation-config.json` (`infrastructure.md`), not one file per entry
 like `ReviewState`, since this is a small, infrequently-written map rather
 than per-review data.
@@ -275,25 +278,42 @@ than per-review data.
 | chosen_at | string | ISO, set when the mode is first chosen |
 | last_used | string? | ISO, updated each time an investigation call actually uses this config — the input to `always-clone` pruning (idle TTL) |
 
+### AiProviderConfig
+
+Global reviewer preference for which local AI subprocess generates commentary
+and which model argument, if any, is passed to that provider. Persisted in
+`STATE_DIR/ai-config.json` (`infrastructure.md`) because it is a tool
+preference, not per-review state and not a browser-only display preference.
+
+| Field | Type | Notes |
+|-------|------|-------|
+| provider | `'claude' \| 'codex'` | Active AI provider. Defaults to `'claude'` when the config file is absent so existing installs keep current behavior |
+| claude_model | string? | Optional model argument for the Claude CLI. Missing/blank means "use the CLI default" |
+| codex_model | string? | Optional model argument for `codex exec`. Missing/blank means "use the CLI default" |
+| updated_at | string | ISO timestamp set when the reviewer changes provider or model |
+
 ### ReviewPayload
 
 The submit-side projection of a `ReviewState` — what `buildReviewPayload()`
 (`src/submit.ts`) hands to the platform adapter. Distinct from `ReviewState`
 because it carries only what a review submission needs, already normalized to
 the platform's wire shape: drafted comments become `ReviewComment[]` anchored
-by `path`/`line`/`side`, and the drafted-against SHA is pinned as `commit_id`
-so a stale submission can be detected rather than posted against the wrong
-head.
+by `path`/`line`/`side`, and `commit_id` carries the SHA supplied to the
+platform adapter. Today that value comes from `ReviewState.head_sha`, which is
+the latest fetched SHA rather than a separate drafted-against SHA; see
+Production Annotations.
 
 | Field | Type | Notes |
 |-------|------|-------|
 | event | Verdict | GitHub review event; see Normalization Rules. The GitLab adapter maps its own `GitLabVerdict` separately |
 | body | string | Summary note |
-| commit_id | string | The `head_sha` the comments were drafted against |
+| commit_id | string | The SHA supplied to the platform review API; currently `ReviewState.head_sha` |
 | comments | ReviewComment[] | Inline comments — `{ path, line, side, body }` |
 
-Server-side only: it is echoed back on `SubmitResult.payload` for a future
-manual-submit fallback and never reaches the client (see `api.md`).
+Server-side only: it is echoed back on `SubmitResult.payload` when an adapter
+fails, then stripped by the `/api/submit` route before the response reaches
+the client (see `api.md`). There is no client-visible manual-submit fallback
+today.
 
 ### SubmitResult
 
@@ -308,7 +328,7 @@ wire response after calling the adapter (see `api.md`).
 | stale | `{ old, new_head, inline_count }`? | Set when the drafted-against head SHA is gone |
 | comment_errors | `Array<{ path, line, error }>`? | Partial GitLab discussion-post failures |
 | error | string? | `gh`/`glab` stderr or synthesized message |
-| payload | ReviewPayload? | Echoed on failure server-side only, for a future manual-submit fallback; never reaches the client |
+| payload | ReviewPayload? | Echoed on failure server-side only; stripped before the client response and not used by any UI fallback today |
 | state | ReviewState | Added by the `/api/submit` route handler, not the submit adapter itself |
 
 The GitLab adapter (`submitGitLabReview`) actually returns `SubmitResult &
@@ -381,7 +401,7 @@ point of use.
 ### Action
 
 Discriminated union of all mutations the UI POSTs to `/api/action` (and that
-the Claude SSE route applies internally for `add_note`). See
+the AI SSE route applies internally for `add_note`). See
 `applyAction()` in `src/state.ts` for the full reducer.
 
 | Variant | Fields |
@@ -420,6 +440,12 @@ the Claude SSE route applies internally for `add_note`). See
   and `error` a failed generation surfaced in the note stream rather than
   swallowed. Chosen at the call site by whether a question was supplied
   (`src/server.ts`, `web/src/App.tsx`).
+- **AI provider/model selection** is global and provider-specific. A missing
+  `AiProviderConfig` behaves as `{ provider: 'claude' }`. Blank or missing
+  model fields are not normalized into explicit defaults; the active adapter
+  simply omits the model argument so the underlying CLI chooses its own
+  default. Switching providers does not erase the inactive provider's stored
+  model field.
 - **Jira keys** are extracted with a single regex (`\b[A-Z][A-Z0-9]+-\d+\b`)
   applied across PR title, head branch name, and PR body; deduplicated via a
   `Set`.
@@ -481,9 +507,10 @@ arrays. `listReviews()` scans all files in the state directory on every call
   with `shaOnPr()` — i.e. it asks "is the latest SHA on this PR?", which is
   nearly always yes. The `SubmitResult.stale` path therefore fires mainly via
   the GitHub-error fallback (`STALE_RE` against `gh` stderr), not via the
-  explicit pre-check. Closing this means persisting the drafted SHA separately
-  from the latest-fetched one; the two are conflated into one field today.
-  Anchor Reconciliation independently covers the *chunk*-shaped consequences
-  of a moved head, so drafted comments are not silently mis-anchored — it is
-  specifically the commit-level guard that is weak. Deliberate-ish for a
-  single-reviewer local tool, but a real gap rather than a designed tradeoff.
+  explicit pre-check. Anchor Reconciliation independently covers the
+  *chunk*-shaped consequences of a moved head, so drafted comments are not
+  silently mis-anchored — it is specifically the commit-level guard that is
+  weak. This is tracked as open feedback F001
+  (`feedback-head-sha-drafted-vs-fetched-co-a9d9.md`), whose proposed fix is
+  to persist the drafted SHA separately from the latest-fetched SHA with one
+  new field plus a migration step.

@@ -3,7 +3,7 @@ name: ui
 render_target: docs/ARCHITECTURE.md
 render_section: UI
 status: stable
-last_updated: 2026-07-13
+last_updated: 2026-07-22
 diagram_type: graph TD
 diagram_status: stale
 ---
@@ -41,9 +41,9 @@ deferred backlog item (`customizable-syntax-themes`), and user-authored
 custom palettes/fonts beyond the presets are another (`customizable-fonts-colors`).
 
 The visual identity uses a self-hosted typeface set (`@fontsource`): Figtree
-(sans / UI), Tinos (serif — Claude's voice in `AiCommentary`), and Space Mono
-(mono — diff, code, and meta), wired through the `--font-sans`/`--font-serif`/
-`--font-mono` custom properties. The three primary regions — top nav (`TopNav`),
+(sans / UI), Tinos (serif — AI commentary voice in `AiCommentary`), and Space
+Mono (mono — diff, code, and meta), wired through the `--font-sans`/
+`--font-serif`/`--font-mono` custom properties. The three primary regions — top nav (`TopNav`),
 the scrolling review stage, and the command bar (`ResponseBar`) — read as
 distinct planes via one-directional "rail" shadows; a single accent
 `:focus-visible` ring applies to all controls (keyboard-only) and text
@@ -58,7 +58,7 @@ modal is open).
 ## Views
 
 All views are orchestrated by `App.tsx`, which owns navigation (`index`:
-`-1` = overview, `0..N-1` = chunk), the active Claude stream, and drafts.
+`-1` = overview, `0..N-1` = chunk), the active AI stream, and drafts.
 
 ### Splash (`Splash.tsx`)
 
@@ -78,8 +78,8 @@ token this saves.
 The `index === -1` page. Shows PR/MR title, description (rendered as
 markdown), and Jira context (linked issue(s) + epic, or a setup banner via
 `ErrorBanner` if Jira is unavailable — see `datamodel.md`'s `JiraContext`).
-Hosts the AI panel scoped to `OVERVIEW_ID` — ask Claude to summarize the
-whole PR or answer a question about it. `onBegin` jumps to chunk 0; its
+Hosts the AI panel scoped to `OVERVIEW_ID` — ask the configured AI provider
+to summarize the whole PR or answer a question about it. `onBegin` jumps to chunk 0; its
 footer button reads "Begin review →" until any chunk has been viewed
 (`state.viewed` non-empty), then "Resume review →" — a resume affordance
 distinct from the zero-chunk empty state below.
@@ -91,8 +91,9 @@ no current chunk to attach to. Each entry shows the comment body plus its
 last-known `file`/`hunk_header` snapshot, with a "Re-anchor" button that
 jumps into `ChunkView` in anchor-picking mode (see `ResponseBar.tsx` below).
 Displaced notes and flags are surfaced in the same section for visibility,
-but read-only — no re-anchor affordance for them (see `api.md`'s
-`reanchor_comment`); a note can only be deleted and a flag only cleared.
+but their content/anchor is read-only — no re-anchor affordance for them
+(see `api.md`'s `reanchor_comment`). Their only available action is removal:
+a note can be deleted and a flag can be cleared.
 
 This exclusivity isn't just a byproduct of a displaced entry's `chunk_id` no
 longer resolving — Anchor Reconciliation retains the *last-known* `chunk_id`
@@ -152,8 +153,9 @@ Shared across views, listed by concern:
 - **`AiCommentary.tsx`** — renders the note list (`StoredNote[]`, see
   `datamodel.md`) for whichever id is active (chunk or `OVERVIEW_ID`), the
   ask-AI input, the live streaming buffer while a request is in flight
-  (a `NotePreview`), and per-note delete (gated by a `deletableNoteIds` set
-  so a mock note's fake id can't offer a no-op delete button).
+  (a `NotePreview`), Stop while the current target is streaming, Regenerate
+  on persisted initial notes, and per-note delete (gated by a
+  `deletableNoteIds` set so a mock note's fake id can't offer a no-op delete button).
   Distinguishes `initial`/`context`/`investigation`/`error` note kinds
   visually.
 - **`SubmitModal.tsx`** — verdict picker (GitHub `VERDICTS` vs. GitLab
@@ -193,7 +195,9 @@ Shared across views, listed by concern:
   **Theme** toggle, the two Appearance axes; plus
   preload behavior (`preload_chunks` count, `preload_overview` on/off,
   persisted to `localStorage` (`ar-preload-chunks`, `ar-preload-overview`)
-  layered over the server default from `GET /api/config`), and an
+  layered over the server default from `GET /api/config`), AI controls backed
+  by `GET`/`POST /api/ai-config` (provider selector: Claude/Codex, plus a
+  provider-specific model field where blank means provider default), and an
   "Investigation access" row showing the active repo's current
   `InvestigationConfig.mode` (`datamodel.md`) with a button that reopens
   `InvestigationModal` to change it. A read-only "About" section (rendered
@@ -205,7 +209,8 @@ Shared across views, listed by concern:
   `infrastructure.md`'s Repo Investigation Access) with a short
   tradeoff description each — notably, `api` mode's copy states its scope
   limit explicitly ("full contents of changed files only, not the whole
-  repo") so the reviewer isn't surprised later. `local-path` reveals a text
+  repo") so the reviewer isn't surprised later. Copy refers to "AI" rather
+  than "Claude" except where a provider-specific caveat is needed. `local-path` reveals a text
   input for the directory. Save calls `POST /api/investigation-config`
   (`api.md`); a clone-mode save can take a few seconds (real `git clone`)
   so the button shows a "Cloning…" busy state, matching
@@ -213,7 +218,7 @@ Shared across views, listed by concern:
 - **`HelpOverlay.tsx`** — static keyboard-shortcut reference (`Row`/`Binding`
   list), toggled by `?`.
 - **`ErrorBanner.tsx`** — generic inline error/warning banner, reused for
-  Jira setup hints, Claude errors, and submit failures.
+  Jira setup hints, AI provider errors, and submit failures.
 - **`Markdown.tsx`** — thin `react-markdown` + `remark-gfm` wrapper; all
   element styling lives in a single `.md` CSS class so markdown content
   themes with the rest of the app rather than carrying its own styles.
@@ -232,8 +237,15 @@ Shared across views, listed by concern:
   (`streaming.text`, growing via `onDelta`) with a busy indicator; the ask
   input is disabled (`busy: streaming?.chunkId === activeId`) while a
   request for *that* id is in flight, but streaming is otherwise
-  non-blocking for navigation.
-- **AI error**: `claudeError` rendered via `ErrorBanner` in the AI panel;
+  non-blocking for navigation. A Stop control is visible for the active
+  target while streaming; clicking it closes the current stream, clears the
+  live preview, and does not persist a partial note.
+- **AI regenerate**: persisted initial notes for a chunk or overview expose
+  Regenerate. Regenerate deletes that note through `delete_note`, then starts
+  a fresh empty-question AI request for the same target. If the replacement
+  stream is stopped or errors before `done`, no partial replacement is
+  persisted.
+- **AI error**: `aiError` rendered via `ErrorBanner` in the AI panel;
   cleared automatically on navigation (`activeId` change) or on starting a
   new ask.
 - **Background preload**: silent for targets other than the currently
@@ -245,7 +257,7 @@ Shared across views, listed by concern:
   in-flight preload target *is* the currently viewed chunk or the overview
   (`activeId`), the shared `aiPanel.busy` reflects it — same `busy` prop
   `AiCommentary`/`OverviewView`'s `Summary` already use for a foreground
-  ask, so the Ask/Explain/Summarize/regenerate controls disable and a
+  ask, so the Ask/Explain/Summarize/Regenerate controls disable and a
   loading indicator (the same pulsing-cursor treatment used for a live
   foreground stream) shows automatically, with no separate loading-state
   plumbing per view. This prevents a same-target duplicate request — e.g.
@@ -253,18 +265,23 @@ Shared across views, listed by concern:
   changing the always-silent, non-blocking treatment for preloads of chunks
   the user isn't currently looking at.
 - **Submit**: modal-local states for in-flight, success (with permalink),
-  stale-SHA warning (offers re-fetch), and GitLab partial-failure
-  (`comment_errors` list, retry-available — see `SubmitModal.tsx` above) —
-  all handled inside `SubmitModal`, not lifted to `App.tsx`.
+  stale-SHA warning, and GitLab partial-failure (`comment_errors` list,
+  retry-available — see `SubmitModal.tsx` above) — all handled inside
+  `SubmitModal`, not lifted to `App.tsx`. The stale-SHA warning is
+  instructional only: it tells the reviewer to re-fetch the PR/MR before
+  submitting inline comments, but there is no in-modal re-fetch button or
+  route wired to that state today.
 - **Displaced comments** (Overview page only): rendered whenever
   `state.comments`/`notes`/`flagged` contains any `displaced: true` entry
   (see `datamodel.md`'s Anchor Reconciliation) — a dedicated section, not a
   dismissible banner, since these need an actual action (re-anchor, delete,
-  or unflag) rather than just acknowledgment. Comments show a "Re-anchor"
-  button; notes and flags are read-only there (delete/unflag only).
-  Displaced comment *bodies* are also read-only — no Edit affordance in this
-  section (a deliberate scope decision, not an omission): editing happens
-  after re-anchoring, keeping the displaced section single-purpose.
+  or unflag) rather than just acknowledgment. Comments show "Re-anchor" and
+  "delete" actions. Notes and flags do not expose re-anchor/edit controls in
+  this section; they can only be removed (`delete_note` for notes, clearing
+  the flag for flags). Displaced comment *bodies* are also read-only — no
+  Edit affordance in this section (a deliberate scope decision, not an
+  omission): editing happens after re-anchoring, keeping the displaced
+  section single-purpose.
 - **Comment editing** (`DiffPane`'s `CommentCard`): card-local editing state
   — textarea prefilled with the body, Save/Cancel. Save is disabled on an
   empty/whitespace-only body (matching the add-comment rule); Escape cancels.
@@ -278,8 +295,8 @@ Shared across views, listed by concern:
   dismissible `ErrorBanner`-style banner appears in the AI panel inviting
   the reviewer to "Enable deeper investigation," opening
   `InvestigationModal` on click. Purely opt-in and non-blocking — dismissing
-  it (or never clicking it) leaves the repo at `'none'` and Claude behaves
-  exactly as before; the banner doesn't reappear for that repo once a mode
+  it (or never clicking it) leaves the repo at `'none'` and the configured AI
+  provider behaves exactly as before; the banner doesn't reappear for that repo once a mode
   is explicitly chosen (including re-choosing `'none'` from the modal,
   which also counts as "chosen" and suppresses the banner).
 - **Empty/zero-chunk PR**: A PR/MR with zero chunks (e.g., a diff-less or
@@ -313,7 +330,7 @@ deliberate exception that *does* key off the modifier.
 
 - **Load error has no in-place retry** — the full-screen `Error: {message}`
   state (see States above) is inconsistent with every other degrade path
-  (Jira, Claude, submit), which are all recoverable-in-place banners. Not
+  (Jira, AI provider, submit), which are all recoverable-in-place banners. Not
   intentional. Future work should replace this terminal state with an
   in-place retry affordance (re-run `fetchReview()`/`fetchState()`) rather
   than requiring a manual page reload.

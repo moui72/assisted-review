@@ -50,7 +50,7 @@ status: completed
   *implemented* empty-state message instead of the old "Confirmed gap, needs
   an explicit empty state" framing.
 
-- [x] T004 [artifacts: none] Depends on T003. Remove the resolved
+- [x] T004 Depends on T003. Remove the resolved
   "Empty/zero-chunk PR" entry from `.project/DEFECTS.md` (it will no longer
   be accurate once `ui.md` and the code agree), or run `/ardd-verify` to
   regenerate `DEFECTS.md` from scratch and confirm it comes back empty.
