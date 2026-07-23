@@ -47,6 +47,11 @@ function extractDelta(ev: Record<string, unknown>): string | undefined {
   if (typeof ev.message === 'string' && typeof ev.type === 'string' && ev.type.includes('delta')) {
     return ev.message;
   }
+  // Handle item.updated events with item.text
+  if (ev.item && typeof ev.item === 'object' && typeof ev.type === 'string' && ev.type === 'item.updated') {
+    const item = ev.item as Record<string, unknown>;
+    if (typeof item.text === 'string') return item.text;
+  }
   return undefined;
 }
 
@@ -55,6 +60,9 @@ function extractFinal(ev: Record<string, unknown>): string | undefined {
   if (typeof ev.message === 'string' && ev.type === 'agent_message') return ev.message;
   if (ev.item && typeof ev.item === 'object') {
     const item = ev.item as Record<string, unknown>;
+    // First try item.text (direct string field for item.completed)
+    if (typeof item.text === 'string') return item.text;
+    // Fall back to item.content
     const text = textFromContent(item.content);
     if (text) return text;
   }

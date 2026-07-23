@@ -41,7 +41,7 @@ function Note({
           {onRegenerate && persistedId && note.kind === 'initial' && (
             <button
               onClick={() => onRegenerate(persistedId)}
-              className="ml-2 align-middle font-sans text-[10px] text-faint opacity-0 transition group-hover:opacity-100 hover:text-accent"
+              className="ml-2 align-middle font-sans text-[10px] text-faint opacity-0 transition group-hover:opacity-100 focus-visible:opacity-100 hover:text-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/50"
             >
               regenerate
             </button>
@@ -49,7 +49,7 @@ function Note({
           {onDelete && persistedId && (
             <button
               onClick={() => onDelete(persistedId)}
-              className="ml-2 align-middle font-sans text-[10px] text-faint opacity-0 transition group-hover:opacity-100 hover:text-[var(--del-fg)]"
+              className="ml-2 align-middle font-sans text-[10px] text-faint opacity-0 transition group-hover:opacity-100 focus-visible:opacity-100 hover:text-[var(--del-fg)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/50"
             >
               delete
             </button>

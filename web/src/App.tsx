@@ -330,15 +330,50 @@ export function App() {
       const note = state.notes.find((n) => n.id === id);
       if (!note || note.kind !== 'initial') return;
       if (preloadTargetId === note.chunk_id) return;
+      const targetChunkId = note.chunk_id;
+      // Cancel any in-flight preloads to avoid interference
+      preloadCancelRef.current?.();
+      preloadCancelRef.current = null;
+      // Mark as busy immediately to block Ask during the delete round-trip
+      const busyMarker = { chunkId: targetChunkId, kind: 'initial' as const, text: '' };
+      setStreaming(busyMarker);
       try {
         const next = await postAction({ type: 'delete_note', id });
         setState(next);
-        startAiStream(note.chunk_id, '');
+        // Only start the replacement stream if the busy marker is still active
+        // (not replaced by a newer stream from a different action)
+        setStreaming((current) => {
+          if (current === busyMarker) {
+            // Still the placeholder we set — safe to replace with real stream
+            setAiError(null);
+            aiCloseRef.current = streamAi(
+              { chunkId: targetChunkId, question: '' },
+              {
+                onDelta: (t) =>
+                  setStreaming((s) => (s ? { ...s, text: s.text + t } : s)),
+                onDone: (nextState) => {
+                  aiCloseRef.current = null;
+                  setState(nextState);
+                  setStreaming(null);
+                },
+                onError: (msg) => {
+                  aiCloseRef.current = null;
+                  setAiError(msg);
+                  setStreaming(null);
+                },
+              },
+            );
+            return { chunkId: targetChunkId, kind: 'initial', text: '' };
+          }
+          // A newer stream started — leave it alone
+          return current;
+        });
       } catch (e) {
         setAiError(errMsg(e));
+        setStreaming(null);
       }
     },
-    [state, streaming, preloadTargetId, startAiStream],
+    [state, streaming, preloadTargetId],
   );
 
   // Keyboard navigation (ignored while typing in the comment box).

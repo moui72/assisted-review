@@ -129,6 +129,41 @@ describe('streamCodex', () => {
     expect(done).toBe('final answer');
   });
 
+  it('reads final text from item.completed with item.text', async () => {
+    const child = makeChild();
+    vi.mocked(spawn).mockReturnValue(asSpawnResult(child));
+    const done = await new Promise<string>((resolve, reject) => {
+      streamCodex('p', { onDelta: () => {}, onDone: resolve, onError: reject });
+      process.nextTick(() => {
+        child.stdout.emit('data', jsonLine({
+          type: 'item.completed',
+          item: { text: 'direct text field' },
+        }));
+      });
+    });
+    expect(done).toBe('direct text field');
+  });
+
+  it('forwards deltas from item.updated events with item.text', async () => {
+    const child = makeChild();
+    vi.mocked(spawn).mockReturnValue(asSpawnResult(child));
+    const deltas: string[] = [];
+    const done = await new Promise<string>((resolve, reject) => {
+      streamCodex('p', {
+        onDelta: (text) => deltas.push(text),
+        onDone: resolve,
+        onError: reject,
+      });
+      process.nextTick(() => {
+        child.stdout.emit('data', jsonLine({ type: 'item.updated', item: { text: 'chunk1' } }));
+        child.stdout.emit('data', jsonLine({ type: 'item.updated', item: { text: 'chunk2' } }));
+        child.stdout.emit('data', jsonLine({ type: 'item.completed', item: { text: 'chunk1chunk2' } }));
+      });
+    });
+    expect(deltas).toEqual(['chunk1', 'chunk2']);
+    expect(done).toBe('chunk1chunk2');
+  });
+
   it('calls onError for Codex error events and non-zero exits', async () => {
     const child = makeChild();
     vi.mocked(spawn).mockReturnValue(asSpawnResult(child));

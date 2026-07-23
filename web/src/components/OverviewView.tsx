@@ -98,7 +98,7 @@ function Summary({ ai }: { ai: AiPanelProps }) {
             stop
           </button>
         )}
-        {summary?.id && (
+        {summary?.id && ai.deletableNoteIds.has(summary.id) && (
           <button
             onClick={() => ai.onRegenerateNote?.(summary.id!)}
             disabled={!ai.onRegenerateNote}
