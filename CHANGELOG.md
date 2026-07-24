@@ -1,3 +1,7 @@
+> **Note:** This changelog is frozen as of v1.12.2. Release notes now live in
+> [GitHub Releases](https://github.com/moui72/assisted-review/releases) and on the
+> [docs site](https://moui72.github.io/assisted-review/release-notes/).
+
 ## [1.12.2](https://github.com/moui72/assisted-review/compare/v1.12.1...v1.12.2) (2026-07-21)
 
 
