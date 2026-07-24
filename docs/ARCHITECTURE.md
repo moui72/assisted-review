@@ -3,9 +3,9 @@
 How assisted-review is put together: process model, backend modules, and the
 three generated diagrams (data model, infrastructure, UI). The diagrams are
 generated from the ARDD artifacts in
-[`.project/artifacts/`](../.project/artifacts) by `/ardd-diagram` — don't edit
+[`.project/artifacts/`](https://github.com/moui72/assisted-review/blob/main/.project/artifacts) by `/ardd-diagram` — don't edit
 the Mermaid blocks by hand; the prose around them is maintained normally. For
-the user-facing overview, start with the [README](../README.md).
+the user-facing overview, start with the [README](https://github.com/moui72/assisted-review/blob/main/README.md).
 
 ## Process model
 
@@ -30,7 +30,7 @@ multiple *saved* reviews exist only as state files on disk, listed via
 `GET /api/reviews`.
 
 A few invariants shape everything else (see
-[`constitution.md`](../.project/artifacts/constitution.md)):
+[`constitution.md`](https://github.com/moui72/assisted-review/blob/main/.project/artifacts/constitution.md)):
 
 - **Local-only.** The server never binds off-loopback; no data leaves the
   machine except comments the reviewer explicitly submits.
@@ -97,7 +97,7 @@ Module notes, roughly in the order a review flows through them:
   with SPA fallback. Only one Claude stream may be in flight globally;
   opening a review or dropping the SSE connection cancels it. The full
   endpoint-by-endpoint contract is in
-  [`api.md`](../.project/artifacts/api.md).
+  [`api.md`](https://github.com/moui72/assisted-review/blob/main/.project/artifacts/api.md).
 - **`claude.ts` / `investigation.ts`** — spawns
   `claude -p --output-format stream-json` with `Bash`/`Edit`/`Write`/web
   tools always disallowed. The per-repo `InvestigationConfig` decides how
@@ -130,7 +130,7 @@ reconciliation** pass re-matches those snapshots against the freshly parsed
 chunks — re-syncing ids where the hunk still exists, and marking entries
 `displaced` (surfaced in the UI for manual re-anchoring, deletion, or
 unflagging) where it doesn't. Full field-by-field detail is in
-[`datamodel.md`](../.project/artifacts/datamodel.md).
+[`datamodel.md`](https://github.com/moui72/assisted-review/blob/main/.project/artifacts/datamodel.md).
 
 ```mermaid
 erDiagram
@@ -288,7 +288,7 @@ subprocesses (`gh`, `glab`, `claude`, `op`) or plain HTTPS (Jira, GitLab REST
 fallback, npm registry) — and every optional one degrades to a typed
 "unavailable" state instead of failing the review. Transport details, shape
 mappings, and storage layout are in
-[`infrastructure.md`](../.project/artifacts/infrastructure.md).
+[`infrastructure.md`](https://github.com/moui72/assisted-review/blob/main/.project/artifacts/infrastructure.md).
 
 ```mermaid
 graph TD
@@ -345,7 +345,7 @@ in-progress draft text). Theming is two independent persisted axes — palette
 and light/dark mode — implemented entirely with CSS custom properties (no
 `tailwind.config.js`); each palette carries a complete token set for both
 modes, including syntax colors. Component-by-component detail, UI states, and
-the keyboard model are in [`ui.md`](../.project/artifacts/ui.md).
+the keyboard model are in [`ui.md`](https://github.com/moui72/assisted-review/blob/main/.project/artifacts/ui.md).
 
 ```mermaid
 graph TD

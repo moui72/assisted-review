@@ -1,0 +1,73 @@
+site_name: assisted-review
+site_description: >-
+  Keyboard-driven, AI-assisted GitHub PR / GitLab MR review that runs
+  entirely on your machine.
+site_url: https://moui72.github.io/assisted-review/
+repo_url: https://github.com/moui72/assisted-review
+repo_name: moui72/assisted-review
+edit_uri: edit/main/docs/
+
+theme:
+  name: material
+  logo: assets/icon-dark.svg
+  favicon: assets/icon.svg
+  palette:
+    - media: '(prefers-color-scheme: light)'
+      scheme: default
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/weather-night
+        name: Switch to dark mode
+    - media: '(prefers-color-scheme: dark)'
+      scheme: slate
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/weather-sunny
+        name: Switch to light mode
+  features:
+    - navigation.sections
+    - navigation.footer
+    - navigation.top
+    - content.code.copy
+    - content.action.edit
+    - search.suggest
+    - search.highlight
+
+markdown_extensions:
+  - admonition
+  - attr_list
+  - md_in_html
+  - toc:
+      permalink: true
+  - pymdownx.details
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+  - pymdownx.highlight
+  - pymdownx.inlinehilite
+  - pymdownx.keys
+  - pymdownx.tabbed:
+      alternate_style: true
+
+plugins:
+  - search
+
+nav:
+  - Home: index.md
+  - Getting started: getting-started.md
+  - Reviewing a PR:
+      - Workflow & UI: reviewing.md
+      - Keyboard shortcuts: keyboard-shortcuts.md
+      - Submitting a review: submitting.md
+  - AI commentary: ai.md
+  - Configuration:
+      - CLI & environment: configuration.md
+      - GitLab: gitlab.md
+      - Jira: jira.md
+  - Architecture: ARCHITECTURE.md
+  - Contributing: contributing.md
+  - Release notes: release-notes.md
