@@ -14,8 +14,15 @@ name: ArDD version badge sync
 # .github/badges/ardd-icon.svg, per upstream templates/badge.md's renderer
 # caveat). The other keys are emitted anyway, matching upstream's payload
 # field-for-field, so the file stays a valid shields.io endpoint payload and
-# switching renderers is a one-line README change. Be aware the `channel`
-# colouring is inert as currently rendered.
+# switching renderers is a one-line README change.
+#
+# The `channel` colouring below is mirrored by hand: shieldcn's dynamic/json
+# reads only `message`, and it ignores both a `colorQuery=$.color` selector
+# and the JSON's own `color` field (verified 2026-07-24 by A/B render), so
+# the README's badge URL carries a static `color=` param instead. Keep the
+# two in sync — if the `case "$channel"` block below changes which colour a
+# channel maps to, update the README's `color=` param to match. Switching to
+# a shields.io /endpoint render would make this automatic.
 #
 # .github/badges/ardd-icon.svg is the source of truth for the mark: this
 # workflow inlines it as logoSvg, and the README's `logo=` param is its
@@ -93,7 +100,7 @@ jobs:
             "label": "built with ArDD",
             "message": "$message",
             "color": "$color",
-            "labelColor": "#7C3AED",
+            "labelColor": "#2F4858",
             "logoSvg": "$logo"
           }
           JSON
