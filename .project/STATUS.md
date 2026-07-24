@@ -44,9 +44,9 @@ None — `DEFECTS.md` all-clear, last checked 2026-07-11. Refresh with
 ## Feedback
 
 2 open feedback files — `feedback-ardd-update-usage-improvements-1c35.md`
-and `feedback-ardd-badge-toolchain-defects-dbbf.md` (upstream ArDD badge
-defects: stable `Source-Ref` on a beta channel, stale `PLACEHOLDER` caveat,
-inert `mode=` wrapper). Both will be picked up by the next `/ardd-plan`.
+and `feedback-ardd-badge-toolchain-defects-dbbf.md` (six upstream ArDD
+toolchain defects found while auditing the version badge). Both will be
+picked up by the next `/ardd-plan`.
 
 ## Feature Backlog
 
@@ -67,9 +67,12 @@ already represented by an active feature/task, or documented as future work.
   `ai-stream-stop-regenerate` — tasks file `tasks-1a23-cc11.md` is
   `status: completed` and its work merged into `main` via PR #112
   (`fc3fac2`), but the register still says `status: tasked`.
-  `completion-flip-check.sh` does not catch this one: the tasks file has no
-  `branch:` field for it to compare against the default branch, so the
-  detection was manual this pass. **Resolved in this pass** — all three were
+  `completion-flip-check.sh` does not catch this one: the plan does record
+  `branch: 1a23`, but that branch was deleted when the PR merged, so the
+  script's `git merge-base --is-ancestor` gate errors, is swallowed by
+  `2>/dev/null`, and exits 0 indistinguishably from "nothing orphaned".
+  Detection was manual this pass. Logged upstream as F003 in
+  `feedback-ardd-badge-toolchain-defects-dbbf.md`. **Resolved in this pass** — all three were
   flipped to `implemented` with `ardd-state.sh feature-flip`.
 
 ## Work Queue
