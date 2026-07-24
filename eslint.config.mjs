@@ -4,7 +4,7 @@ import tseslint from 'typescript-eslint';
 import prettier from 'eslint-config-prettier';
 
 export default tseslint.config(
-  { ignores: ['dist', 'build', 'node_modules', '.claude'] },
+  { ignores: ['dist', 'build', 'node_modules', '.claude', 'site'] },
   js.configs.recommended,
   ...tseslint.configs.recommended,
   {

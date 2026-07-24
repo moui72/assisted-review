@@ -12,3 +12,5 @@ test-results/
 .claude/skills/shieldcn-badges/
 skills-lock.json
 .project/.lock
+docs/release-notes.md
+site/
