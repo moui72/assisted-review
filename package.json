@@ -8,6 +8,7 @@
     "type": "git",
     "url": "git+https://github.com/moui72/assisted-review.git"
   },
+  "homepage": "https://moui72.github.io/assisted-review/",
   "license": "MIT",
   "engines": {
     "node": ">=20.18"
