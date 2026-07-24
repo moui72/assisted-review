@@ -1,6 +1,6 @@
 ---
 slug: codex-ai-provider-support
-status: tasked
+status: implemented
 logged: 2026-07-22
 plan: plan-1a23-2026-07-22-7942.md
 tasks: tasks-1a23-cc11.md

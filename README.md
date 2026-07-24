@@ -6,20 +6,10 @@
 </p>
 
 <p align="center">
-  <a href="https://www.npmjs.com/package/assisted-review">
-    <picture>
-      <source media="(prefers-color-scheme: dark)" srcset="https://shieldcn.dev/group/npm/assisted-review+npm/dt/assisted-review.svg?variant=secondary&color=CB3837&mode=dark" />
-      <img alt="npm version and downloads" src="https://shieldcn.dev/group/npm/assisted-review+npm/dt/assisted-review.svg?variant=secondary&color=CB3837&mode=light" />
-    </picture>
-  </a>
-  <!-- ardd-badge-start -->
-  <a href="https://github.com/moui72/artifact-driven-dev">
-    <picture>
-      <source media="(prefers-color-scheme: dark)" srcset="https://shieldcn.dev/badge/dynamic/json.svg?url=https%3A%2F%2Fraw.githubusercontent.com%2Fmoui72%2Fassisted-review%2Fmain%2F.github%2Fbadges%2Fardd-version.json&query=%24.message&label=built%20with%20ArDD&split=true&variant=secondary&mode=dark&labelColor=%237C3AED&logo=data%3Aimage%2Fsvg%2Bxml%3Bbase64%2CPHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgcm9sZT0iaW1nIiBhcmlhLWxhYmVsPSJBckREIj4KPCEtLSBTb3VyY2Ugb2YgdHJ1dGggZm9yIHRoZSBBckREIGJhZGdlIG1hcms6IHRoZSBiYWRnZSB3b3JrZmxvdyBpbmxpbmVzIHRoaXMgZmlsZSB2ZXJiYXRpbSBhcyB0aGUgZW5kcG9pbnQgSlNPTidzIGxvZ29TdmcuIC0tPgo8cGF0aCBmaWxsPSJjdXJyZW50Q29sb3IiIGZpbGwtcnVsZT0iZXZlbm9kZCIgZD0iTTEyIDIgTDIyLjUgMjEgSDEuNSBaIE0xMiA4LjIgTDE3LjQgMTggSDYuNiBaIi8%2BCjwvc3ZnPgo%3D" />
-      <img alt="built with ArDD" src="https://shieldcn.dev/badge/dynamic/json.svg?url=https%3A%2F%2Fraw.githubusercontent.com%2Fmoui72%2Fassisted-review%2Fmain%2F.github%2Fbadges%2Fardd-version.json&query=%24.message&label=built%20with%20ArDD&split=true&variant=secondary&mode=light&labelColor=%237C3AED&logo=data%3Aimage%2Fsvg%2Bxml%3Bbase64%2CPHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgcm9sZT0iaW1nIiBhcmlhLWxhYmVsPSJBckREIj4KPCEtLSBTb3VyY2Ugb2YgdHJ1dGggZm9yIHRoZSBBckREIGJhZGdlIG1hcms6IHRoZSBiYWRnZSB3b3JrZmxvdyBpbmxpbmVzIHRoaXMgZmlsZSB2ZXJiYXRpbSBhcyB0aGUgZW5kcG9pbnQgSlNPTidzIGxvZ29TdmcuIC0tPgo8cGF0aCBmaWxsPSJjdXJyZW50Q29sb3IiIGZpbGwtcnVsZT0iZXZlbm9kZCIgZD0iTTEyIDIgTDIyLjUgMjEgSDEuNSBaIE0xMiA4LjIgTDE3LjQgMTggSDYuNiBaIi8%2BCjwvc3ZnPgo%3D" />
-    </picture>
-  </a>
-  <!-- ardd-badge-end -->
+  <a href="https://www.npmjs.com/package/assisted-review"><img alt="npm version and downloads" src="https://shieldcn.dev/group/npm/assisted-review+npm/dt/assisted-review.svg?variant=secondary&color=CB3837" /></a>
+  <!-- ardd-badge-version-start -->
+  <a href="https://github.com/moui72/artifact-driven-dev"><img alt="built with ArDD" src="https://shieldcn.dev/badge/dynamic/json.svg?url=https%3A%2F%2Fraw.githubusercontent.com%2Fmoui72%2Fassisted-review%2Fmain%2F.github%2Fbadges%2Fardd-version.json&query=%24.message&label=built%20with%20ArDD&split=true&variant=secondary&labelColor=%237C3AED&logo=data%3Aimage%2Fsvg%2Bxml%3Bbase64%2CPHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgcm9sZT0iaW1nIiBhcmlhLWxhYmVsPSJBckREIj4KPCEtLSBTb3VyY2Ugb2YgdHJ1dGggZm9yIHRoZSBBckREIGJhZGdlIG1hcms6IHRoZSBiYWRnZSB3b3JrZmxvdyBpbmxpbmVzIHRoaXMgZmlsZSB2ZXJiYXRpbSBhcyB0aGUgZW5kcG9pbnQgSlNPTidzIGxvZ29TdmcuIC0tPgo8cGF0aCBmaWxsPSJjdXJyZW50Q29sb3IiIGZpbGwtcnVsZT0iZXZlbm9kZCIgZD0iTTEyIDIgTDIyLjUgMjEgSDEuNSBaIE0xMiA4LjIgTDE3LjQgMTggSDYuNiBaIi8%2BCjwvc3ZnPgo%3D" /></a>
+  <!-- ardd-badge-version-end -->
   <a href="https://github.com/sponsors/moui72"><img alt="sponsor" src="https://shieldcn.dev/badge/sponsor-%E2%9D%A4-ea4aaa.svg?variant=secondary&theme=pink" /></a>
 </p>
 

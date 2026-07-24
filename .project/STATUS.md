@@ -1,5 +1,108 @@
 # assisted-review — Project Status
 
+_Updated: 2026-07-24 (post-`/ardd-update` status pass)._
+
+## Artifact Status
+
+| Artifact | Status | Open questions |
+|---|---|---|
+| constitution.md | stable ✅ (v3.4.0, refined 2026-07-22) | — |
+| datamodel.md | stable ✅ (refined 2026-07-22) | — |
+| infrastructure.md | stable ✅ (refined 2026-07-22) | — |
+| api.md | stable ✅ (refined 2026-07-22) | — |
+| ui.md | stable ✅ (refined 2026-07-22) | — |
+
+No `[OPEN: ...]`, `TODO`, or `TBD` markers in any artifact. Artifacts are
+unchanged since the 2026-07-23 pass (last artifact commit: `fc3fac2`).
+
+## Cross-Artifact Issues
+
+None.
+
+## Within-Artifact Issues
+
+None.
+
+## Constitution Compliance
+
+No violations found in this pass.
+
+## Diagrams
+
+- datamodel.md — stale ⚠️ (`erDiagram` — run `/ardd-diagram datamodel`)
+- infrastructure.md — stale ⚠️ (`graph TD` — run `/ardd-diagram infrastructure`)
+- ui.md — stale ⚠️ (`graph TD` — run `/ardd-diagram ui`)
+
+Rendered to `docs/ARCHITECTURE.md`.
+
+## Code-vs-Artifact Defects
+
+None — `DEFECTS.md` all-clear, last checked 2026-07-11. Refresh with
+`/ardd-defects`; that survey now predates several merged PRs (#112, #113,
+#114, #115).
+
+## Feedback
+
+2 open feedback files — `feedback-ardd-update-usage-improvements-1c35.md`
+and `feedback-ardd-badge-toolchain-defects-dbbf.md` (upstream ArDD badge
+defects: stable `Source-Ref` on a beta channel, stale `PLACEHOLDER` caveat,
+inert `mode=` wrapper). Both will be picked up by the next `/ardd-plan`.
+
+## Feature Backlog
+
+11 backlogged · 0 planned · 0 tasked · 12 implemented — see
+`.project/features/`. Target a backlogged slug with `/ardd-plan <slug>`.
+
+The three formerly-`tasked` entries bound to `plan-1a23-2026-07-22-7942.md`
+were flipped to `implemented` in this pass (see Orphaned Completion Flips).
+
+## Documented but Untracked
+
+None. Every capability described in the stable artifacts is implemented,
+already represented by an active feature/task, or documented as future work.
+
+## Orphaned Completion Flips
+
+- Slugs `codex-ai-provider-support`, `claude-model-selection`, and
+  `ai-stream-stop-regenerate` — tasks file `tasks-1a23-cc11.md` is
+  `status: completed` and its work merged into `main` via PR #112
+  (`fc3fac2`), but the register still says `status: tasked`.
+  `completion-flip-check.sh` does not catch this one: the tasks file has no
+  `branch:` field for it to compare against the default branch, so the
+  detection was manual this pass. **Resolved in this pass** — all three were
+  flipped to `implemented` with `ardd-state.sh feature-flip`.
+
+## Work Queue
+
+No ready task files.
+
+## In Flight
+
+- Worktree `.claude/worktrees/ardd-codify-trial` (branch
+  `ardd-codify-trial`) — `tasks=none`, unmerged, not reapable.
+
+No open draft PRs were found in this pass.
+
+## ArDD Toolchain
+
+Installed ArDD is up to date on the beta channel
+(`20d896018b04891ce17a0221824635222ce6817f`, `v1.2.1-beta.1`), updated this
+run from `9bc9b38` / `v1.1.1-beta.3`.
+
+## Summary
+
+4 issues found: the three stale diagrams plus the orphaned completion flip
+for the `1a23` feature set. Safe to `/ardd-plan`: yes; no ready task files
+remain.
+
+## Recommended Next Step
+
+`/ardd-defects` — the last code-vs-artifact survey (2026-07-11) predates four
+merged PRs. After that, clear the stale diagrams with `/ardd-diagram
+datamodel`, `/ardd-diagram infrastructure`, and `/ardd-diagram ui`.
+
+---
+
 _Updated: 2026-07-23 (post-`/ardd-update` status pass)._
 
 ## Artifact Status
