@@ -14,8 +14,16 @@
   <!-- ardd-badge-version-start -->
   <a href="https://github.com/moui72/artifact-driven-dev"><img alt="built with ArDD" src="https://shieldcn.dev/badge/dynamic/json.svg?url=https%3A%2F%2Fraw.githubusercontent.com%2Fmoui72%2Fassisted-review%2Fmain%2F.github%2Fbadges%2Fardd-version.json&query=%24.message&label=built%20with%20ArDD&split=true&variant=secondary&labelColor=2F4858&color=yellow&logo=data%3Aimage%2Fsvg%2Bxml%3Bbase64%2CPHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxMDAgMTAwIiByb2xlPSJpbWciIGFyaWEtbGFiZWw9IkFyREQiPgo8IS0tIFNvdXJjZSBvZiB0cnV0aCBmb3IgdGhlIEFyREQgYmFkZ2UgbWFyazogdGhlIGJhZGdlIHdvcmtmbG93IGlubGluZXMgdGhpcyBmaWxlIHZlcmJhdGltIGFzIHRoZSBlbmRwb2ludCBKU09OJ3MgbG9nb1N2Zy4gRGFyay1iYWNrZ3JvdW5kIHZhcmlhbnQgKGJhZGdlIGxhYmVsIHNpZGUpOiB3aGl0ZSByaW5nL3JlY3Q7IHRoZSBmb3VydGggdHJpYW5nbGUgaXMgd2hpdGUsIG1hdGNoaW5nIHRoZSBsb2dvJ3MgZGFyay1jb250ZXh0IHRyZWF0bWVudC4gLS0%2BCjxjaXJjbGUgY3g9IjUwIiBjeT0iNTAiIHI9IjM0IiBmaWxsPSJub25lIiBzdHJva2U9IiNmZmZmZmYiIHN0cm9rZS13aWR0aD0iNiIvPgo8cmVjdCB4PSI0MSIgeT0iMzkiIHdpZHRoPSIxOCIgaGVpZ2h0PSIyMiIgcng9IjMiIGZpbGw9IiNmZmZmZmYiLz4KPHBvbHlnb24gcG9pbnRzPSIxMCwwIC04LC05IC04LDkiIGZpbGw9IiNmMjY0MTkiIHRyYW5zZm9ybT0idHJhbnNsYXRlKDQxIDE3KSByb3RhdGUoLTE1KSIvPgo8cG9seWdvbiBwb2ludHM9IjEwLDAgLTgsLTkgLTgsOSIgZmlsbD0iI2Y2YWUyZCIgdHJhbnNmb3JtPSJ0cmFuc2xhdGUoMTcgNDEpIHJvdGF0ZSgtNzUpIi8%2BCjxwb2x5Z29uIHBvaW50cz0iMTAsMCAtOCwtOSAtOCw5IiBmaWxsPSIjODZiYmQ4IiB0cmFuc2Zvcm09InRyYW5zbGF0ZSg4MyA1OSkgcm90YXRlKDEwNSkiLz4KPHBvbHlnb24gcG9pbnRzPSIxMCwwIC04LC05IC04LDkiIGZpbGw9IiNmZmZmZmYiIHRyYW5zZm9ybT0idHJhbnNsYXRlKDU5IDgzKSByb3RhdGUoMTY1KSIvPgo8L3N2Zz4K" /></a>
   <!-- ardd-badge-version-end -->
+  <a href="https://moui72.github.io/assisted-review/"><img alt="documentation" src="https://shieldcn.dev/badge/docs-online-blue.svg?variant=secondary" /></a>
   <a href="LICENSE"><img alt="MIT license" src="https://shieldcn.dev/badge/license-MIT-blue.svg?variant=secondary" /></a>
   <a href="https://github.com/sponsors/moui72"><img alt="sponsor" src="https://shieldcn.dev/badge/sponsor-%E2%9D%A4-ea4aaa.svg?variant=secondary&theme=pink" /></a>
+</p>
+
+<p align="center">
+  <b><a href="https://moui72.github.io/assisted-review/">Documentation</a></b> ·
+  <a href="https://moui72.github.io/assisted-review/getting-started/">Getting started</a> ·
+  <a href="https://moui72.github.io/assisted-review/keyboard-shortcuts/">Keyboard shortcuts</a> ·
+  <a href="https://moui72.github.io/assisted-review/configuration/">Configuration</a>
 </p>
 
 ## What is assisted-review?
@@ -267,7 +275,7 @@ app served by that same server. External tools (`gh`, `glab`, `claude`, `codex`,
 are always subprocesses, never vendored SDKs.
 
 The full write-up — module map, data model, infrastructure, and UI diagrams —
-lives in [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) (kept out of this
+lives in [the architecture docs](https://moui72.github.io/assisted-review/ARCHITECTURE/) (kept out of this
 README so it renders cleanly on npm).
 
 ## Contributing
