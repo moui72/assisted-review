@@ -30,6 +30,11 @@ assisted-review <owner/repo#N | PR URL>
 - **Update:** `npm update -g assisted-review`
 - **Remove:** `npm uninstall -g assisted-review`
 
+Two release channels are published: `latest` (stable, the default) and
+`beta` (prereleases cut from every push to `main`) — opt in with
+`npm i -g assisted-review@beta`. See
+[release channels](contributing.md#release-channels).
+
 The CLI checks the npm registry in the background on startup (at most once
 per 24h) and prints a one-line notice when a newer version is out — disable
 with `ASSISTED_REVIEW_NO_UPDATE_CHECK`.
