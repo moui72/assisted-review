@@ -177,6 +177,132 @@ describe('streamCodex', () => {
     expect(err).toBe('blocked');
   });
 
+  it('extracts the error message from a string `error` field', async () => {
+    const child = makeChild();
+    vi.mocked(spawn).mockReturnValue(asSpawnResult(child));
+    const err = await new Promise<string>((resolve, reject) => {
+      streamCodex('p', { onDelta: () => {}, onDone: () => reject(new Error('unexpected done')), onError: resolve });
+      process.nextTick(() => {
+        child.stdout.emit('data', jsonLine({ type: 'turn.error', error: 'sandbox denied write' }));
+      });
+    });
+    expect(err).toBe('sandbox denied write');
+  });
+
+  it('extracts the error message from an `error.message` object field', async () => {
+    const child = makeChild();
+    vi.mocked(spawn).mockReturnValue(asSpawnResult(child));
+    const err = await new Promise<string>((resolve, reject) => {
+      streamCodex('p', { onDelta: () => {}, onDone: () => reject(new Error('unexpected done')), onError: resolve });
+      process.nextTick(() => {
+        child.stdout.emit('data', jsonLine({ type: 'stream_error', error: { message: 'rate limited' } }));
+      });
+    });
+    expect(err).toBe('rate limited');
+  });
+
+  it('falls back to a generic message for an error event with no message/error field', async () => {
+    const child = makeChild();
+    vi.mocked(spawn).mockReturnValue(asSpawnResult(child));
+    const err = await new Promise<string>((resolve, reject) => {
+      streamCodex('p', { onDelta: () => {}, onDone: () => reject(new Error('unexpected done')), onError: resolve });
+      process.nextTick(() => {
+        child.stdout.emit('data', jsonLine({ type: 'error' }));
+      });
+    });
+    expect(err).toBe('Codex returned an error');
+  });
+
+  it('extracts delta text from a `text` field when the event type includes "delta"', async () => {
+    const child = makeChild();
+    vi.mocked(spawn).mockReturnValue(asSpawnResult(child));
+    const deltas: string[] = [];
+    await new Promise<void>((resolve) => {
+      streamCodex('p', { onDelta: (t) => deltas.push(t), onDone: () => resolve(), onError: () => resolve() });
+      process.nextTick(() => {
+        child.stdout.emit('data', jsonLine({ type: 'output_text.delta', text: 'streamed chunk' }));
+        child.emit('close', 0);
+      });
+    });
+    expect(deltas).toEqual(['streamed chunk']);
+  });
+
+  it('reads final text from `content` array when no `item` wrapper is present', async () => {
+    const child = makeChild();
+    vi.mocked(spawn).mockReturnValue(asSpawnResult(child));
+    const done = await new Promise<string>((resolve, reject) => {
+      streamCodex('p', { onDelta: () => {}, onDone: resolve, onError: reject });
+      process.nextTick(() => {
+        child.stdout.emit('data', jsonLine({
+          type: 'agent_message',
+          content: [{ text: 'final from content' }],
+        }));
+      });
+    });
+    expect(done).toBe('final from content');
+  });
+
+  it('ignores malformed JSON lines on stdout', async () => {
+    const child = makeChild();
+    vi.mocked(spawn).mockReturnValue(asSpawnResult(child));
+    const done = await new Promise<string>((resolve, reject) => {
+      streamCodex('p', { onDelta: () => {}, onDone: resolve, onError: reject });
+      process.nextTick(() => {
+        child.stdout.emit('data', Buffer.from('not json at all\n'));
+        child.stdout.emit('data', Buffer.from('   \n'));
+        child.stdout.emit('data', jsonLine({ type: 'result', result: 'ok' }));
+      });
+    });
+    expect(done).toBe('ok');
+  });
+
+  it('suppresses EPIPE stdin write errors without calling onError', async () => {
+    const child = makeChild();
+    vi.mocked(spawn).mockReturnValue(asSpawnResult(child));
+    const onError = vi.fn();
+    const done = await new Promise<string>((resolve) => {
+      streamCodex('p', { onDelta: () => {}, onDone: resolve, onError });
+      process.nextTick(() => {
+        const epipe = Object.assign(new Error('EPIPE'), { code: 'EPIPE' });
+        child.stdin.emit('error', epipe);
+        child.stdout.emit('data', jsonLine({ type: 'result', result: 'ok' }));
+      });
+    });
+    expect(done).toBe('ok');
+    expect(onError).not.toHaveBeenCalled();
+  });
+
+  it('surfaces non-EPIPE stdin write errors via onError', async () => {
+    const child = makeChild();
+    vi.mocked(spawn).mockReturnValue(asSpawnResult(child));
+    const err = await new Promise<string>((resolve, reject) => {
+      streamCodex('p', { onDelta: () => {}, onDone: () => reject(new Error('unexpected done')), onError: resolve });
+      process.nextTick(() => {
+        const otherErr = Object.assign(new Error('EACCES'), { code: 'EACCES' });
+        child.stdin.emit('error', otherErr);
+      });
+    });
+    expect(err).toContain('stdin write failed');
+  });
+
+  it('falls back to an exit-code message when the process exits non-zero with no stderr', async () => {
+    const child = makeChild();
+    vi.mocked(spawn).mockReturnValue(asSpawnResult(child));
+    const err = await new Promise<string>((resolve, reject) => {
+      streamCodex('p', { onDelta: () => {}, onDone: () => reject(new Error('unexpected done')), onError: resolve });
+      process.nextTick(() => child.emit('close', 1));
+    });
+    expect(err).toBe('codex exited with code 1');
+  });
+
+  it('defaults the spawn cwd to the OS temp dir when none is provided', () => {
+    const child = makeChild();
+    vi.mocked(spawn).mockReturnValue(asSpawnResult(child));
+    streamCodex('p', { onDelta: () => {}, onDone: () => {}, onError: () => {} });
+    const [, , opts] = vi.mocked(spawn).mock.calls[0];
+    expect((opts as { cwd?: string }).cwd).toBe(tmpdir());
+  });
+
   it('calls onError when Codex fails to spawn', async () => {
     const child = makeChild();
     vi.mocked(spawn).mockReturnValue(asSpawnResult(child));

@@ -77,6 +77,57 @@ describe('applyAction', () => {
     expect(next.comments).not.toBe(state.comments);
   });
 
+  it('add_comment pins draft_head_sha to the current head_sha for the first comment', () => {
+    const state: ReviewState = {
+      ...baseState(pr),
+      head_sha: 'latest-sha',
+      draft_head_sha: 'stale-drafted-sha', // e.g. left over from a prior, now-cleared draft
+    };
+    const next = applyAction(state, {
+      type: 'add_comment',
+      chunk_id: 'c1',
+      side: 'RIGHT',
+      line: 1,
+      body: 'first draft',
+      file: 'a.ts',
+      hunk_header: '@@ -1,3 +1,3 @@',
+    });
+    expect(next.draft_head_sha).toBe('latest-sha');
+  });
+
+  it('add_comment leaves draft_head_sha unchanged when a draft is already in progress', () => {
+    const state: ReviewState = {
+      ...baseState(pr),
+      head_sha: 'later-head-sha',
+      draft_head_sha: 'drafted-sha',
+      comments: [
+        {
+          id: 'existing',
+          chunk_id: 'c0',
+          side: 'RIGHT',
+          line: 1,
+          body: 'earlier comment',
+          file: 'a.ts',
+          hunk_header: '@@ -1,3 +1,3 @@',
+          displaced: false,
+          created_at: '2020-01-01T00:00:00.000Z',
+          updated_at: '2020-01-01T00:00:00.000Z',
+        },
+      ],
+    };
+    const next = applyAction(state, {
+      type: 'add_comment',
+      chunk_id: 'c1',
+      side: 'RIGHT',
+      line: 2,
+      body: 'second draft',
+      file: 'b.ts',
+      hunk_header: '@@ -4,3 +4,3 @@',
+    });
+    expect(next.draft_head_sha).toBe('drafted-sha');
+    expect(next.comments).toHaveLength(2);
+  });
+
   it('update_comment changes only the matching id body + updated_at', () => {
     let state = baseState(pr);
     state = applyAction(state, {
@@ -730,6 +781,33 @@ describe('AI provider config persistence', () => {
     expect(() =>
       applyAiProviderConfigUpdate(current, { provider: 'openai' }),
     ).toThrow('AI provider must be claude or codex');
+  });
+
+  it('applyAiProviderConfigUpdate rejects a non-object update payload', () => {
+    const current = normalizeAiProviderConfig(null);
+    expect(() => applyAiProviderConfigUpdate(current, null)).toThrow(
+      'AI provider config update must be an object',
+    );
+    expect(() => applyAiProviderConfigUpdate(current, 'claude')).toThrow(
+      'AI provider config update must be an object',
+    );
+    expect(() => applyAiProviderConfigUpdate(current, undefined)).toThrow(
+      'AI provider config update must be an object',
+    );
+  });
+
+  it('applyAiProviderConfigUpdate clears a model field when explicitly set to a blank string', () => {
+    const current = normalizeAiProviderConfig({
+      provider: 'claude',
+      claude_model: 'sonnet',
+      updated_at: 'old',
+    });
+    const next = applyAiProviderConfigUpdate(
+      current,
+      { provider: 'claude', claude_model: '   ' },
+      'new',
+    );
+    expect(next).toEqual({ provider: 'claude', updated_at: 'new' });
   });
 
   it('loadAiProviderConfig recovers to defaults for malformed config JSON', async () => {

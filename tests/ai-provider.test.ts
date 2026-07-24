@@ -91,6 +91,29 @@ describe('streamAiProvider', () => {
     expect(handlers.onError).toHaveBeenCalledWith('Codex provider is not available');
     expect(cancel).toEqual(expect.any(Function));
   });
+
+  it('dispatches with undefined opts when no repo-access options or model are set', () => {
+    const adapters: AiProviderAdapters = {
+      claude: vi.fn().mockReturnValue(() => {}),
+    };
+    streamAiProvider('prompt', config({ provider: 'claude' }), handlers, adapters);
+    expect(adapters.claude).toHaveBeenCalledWith('prompt', handlers, undefined);
+  });
+
+  it('omits the model field when the active provider has no model override, keeping other opts', () => {
+    const adapters: AiProviderAdapters = {
+      claude: vi.fn(),
+      codex: vi.fn().mockReturnValue(() => {}),
+    };
+    streamAiProvider(
+      'prompt',
+      config({ provider: 'codex', codex_model: undefined }),
+      handlers,
+      adapters,
+      { cwd: '/repo' },
+    );
+    expect(adapters.codex).toHaveBeenCalledWith('prompt', handlers, { cwd: '/repo' });
+  });
 });
 
 describe('defaultAiProviderAdapters', () => {
