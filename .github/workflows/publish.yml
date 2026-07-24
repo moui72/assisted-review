@@ -2,7 +2,7 @@ name: Publish to npm
 
 on:
   push:
-    branches: [main]
+    branches: [main, release]
 
 jobs:
   release:
@@ -16,7 +16,7 @@ jobs:
       - uses: actions/checkout@v7
         with:
           fetch-depth: 0  # semantic-release needs full history to find previous tags
-          # Admin PAT so @semantic-release/git can push the release commit past the
+          # Admin PAT so semantic-release can push version tags past the
           # branch ruleset (the default GITHUB_TOKEN cannot bypass it on a user repo).
           token: ${{ secrets.GH_PAT }}
 
@@ -38,8 +38,8 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Install semantic-release plugins
-        run: npm install -g semantic-release @semantic-release/changelog @semantic-release/git
+      - name: Install semantic-release
+        run: npm install -g semantic-release
 
       - name: Release
         run: semantic-release
