@@ -265,4 +265,37 @@ describe('streamClaude', () => {
     expect(child.stdin.write).toHaveBeenCalledWith('my prompt');
     expect(child.stdin.end).toHaveBeenCalled();
   });
+
+  it('suppresses EPIPE stdin write errors without calling onError', async () => {
+    const child = makeChild();
+    vi.mocked(spawn).mockReturnValue(asSpawnResult(child));
+
+    const onError = vi.fn();
+    const done = await new Promise<string>((resolve) => {
+      streamClaude('p', { onDelta: () => {}, onDone: resolve, onError });
+      process.nextTick(() => {
+        const epipe = Object.assign(new Error('EPIPE'), { code: 'EPIPE' });
+        child.stdin.emit('error', epipe);
+        child.stdout.emit('data', jsonLine({ type: 'result', result: 'ok', is_error: false }));
+      });
+    });
+
+    expect(done).toBe('ok');
+    expect(onError).not.toHaveBeenCalled();
+  });
+
+  it('surfaces non-EPIPE stdin write errors via onError', async () => {
+    const child = makeChild();
+    vi.mocked(spawn).mockReturnValue(asSpawnResult(child));
+
+    const err = await new Promise<string>((resolve, reject) => {
+      streamClaude('p', { onDelta: () => {}, onDone: () => reject(new Error('unexpected done')), onError: resolve });
+      process.nextTick(() => {
+        const otherErr = Object.assign(new Error('EACCES'), { code: 'EACCES' });
+        child.stdin.emit('error', otherErr);
+      });
+    });
+
+    expect(err).toContain('stdin write failed');
+  });
 });
