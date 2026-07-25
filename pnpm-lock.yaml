@@ -16,7 +16,7 @@ importers:
         version: 5.2.9
       '@fontsource/tinos':
         specifier: ^5.2.7
-        version: 5.2.7
+        version: 5.3.0
       dotenv:
         specifier: ^17.4.2
         version: 17.4.2
@@ -627,8 +627,8 @@ packages:
   '@fontsource/space-mono@5.2.9':
     resolution: {integrity: sha512-b61faFOHEISQ/pD25G+cfGY9o/WW6lRv6hBQQfpWvEJ4y1V+S4gmth95EVyBE2VL3qDYHeVQ8nBzrplzdXTDDg==}
 
-  '@fontsource/tinos@5.2.7':
-    resolution: {integrity: sha512-F+rSTz0CNDZ/nx3BlmVA+wlbfCR1gwXeJTkGxb6pwu5KjeWVyaZ6ioInm533pw2Ha7472Lwb4vLjzo1zT0RXmA==}
+  '@fontsource/tinos@5.3.0':
+    resolution: {integrity: sha512-VVDyyZdbcsLKxo/W7rClAvacD/7DsGc7J5xzzp51Tndib8kDkEe/0bqbb3Xb3iH6+IUjt07aRsvtQ9MGeGGi4w==}
 
   '@humanfs/core@0.19.2':
     resolution: {integrity: sha512-UhXNm+CFMWcbChXywFwkmhqjs3PRCmcSa/hfBgLIb7oQ5HNb1wS0icWsGtSAUNgefHeI+eBrA8I1fxmbHsGdvA==}
@@ -2702,7 +2702,7 @@ snapshots:
 
   '@fontsource/space-mono@5.2.9': {}
 
-  '@fontsource/tinos@5.2.7': {}
+  '@fontsource/tinos@5.3.0': {}
 
   '@humanfs/core@0.19.2':
     dependencies:
