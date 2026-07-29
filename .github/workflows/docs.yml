@@ -31,7 +31,7 @@ jobs:
         run: node scripts/generate-release-notes.mjs
         env:
           GITHUB_TOKEN: ${{ github.token }}
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v7
         with:
           python-version: '3.12'
       - run: pip install mkdocs-material
