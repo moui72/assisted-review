@@ -1,0 +1,1375 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Keyboard-driven, AI-assisted GitHub PR / GitLab MR review that runs entirely on your machine.">
+      
+      
+      
+        <link rel="canonical" href="https://moui72.github.io/assisted-review/ARCHITECTURE/">
+      
+      
+        <link rel="prev" href="../jira/">
+      
+      
+        <link rel="next" href="../contributing/">
+      
+      
+        
+      
+      
+      <link rel="icon" href="../assets/icon.svg">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
+    
+    
+      
+        <title>Architecture - assisted-review</title>
+      
+    
+    
+      <link rel="stylesheet" href="../assets/stylesheets/main.ec1eaa64.min.css">
+      
+        
+        <link rel="stylesheet" href="../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#architecture" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href=".." title="assisted-review" class="md-header__button md-logo" aria-label="assisted-review" data-md-component="logo">
+      
+  <img src="../assets/icon-dark.svg" alt="logo">
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            assisted-review
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Architecture
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: light)" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="m17.75 4.09-2.53 1.94.91 3.06-2.63-1.81-2.63 1.81.91-3.06-2.53-1.94L12.44 4l1.06-3 1.06 3zm3.5 6.91-1.64 1.25.59 1.98-1.7-1.17-1.7 1.17.59-1.98L15.75 11l2.06-.05L18.5 9l.69 1.95zm-2.28 4.95c.83-.08 1.72 1.1 1.19 1.85-.32.45-.66.87-1.08 1.27C15.17 23 8.84 23 4.94 19.07c-3.91-3.9-3.91-10.24 0-14.14.4-.4.82-.76 1.27-1.08.75-.53 1.93.36 1.85 1.19-.27 2.86.69 5.83 2.89 8.02a9.96 9.96 0 0 0 8.02 2.89m-1.64 2.02a12.08 12.08 0 0 1-7.8-3.47c-2.17-2.19-3.33-5-3.49-7.82-2.81 3.14-2.7 7.96.31 10.98 3.02 3.01 7.84 3.12 10.98.31"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: dark)" data-md-color-scheme="slate" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 7a5 5 0 0 1 5 5 5 5 0 0 1-5 5 5 5 0 0 1-5-5 5 5 0 0 1 5-5m0 2a3 3 0 0 0-3 3 3 3 0 0 0 3 3 3 3 0 0 0 3-3 3 3 0 0 0-3-3m0-7 2.39 3.42C13.65 5.15 12.84 5 12 5s-1.65.15-2.39.42zM3.34 7l4.16-.35A7.2 7.2 0 0 0 5.94 8.5c-.44.74-.69 1.5-.83 2.29zm.02 10 1.76-3.77a7.131 7.131 0 0 0 2.38 4.14zM20.65 7l-1.77 3.79a7.02 7.02 0 0 0-2.38-4.15zm-.01 10-4.14.36c.59-.51 1.12-1.14 1.54-1.86.42-.73.69-1.5.83-2.29zM12 22l-2.41-3.44c.74.27 1.55.44 2.41.44.82 0 1.63-.17 2.37-.44z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/moui72/assisted-review" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    moui72/assisted-review
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href=".." title="assisted-review" class="md-nav__button md-logo" aria-label="assisted-review" data-md-component="logo">
+      
+  <img src="../assets/icon-dark.svg" alt="logo">
+
+    </a>
+    assisted-review
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/moui72/assisted-review" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    moui72/assisted-review
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href=".." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../getting-started/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Getting started
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reviewing a PR
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Reviewing a PR
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../reviewing/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Workflow & UI
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../keyboard-shortcuts/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Keyboard shortcuts
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../submitting/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Submitting a review
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../ai/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    AI commentary
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Configuration
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Configuration
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../configuration/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    CLI & environment
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../gitlab/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    GitLab
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../jira/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Jira
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Architecture
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Architecture
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#process-model" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Process model
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#backend-modules" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Backend modules
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#datamodel" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Datamodel
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#infrastructure" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Infrastructure
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#ui" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        UI
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../contributing/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Contributing
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../release-notes/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Release notes
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#process-model" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Process model
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#backend-modules" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Backend modules
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#datamodel" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Datamodel
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#infrastructure" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Infrastructure
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#ui" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        UI
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+    <a href="https://github.com/moui72/assisted-review/edit/main/docs/ARCHITECTURE.md" title="Edit this page" class="md-content__button md-icon" rel="edit">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M10 20H6V4h7v5h5v3.1l2-2V8l-6-6H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h4zm10.2-7c.1 0 .3.1.4.2l1.3 1.3c.2.2.2.6 0 .8l-1 1-2.1-2.1 1-1c.1-.1.2-.2.4-.2m0 3.9L14.1 23H12v-2.1l6.1-6.1z"/></svg>
+    </a>
+  
+  
+
+
+<h1 id="architecture">Architecture<a class="headerlink" href="#architecture" title="Permanent link">&para;</a></h1>
+<p>How assisted-review is put together: process model, backend modules, and the
+three generated diagrams (data model, infrastructure, UI). The diagrams are
+generated from the ARDD artifacts in
+<a href="https://github.com/moui72/assisted-review/blob/main/.project/artifacts"><code>.project/artifacts/</code></a> by <code>/ardd-diagram</code> — don't edit
+the Mermaid blocks by hand; the prose around them is maintained normally. For
+the user-facing overview, start with the <a href="https://github.com/moui72/assisted-review/blob/main/README.md">README</a>.</p>
+<h2 id="process-model">Process model<a class="headerlink" href="#process-model" title="Permanent link">&para;</a></h2>
+<p>One command, one process, one browser tab:</p>
+<ol>
+<li><strong>CLI</strong> (<code>src/cli.ts</code>) parses the PR/MR ref, fetches the diff and metadata
+   via <code>gh</code>/<code>glab</code>, parses and groups the diff into chunks, optionally pulls
+   Jira context, loads (or creates) the persisted review state, and starts
+   the server. With no ref, it starts straight into splash-screen mode.</li>
+<li><strong>Server</strong> (<code>src/server.ts</code>) is a single Node <code>http</code> server bound to
+   <code>127.0.0.1</code> (default port 4319). It serves the pre-built React UI from
+   <code>dist/</code> and a small JSON API under <code>/api/*</code> — REST plus one SSE endpoint
+   for streaming Claude output. There is no auth layer; loopback binding is
+   the protection, by design (a single local reviewer using credentials they
+   already hold via <code>gh auth</code>/<code>glab auth</code>).</li>
+<li><strong>Browser</strong> runs the React SPA, a thin client: nearly all review state is
+   server-authoritative and round-trips through the API on every mutation.</li>
+</ol>
+<p>The server holds exactly one <em>active</em> review in memory at a time
+(<code>AppContext { review, state }</code>). Opening a different PR/MR replaces it;
+multiple <em>saved</em> reviews exist only as state files on disk, listed via
+<code>GET /api/reviews</code>.</p>
+<p>A few invariants shape everything else (see
+<a href="https://github.com/moui72/assisted-review/blob/main/.project/artifacts/constitution.md"><code>constitution.md</code></a>):</p>
+<ul>
+<li><strong>Local-only.</strong> The server never binds off-loopback; no data leaves the
+  machine except comments the reviewer explicitly submits.</li>
+<li><strong>State mutation is a pure reducer.</strong> <code>applyAction(state, action)</code> in
+  <code>src/state.ts</code> never mutates its input; persistence is a separate atomic
+  write (tmp file + <code>rename()</code>). Concurrent in-process mutations are
+  serialized through a small FIFO mutex (<code>src/mutex.ts</code>).</li>
+<li><strong>External tools are subprocesses.</strong> <code>gh</code>, <code>glab</code>, <code>claude</code>, and optionally
+  <code>op</code> are invoked via <code>node:child_process</code>, never as imported SDKs. Missing
+  binaries surface as actionable errors.</li>
+<li><strong>Optional integrations degrade, never crash.</strong> Jira, AI commentary, and
+  the update check each resolve to a typed "unavailable" state (setup banner,
+  error note, silence) rather than blocking the core review flow.</li>
+</ul>
+<h2 id="backend-modules">Backend modules<a class="headerlink" href="#backend-modules" title="Permanent link">&para;</a></h2>
+<div class="highlight"><pre><span></span><code>src/         TypeScript backend (strict, ESM, compiled to build/)
+  cli.ts        entry: parse ref → fetch → chunks → Jira → serve
+  env.ts        .env loading (env vars → DOTENV_CONFIG_PATH → ./.env → ~/.assisted-review/.env)
+  parse-ref.ts  ref formats: owner/repo#N, namespace/repo!N, GitHub/GitLab URLs
+  fetch.ts      diff + metadata via gh / glab / GitLab REST, normalized to one shape
+  parse-diff.ts unified diff → RawHunk[] → grouped Chunk[]
+  gitlab-rest.ts  glab-CLI-or-REST transport: pagination, retry classification
+  gitlab-token.ts browser-entered GitLab token store (memory + 0600 file on disk)
+  review.ts     loadReview(): assembles Review + ReviewState, runs anchor reconciliation
+  state.ts      pure applyAction reducer, migrate(), atomic saveState, listReviews
+  mutex.ts      in-process FIFO lock serializing state read-modify-write cycles
+  server.ts     localhost HTTP server: REST + SSE API, static UI, one active review
+  claude.ts     headless claude bridge: prompt builders, stream-json parsing, cancel
+  investigation.ts  per-repo repo-access config for Claude + clone lifecycle/pruning
+  mock-ai.ts    --mock-ai placeholder notes (offline / e2e)
+  jira.ts       Jira REST fetch, ADF-to-text flattening, degrade-to-banner
+  resolve-token.ts  JIRA_TOKEN indirection: op:// / env: / cmd: references
+  setup-jira.ts interactive `assisted-review configure` wizard for Jira env vars
+  submit.ts     publish drafted comments as a real PR/MR review
+  update-check.ts   background npm-registry version check (24h cache)
+  pkg-info.ts   reads this package&#39;s own name/version (update-check, CLI banner)
+  types.ts      the shared type model (re-exported to the frontend)
+web/         Vite + React 19 + Tailwind v4 UI → builds into dist/
+</code></pre></div>
+<p>Module notes, roughly in the order a review flows through them:</p>
+<ul>
+<li><strong><code>fetch.ts</code> / <code>gitlab-rest.ts</code></strong> — GitHub always goes through the <code>gh</code>
+  CLI. GitLab prefers the <code>glab</code> CLI and falls back to the GitLab REST API v4
+  (<code>GITLAB_TOKEN</code> / browser-entered token, <code>GITLAB_HOST</code> for self-hosted);
+  both paths normalize to the same <code>PrMeta</code> shape, and the REST path
+  reconstructs the <code>---</code>/<code>+++</code> markers GitLab's <code>/diffs</code> endpoint omits so
+  both platforms converge on the same parser.</li>
+<li><strong><code>parse-diff.ts</code></strong> — wraps the <code>parse-diff</code> npm package, then
+  <code>groupChunks()</code> merges adjacent same-file hunks separated by a small
+  unchanged gap (default 20 lines) into <code>Chunk</code>s. That grouping step defines
+  the reviewable unit the whole app operates on.</li>
+<li><strong><code>review.ts</code> / <code>state.ts</code></strong> — <code>loadReview()</code> joins the freshly fetched
+  <code>Review</code> with the persisted <code>ReviewState</code>, migrates old state files, and
+  runs the anchor-reconciliation pass (see Datamodel below). <code>saveState()</code>
+  writes atomically; <code>loadState()</code> falls back to a fresh state on any
+  read/parse error rather than throwing.</li>
+<li><strong><code>server.ts</code></strong> — routes: <code>/api/config</code>, <code>/api/review</code>, <code>/api/state</code>,
+  <code>/api/action</code> (the single generic mutation endpoint — the <code>Action</code> union),
+  <code>/api/claude</code> (SSE), <code>/api/submit</code>, <code>/api/reviews</code>, <code>/api/reviews/open</code>,
+  <code>/api/auth/gitlab</code>, <code>/api/investigation-config</code>, plus static file serving
+  with SPA fallback. Only one Claude stream may be in flight globally;
+  opening a review or dropping the SSE connection cancels it. The full
+  endpoint-by-endpoint contract is in
+  <a href="https://github.com/moui72/assisted-review/blob/main/.project/artifacts/api.md"><code>api.md</code></a>.</li>
+<li><strong><code>claude.ts</code> / <code>investigation.ts</code></strong> — spawns
+  <code>claude -p --output-format stream-json</code> with <code>Bash</code>/<code>Edit</code>/<code>Write</code>/web
+  tools always disallowed. The per-repo <code>InvestigationConfig</code> decides how
+  much more Claude can see: nothing beyond the diff (default), read-only
+  <code>Read</code>/<code>Grep</code>/<code>Glob</code> in a local path or a managed clone, or full contents
+  of changed files fetched via the platform API. Clones live under the state
+  dir and are swept (temp) or idle-pruned after 30 days (persistent).</li>
+<li><strong><code>submit.ts</code></strong> — GitHub: one <code>gh api</code> POST carrying the whole review.
+  GitLab: per-comment discussions + summary note + optional approve, with
+  retry on transient errors and persisted partial-progress so a retry never
+  reposts what already landed. Both paths verify the drafted-against head
+  SHA is still on the PR/MR before posting.</li>
+</ul>
+<h2 id="datamodel">Datamodel<a class="headerlink" href="#datamodel" title="Permanent link">&para;</a></h2>
+<p>Types are defined once in <code>src/types.ts</code> and shared with the frontend via
+<code>import type</code> (re-exported from <code>web/src/api.ts</code>). Two families exist:</p>
+<ul>
+<li><strong>Fetched/derived, in-memory only</strong> — <code>Review</code> and everything under it
+  (<code>PrMeta</code>, <code>Chunk</code>, <code>JiraContext</code>, …), rebuilt on every open and never
+  persisted.</li>
+<li><strong>Persisted</strong> — <code>ReviewState</code> and its nested <code>DraftComment</code> / <code>StoredNote</code>
+  / <code>FlaggedEntry</code>, one JSON file per PR/MR, mutated only through the
+  <code>applyAction</code> reducer.</li>
+</ul>
+<p>The two are joined at read time by <code>chunk_id</code>. Because chunk ids (<code>c1</code>,
+<code>c2</code>, …) are unstable sequential ids, every persisted anchor also snapshots
+the chunk's <code>file</code> + <code>hunk_header</code>; on each reopen, an <strong>anchor
+reconciliation</strong> pass re-matches those snapshots against the freshly parsed
+chunks — re-syncing ids where the hunk still exists, and marking entries
+<code>displaced</code> (surfaced in the UI for manual re-anchoring, deletion, or
+unflagging) where it doesn't. Full field-by-field detail is in
+<a href="https://github.com/moui72/assisted-review/blob/main/.project/artifacts/datamodel.md"><code>datamodel.md</code></a>.</p>
+<pre class="mermaid"><code>erDiagram
+    PrRef {
+        string owner
+        string repo
+        number number
+        string platform
+    }
+    PrMeta {
+        string title
+        string author
+        string base_ref
+        string head_ref
+        boolean is_draft
+        string url
+        string head_sha
+        string body
+    }
+    RawHunk {
+        string id
+        string file
+        string hunk_header
+        LineRange old_range
+        LineRange new_range
+        string context
+        string diff
+    }
+    HunkMember {
+        string hunk_header
+        LineRange old_range
+        LineRange new_range
+    }
+    Chunk {
+        string id
+        string file
+        string diff
+        HunkMember_array members
+        StoredNote_array ai_notes
+    }
+    JiraIssue {
+        string key
+        string summary
+        string status
+        string type
+        string description
+        string url
+        string epic_key
+    }
+    JiraContext {
+        boolean available
+        string reason
+        string setup_hint
+        string_array keys
+    }
+    Overview {
+        JiraContext jira
+    }
+    Review {
+        string generated_at
+    }
+    DraftComment {
+        string id
+        string chunk_id
+        Side side
+        number line
+        string body
+        string file
+        string hunk_header
+        boolean displaced
+        string created_at
+        string updated_at
+    }
+    StoredNote {
+        string id
+        string chunk_id
+        AiNoteKind kind
+        string prompt
+        string body
+        string suggested_action
+        string file
+        string hunk_header
+        boolean displaced
+        string created_at
+    }
+    FlaggedEntry {
+        string chunk_id
+        string file
+        string hunk_header
+        boolean displaced
+    }
+    ReviewState {
+        number version
+        string head_sha
+        string started_at
+        GitLabSubmitProgress gitlab_submit_progress
+    }
+    GitLabSubmitProgress {
+        string_array posted_comment_ids
+        boolean note_posted
+        boolean approved
+    }
+    ReviewSummary {
+        string head_sha
+        string started_at
+        number comment_count
+        number flagged_count
+        number viewed_count
+    }
+    InvestigationConfig {
+        string platform
+        string owner
+        string repo
+        string mode
+        string local_path
+        string clone_path
+        string chosen_at
+        string last_used
+    }
+    SubmitResult {
+        boolean ok
+        string html_url
+        string error
+    }
+
+    RawHunk ||--o{ HunkMember : "retained on grouping"
+    Chunk ||--o{ HunkMember : "members"
+    Chunk ||--o{ StoredNote : "ai_notes (mock, fake ids)"
+    JiraContext ||--o{ JiraIssue : "issues"
+    JiraContext ||--o| JiraIssue : "epic"
+    Overview ||--|| JiraContext : "jira"
+    Review ||--|| PrRef : "pr"
+    Review ||--|| PrMeta : "meta"
+    Review ||--o{ Chunk : "chunks"
+    Review ||--|| Overview : "overview"
+    ReviewState ||--|| PrRef : "pr"
+    ReviewState ||--o| PrMeta : "meta (cached)"
+    ReviewState ||--o{ DraftComment : "comments"
+    ReviewState ||--o{ StoredNote : "notes"
+    ReviewState ||--o{ FlaggedEntry : "flagged"
+    ReviewState ||--o| GitLabSubmitProgress : "gitlab_submit_progress"
+    ReviewSummary ||--|| PrRef : "pr"
+    ReviewSummary ||--o| PrMeta : "meta"</code></pre>
+<h2 id="infrastructure">Infrastructure<a class="headerlink" href="#infrastructure" title="Permanent link">&para;</a></h2>
+<p>No database, no hosted backend. Storage is flat JSON files under
+<code>~/.assisted-review/</code> (override: <code>ASSISTED_REVIEW_STATE_DIR</code>): one state file
+per PR/MR, an <code>investigation-config.json</code> map, repo clones under <code>repos/</code>,
+the browser-entered GitLab token (mode <code>0600</code>), and a 24h update-check cache.
+Every file follows the same atomic tmp-then-<code>rename()</code> write convention. All
+external integrations sit outside the process boundary — CLIs invoked as
+subprocesses (<code>gh</code>, <code>glab</code>, <code>claude</code>, <code>op</code>) or plain HTTPS (Jira, GitLab REST
+fallback, npm registry) — and every optional one degrades to a typed
+"unavailable" state instead of failing the review. Transport details, shape
+mappings, and storage layout are in
+<a href="https://github.com/moui72/assisted-review/blob/main/.project/artifacts/infrastructure.md"><code>infrastructure.md</code></a>.</p>
+<pre class="mermaid"><code>graph TD
+    subgraph local["Local machine — 127.0.0.1 only"]
+        CLI["CLI (src/cli.ts)"]
+        Browser["React UI (dist/) in browser"]
+        Server["HTTP server (src/server.ts)&lt;br/&gt;REST + one SSE endpoint, :4319"]
+        subgraph state["State dir (~/.assisted-review/)"]
+            StateFiles["Review state JSON&lt;br/&gt;one file per PR/MR"]
+            InvCfg["investigation-config.json"]
+            Clones["repos/ — temp &amp;amp; always clones"]
+            GLToken["gitlab-token (0o600)"]
+            UpdCache["update-check.json"]
+        end
+    end
+
+    subgraph ext["External tools &amp;amp; services (subprocesses / HTTP)"]
+        GH["gh CLI → GitHub"]
+        GLAB["glab CLI / REST → GitLab"]
+        Jira["Jira REST API"]
+        Claude["claude CLI — headless, read-only"]
+        NPM["npm registry"]
+        OP["op — 1Password, optional"]
+    end
+
+    CLI --&gt;|starts| Server
+    Browser &lt;--&gt;|"REST + SSE (/api/*)"| Server
+    Server --&gt;|"fetch diff/meta, submit review"| GH
+    Server --&gt;|"fetch diff/meta, submit, clone"| GLAB
+    Server --&gt;|"issue + epic context"| Jira
+    Server --&gt;|"stream commentary"| Claude
+    Server --&gt;|"load / atomic save"| StateFiles
+    Server --&gt;|"read/write chosen mode"| InvCfg
+    Server --&gt;|"clone / refresh / prune"| Clones
+    Server --&gt;|"read/write browser token"| GLToken
+    Server --&gt;|"once-per-24h check"| NPM
+    Server -.-&gt;|"resolve JIRA_TOKEN reference"| OP
+    Claude -.-&gt;|"Read/Grep/Glob in repo-access modes"| Clones</code></pre>
+<h2 id="ui">UI<a class="headerlink" href="#ui" title="Permanent link">&para;</a></h2>
+<p>A single-page React 19 + Tailwind v4 app (<code>web/src/</code>), keyboard-first,
+rendering exactly one review at a time — one chunk (or the overview) per
+screen. <code>App.tsx</code> orchestrates everything: the navigation index (<code>-1</code> =
+overview, <code>0..N-1</code> = chunk), the single active Claude stream, drafts, and the
+global keyboard listener. Views and modals hang off it; the diagram below
+shows the composition.</p>
+<p>The app is a deliberately thin client: <code>ReviewState</code> is server-authoritative
+and re-set from the response of every mutating call, so local React state is
+mostly UI-only concerns (which modal is open, the streaming text buffer,
+in-progress draft text). Theming is two independent persisted axes — palette
+and light/dark mode — implemented entirely with CSS custom properties (no
+<code>tailwind.config.js</code>); each palette carries a complete token set for both
+modes, including syntax colors. Component-by-component detail, UI states, and
+the keyboard model are in <a href="https://github.com/moui72/assisted-review/blob/main/.project/artifacts/ui.md"><code>ui.md</code></a>.</p>
+<pre class="mermaid"><code>graph TD
+    App["App.tsx&lt;br/&gt;navigation · active Claude stream · drafts"]
+
+    App --&gt;|"index -1"| Overview["OverviewView.tsx"]
+    App --&gt;|"index 0..N-1"| Chunk["ChunkView.tsx"]
+    App --&gt; Splash["Splash.tsx"]
+    App --&gt;|"per-chunk viewed/flagged/commented"| TopNav["TopNav.tsx"]
+    App --&gt;|"isMac · re-anchor mode"| ResponseBar["ResponseBar.tsx"]
+    App --&gt; SubmitModal["SubmitModal.tsx"]
+    App --&gt; ReviewsMenu["ReviewsMenu.tsx"]
+    App --&gt; SettingsPanel["SettingsPanel.tsx"]
+    App --&gt; HelpOverlay["HelpOverlay.tsx"]
+
+    Splash --&gt; GLAuth["GitLabAuthModal.tsx"]
+
+    Overview --&gt; MD1["Markdown.tsx"]
+    Overview --&gt; EB["ErrorBanner.tsx"]
+    Overview --&gt;|"scoped OVERVIEW_ID"| AiC["AiCommentary.tsx"]
+
+    Chunk --&gt; DiffPane["DiffPane.tsx"]
+    Chunk --&gt;|"scoped chunk id"| AiC
+    DiffPane --&gt; CommentCard["CommentCard — inline, edit/delete"]
+
+    AiC --&gt;|"StoredNote[] · deletableNoteIds"| Note["Note (StoredNote | NotePreview)"]
+    Note --&gt; MD2["Markdown.tsx"]
+
+    ReviewsMenu --&gt; OpenForm["OpenReviewForm.tsx"]
+    ReviewsMenu --&gt; ReviewsList["ReviewsList.tsx"]
+    ReviewsMenu --&gt; DelConfirm["DeleteReviewConfirm.tsx"]
+    ReviewsMenu --&gt; GLAuth
+
+    SettingsPanel --&gt; InvModal["InvestigationModal.tsx"]</code></pre>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+    
+      
+      <nav class="md-footer__inner md-grid" aria-label="Footer" >
+        
+          
+          <a href="../jira/" class="md-footer__link md-footer__link--prev" aria-label="Previous: Jira">
+            <div class="md-footer__button md-icon">
+              
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+            </div>
+            <div class="md-footer__title">
+              <span class="md-footer__direction">
+                Previous
+              </span>
+              <div class="md-ellipsis">
+                Jira
+              </div>
+            </div>
+          </a>
+        
+        
+          
+          <a href="../contributing/" class="md-footer__link md-footer__link--next" aria-label="Next: Contributing">
+            <div class="md-footer__title">
+              <span class="md-footer__direction">
+                Next
+              </span>
+              <div class="md-ellipsis">
+                Contributing
+              </div>
+            </div>
+            <div class="md-footer__button md-icon">
+              
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M4 11v2h12l-5.5 5.5 1.42 1.42L19.84 12l-7.92-7.92L10.5 5.5 16 11z"/></svg>
+            </div>
+          </a>
+        
+      </nav>
+    
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "..", "features": ["navigation.sections", "navigation.footer", "navigation.top", "content.code.copy", "content.action.edit", "search.suggest", "search.highlight"], "search": "../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../assets/javascripts/bundle.d7400e89.min.js"></script>
+      
+    
+  </body>
+</html>
