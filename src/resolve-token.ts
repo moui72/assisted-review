@@ -19,9 +19,11 @@ async function runOp(ref: string): Promise<string> {
   } catch (err) {
     const e = err as NodeJS.ErrnoException;
     if (e.code === 'ENOENT') {
-      throw new Error('`op` CLI not found — install the 1Password CLI to use op:// references');
+      throw new Error('`op` CLI not found — install the 1Password CLI to use op:// references', {
+        cause: err,
+      });
     }
-    throw new Error(`op read failed: ${(e as Error).message}`);
+    throw new Error(`op read failed: ${(e as Error).message}`, { cause: err });
   }
 }
 
@@ -30,7 +32,7 @@ async function runShell(cmd: string): Promise<string> {
     const { stdout } = await execAsync(cmd, { timeout: 8000 });
     return stdout.trim();
   } catch (err) {
-    throw new Error(`cmd failed: ${(err as Error).message}`);
+    throw new Error(`cmd failed: ${(err as Error).message}`, { cause: err });
   }
 }
 

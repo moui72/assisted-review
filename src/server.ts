@@ -285,7 +285,7 @@ export async function startServer(
         });
       }
       let result;
-      let nextState = state;
+      let nextState: typeof state;
       if (review.pr.platform === 'gitlab') {
         result = await submitGitLabReview(
           review.pr,
