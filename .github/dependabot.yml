@@ -4,6 +4,15 @@ updates:
     directory: "/"
     schedule:
       interval: "weekly"
+    groups:
+      # react and react-dom must be on the exact same version — React 19 throws
+      # "Incompatible React versions" at runtime otherwise. Bump them together.
+      react:
+        patterns:
+          - "react"
+          - "react-dom"
+          - "@types/react"
+          - "@types/react-dom"
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
